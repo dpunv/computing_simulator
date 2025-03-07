@@ -40,24 +40,25 @@ fn print_version() {
     println!("Turing Machine Simulator 0.1.0");
 }
 
-pub fn print_tape(tape: Vec<String>, tm: automaton::TuringMachine, trim: Option<bool>) {
+pub fn print_tape(tape: automaton::Tape, tm: automaton::TuringMachine, trim: Option<bool>) {
+    
     let should_trim = trim.unwrap_or(false);
     let mut tape = tape;
     if should_trim {
-        tape = tape
+        tape.tape = tape.tape
             .iter()
             .skip_while(|symbol| *symbol == &tm.blank_symbol.clone())
             .cloned()
             .collect();
-        tape = tape
+        tape.tape = tape.tape
             .iter()
             .rev()
             .skip_while(|symbol| *symbol == &tm.blank_symbol.clone())
             .cloned()
             .collect();
-        tape = tape.iter().rev().cloned().collect();
+        tape.tape = tape.tape.iter().rev().cloned().collect();
     }
-    for symbol in tape {
+    for symbol in tape.tape {
         print!("{}", symbol);
     }
 }
@@ -73,12 +74,12 @@ fn execute(tm: automaton::TuringMachine, input: String, opt: options::Options) {
     let result = tm.clone().simulate(input_tape, opt.max_steps);
     if opt.output_tape {
         print!("Output Tape:");
-        print_tape(result.1.clone(), tm.clone(), Some(false));
+        print_tape(result.1[0].clone(), tm.clone(), Some(false));
         println!();
     }
     if opt.trimmed_tape {
         print!("Trimmed Tape:");
-        print_tape(result.1.clone(), tm.clone(), Some(true));
+        print_tape(result.1[0].clone(), tm.clone(), Some(true));
         println!();
     }
     if opt.steps {
@@ -125,18 +126,18 @@ pub fn print_computation(
     state: bool,
     head: bool,
 ) {
-    for config in computation {
+    for (ind, config) in computation.iter().enumerate() {
         if steps {
-            print!("Step: {}     ", config.head);
+            print!("Step: {}     ", ind);
         }
         if state {
             print!("State {}     ", config.state);
         }
         if output_tape {
-            print_tape(config.tape.clone(), tm.clone(), Some(trimmed_tape));
+            print_tape(config.tapes[0].clone(), tm.clone(), Some(trimmed_tape));
         }
         if head {
-            println!(" Head: {} ", config.head);
+            println!(" Head: {} ", config.tapes[0].head);
         }
     }
 }

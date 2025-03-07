@@ -17,6 +17,7 @@ pub fn read_turing_machine_from_file(file_path: String) -> automaton::TuringMach
         tape_alphabet: Vec::new(),
         transitions: Vec::new(),
         end_on_final_state: true,
+        tape_count: 1,
     };
 
     let file = std::fs::read_to_string(file_path).expect("Error reading the file");
@@ -52,15 +53,28 @@ pub fn read_turing_machine_from_file(file_path: String) -> automaton::TuringMach
     for symbol in tape_alphabet {
         tm.tape_alphabet.push(symbol.to_string());
     }
+    let tape_count: usize = lines[6].parse().expect("Error parsing tape count");
+    tm.tape_count = tape_count;
 
-    for line in lines.iter().skip(6) {
+    for line in lines.iter().skip(7) {
         let transition: Vec<&str> = line.split(" ").collect();
+        if line.len() < 2 + tape_count * 3 {
+            panic!("Error parsing transition");
+        }
+        let mut symbols = Vec::new();
+        let mut new_symbols = Vec::new();
+        let mut directions = Vec::new();
+        for i in 0..tape_count {
+            symbols.push(transition[2 + i * 3].to_string());
+            new_symbols.push(transition[3 + i * 3].to_string());
+            directions.push(automaton::Direction::from_string(transition[4 + i * 3]));
+        }
         let t = automaton::Transition {
             state: transition[0].to_string(),
-            symbol: transition[1].to_string(),
-            new_state: transition[2].to_string(),
-            new_symbol: transition[3].to_string(),
-            direction: automaton::Direction::from_string(transition[4]),
+            new_state: transition[1].to_string(),
+            symbols,
+            new_symbols,
+            directions,
         };
         tm.transitions.push(t);
     }
@@ -78,6 +92,7 @@ pub fn read_finite_state_machine_from_file(options: options::Options) -> automat
         blank_symbol: " ".to_string(),
         tape_alphabet: Vec::new(),
         end_on_final_state: false,
+        tape_count: 1,
     };
 
     let file = std::fs::read_to_string(options.file).expect("Error reading the file");
@@ -113,18 +128,18 @@ pub fn read_finite_state_machine_from_file(options: options::Options) -> automat
         let transition_data: Vec<&str> = line.split(" ").collect();
         tm.transitions.push(automaton::Transition {
             state: transition_data[0].to_string(),
-            symbol: transition_data[1].to_string(),
+            symbols: vec![transition_data[1].to_string()],
             new_state: transition_data[2].to_string(),
-            new_symbol: tm.blank_symbol.clone(),
-            direction: automaton::Direction::Right,
+            new_symbols: vec![" ".to_string()],
+            directions: vec![automaton::Direction::Right],
         });
     }
     tm.transitions.push(automaton::Transition {
         state: tm.initial_state.clone(),
-        symbol: tm.blank_symbol.clone(),
+        symbols: vec![tm.blank_symbol.clone()],
         new_state: tm.initial_state.clone(),
-        new_symbol: tm.blank_symbol.clone(),
-        direction: automaton::Direction::Right,
+        new_symbols: vec![tm.blank_symbol.clone()],
+        directions: vec![automaton::Direction::Right],
     });
     tm
 }

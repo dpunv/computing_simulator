@@ -13,30 +13,36 @@ pub struct TuringMachine {
     pub tape_alphabet: Vec<String>,
     pub transitions: Vec<Transition>,
     pub end_on_final_state: bool,
+    pub tape_count: usize,
 }
 
 #[derive(Clone)]
-pub struct Configuration {
-    pub state: String,
+pub struct Tape {
     pub tape: Vec<String>,
     pub head: usize,
 }
 
 #[derive(Clone)]
+pub struct Configuration {
+    pub state: String,
+    pub tapes: Vec<Tape>,
+}
+
+#[derive(Clone)]
 pub struct Transition {
     pub state: String,
-    pub symbol: String,
+    pub symbols: Vec<String>,
     pub new_state: String,
-    pub new_symbol: String,
-    pub direction: Direction,
+    pub new_symbols: Vec<String>,
+    pub directions: Vec<Direction>,
 }
 
 pub trait Automaton: Clone {
     fn simulate(
         &self,
         input: Vec<String>,
-        max_steps: i32,
-    ) -> (String, Vec<String>, i32, Vec<Configuration>);
+        max_steps: i32
+    ) -> (String, Vec<Tape>, i32, Vec<Configuration>);
     fn is_deterministic(&self) -> bool;
     fn is_transition_total(&self) -> bool;
     fn is_ok(&self) -> bool;
@@ -85,13 +91,12 @@ impl Automaton for TuringMachine {
     fn simulate(
         &self,
         input: Vec<String>,
-        max_steps: i32,
-    ) -> (String, Vec<String>, i32, Vec<Configuration>) {
+        max_steps: i32
+    ) -> (String, Vec<Tape>, i32, Vec<Configuration>) {
         #[derive(Clone)]
         struct TreeElement {
             state: String,
-            tape: Vec<String>,
-            head: usize,
+            tapes: Vec<Tape>,
             previous: usize,
         }
         let transitions_map = self.make_transition_map();
@@ -102,10 +107,20 @@ impl Automaton for TuringMachine {
         for symbol in input {
             tape.push(symbol);
         }
+        let mut tapes = Vec::new();
+        tapes.push(Tape {
+            tape: tape.clone(),
+            head: 0,
+        });
+        for _ in 1..self.tape_count {
+            tapes.push(Tape {
+                tape: Vec::new(),
+                head: 0,
+            });
+        }
         tree[0].push(TreeElement {
             state: self.initial_state.clone(),
-            tape,
-            head: 0,
+            tapes: tapes.clone(),
             previous: 0,
         });
         let mut steps = 0;
@@ -119,38 +134,43 @@ impl Automaton for TuringMachine {
                     halts = true;
                     break;
                 }
-                let head = element.head;
-                let tape = element.tape.clone();
-                let key = state.clone() + &tape[head];
+                let mut key = state.clone();
+                for tapenum in 0..self.tape_count{
+                    key += &element.tapes[tapenum].tape[element.tapes[tapenum].head];
+                }
                 let mut found = false;
                 if transitions_map.contains_key(&key) {
                     found = true;
                     let possible_transitions = transitions_map.get(&key).unwrap().clone();
                     for transition in possible_transitions.iter() {
-                        let mut new_tape = tape.clone();
-                        new_tape[head] = transition.new_symbol.clone();
-                        let new_head = match transition.direction {
-                            Direction::Left => {
-                                if head == 0 {
-                                    new_tape.insert(0, self.blank_symbol.clone());
-                                    0
-                                } else {
-                                    head - 1
+                        let mut new_tapes = Vec::new();
+                        for tapenum in 0..self.tape_count{
+                            let mut new_tape = element.tapes[tapenum].clone();
+                            new_tape.tape[new_tape.head] = transition.new_symbols[tapenum].clone();
+                            let new_head = match transition.directions[tapenum] {
+                                Direction::Left => {
+                                    if new_tape.head == 0 {
+                                        new_tape.tape.insert(0, self.blank_symbol.clone());
+                                        0
+                                    } else {
+                                        new_tape.head - 1
+                                    }
                                 }
-                            }
-                            Direction::Right => {
-                                if head == new_tape.len() - 1 {
-                                    new_tape.push(self.blank_symbol.clone());
+                                Direction::Right => {
+                                    if new_tape.head == new_tape.tape.len() - 1 {
+                                        new_tape.tape.push(self.blank_symbol.clone());
+                                    }
+                                    new_tape.head + 1
                                 }
-                                head + 1
-                            }
-                            Direction::Stay => head,
-                        };
+                                Direction::Stay => new_tape.head,
+                            };
+                            new_tape.head = new_head;
+                            new_tapes.push(new_tape);
+                        }
                         let new_state = transition.new_state.clone();
                         new_level.push(TreeElement {
                             state: new_state,
-                            tape: new_tape,
-                            head: new_head,
+                            tapes: new_tapes,
                             previous: ind,
                         });
                     }
@@ -172,8 +192,7 @@ impl Automaton for TuringMachine {
             index -= 1;
             let configuration = Configuration {
                 state: element.state.clone(),
-                tape: element.tape.clone(),
-                head: element.head,
+                tapes: element.tapes.clone(),
             };
             computation.push(configuration);
         }
@@ -181,7 +200,7 @@ impl Automaton for TuringMachine {
         let last_element = tree[tree.len() - 1][previous].clone();
         (
             last_element.state.clone(),
-            last_element.tape.clone(),
+            last_element.tapes.clone(),
             steps,
             computation,
         )
@@ -195,7 +214,10 @@ impl Automaton for TuringMachine {
         let mut transition_map: std::collections::HashMap<String, Vec<Transition>> =
             std::collections::HashMap::new();
         for transition in &self.transitions {
-            let key = transition.state.clone() + &transition.symbol;
+            let mut key = transition.state.clone();
+            for symbol in &transition.symbols {
+                key += symbol;
+            }
             if transition_map.contains_key(&key) {
                 transition_map
                     .get_mut(&key)
@@ -232,15 +254,23 @@ impl Automaton for TuringMachine {
         }
 
         for transition in &self.transitions {
-            if !self.states.contains(&transition.state)
-                || !self.states.contains(&transition.new_state)
-                || !self.tape_alphabet.contains(&transition.symbol)
-                || !self.tape_alphabet.contains(&transition.new_symbol)
-                || (transition.direction != Direction::Left
-                    && transition.direction != Direction::Right)
-            {
-                is_transitions_valid = false;
-                break;
+            for symbol in &transition.symbols {
+                if !self.tape_alphabet.contains(symbol) {
+                    is_transitions_valid = false;
+                    break;
+                }
+            }
+            for symbol in &transition.new_symbols {
+                if !self.tape_alphabet.contains(symbol) {
+                    is_transitions_valid = false;
+                    break;
+                }
+            }
+            for direction in &transition.directions {
+                if !matches!(direction, Direction::Left | Direction::Right | Direction::Stay) {
+                    is_transitions_valid = false;
+                    break;
+                }
             }
         }
 
