@@ -28,6 +28,7 @@ fn print_help() {
     println!("  --input: provide the input string for the Turing Machine");
     println!("  --file: provide the file containing the description of the Turing Machine");
     println!("  --status: print informations about the Turing Machine");
+    println!("  --print-encoding: print the encoding of the Turing Machine");
     println!();
     println!("Default: read from a custom file, don't print the tape, print the trimmed tape, print the number of steps, print the final state, don't print the status, don't print the computation");
     println!();
@@ -117,6 +118,10 @@ fn interactive_tui(tm: automaton::TuringMachine, opt: options::Options) {
     }
 }
 
+pub fn print_encoding(tm: &automaton::TuringMachine) {
+    println!("{}", tm.to_encoding());
+}
+
 pub fn print_computation(
     computation: Vec<automaton::Configuration>,
     tm: automaton::TuringMachine,
@@ -152,16 +157,22 @@ pub fn main_cli() {
         print_version();
         return;
     }
-    if (options.type_ != "tm" && options.type_ != "fsm") || options.file.is_empty() {
+    if (options.type_ != "tm" && options.type_ != "fsm" && options.type_ != "pda") || options.file.is_empty() {
         println!("Error: Invalid options. Use --help for more information.");
         return;
     }
     let tm;
     if options.type_ == "tm" {
-        tm = file_handler::read_turing_machine_from_file(options.clone().file);
+        tm = file_handler::read_turing_machine_from_file(options.clone());
     } else if options.type_ == "fsm" {
         tm = file_handler::read_finite_state_machine_from_file(options.clone());
+    } else if options.type_ == "pda" {
+        tm = file_handler::read_pushdown_automaton_from_file(options.clone());
     } else {
+        return;
+    }
+    if options.print_encoding {
+        print_encoding(&tm);
         return;
     }
     if options.status {

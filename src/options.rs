@@ -17,6 +17,7 @@ pub struct Options {
     pub input: String,
     pub file: String,
     pub status: bool,
+    pub print_encoding: bool,
 }
 
 pub fn get_options() -> Options {
@@ -32,6 +33,7 @@ pub fn get_options() -> Options {
     let mut input = String::new();
     let mut file = String::new();
     let mut status = false;
+    let mut print_encoding = false;
 
     let mut default_out = true;
 
@@ -50,7 +52,7 @@ pub fn get_options() -> Options {
             }
         } else if arg.starts_with("--type=") {
             type_ = arg.strip_prefix("--type=").unwrap_or("turing").to_string();
-            if type_ != "tm" && type_ != "fsm" {
+            if type_ != "tm" && type_ != "fsm" && type_ != "pda" {
                 type_ = "tm".to_string();
             }
         } else {
@@ -77,6 +79,7 @@ pub fn get_options() -> Options {
                 }
                 "--help" => help = true,
                 "--version" => version = true,
+                "--print-encoding" => print_encoding = true,
                 "--status" => {
                     status = true;
                     default_out = false;
@@ -108,5 +111,6 @@ pub fn get_options() -> Options {
         input,
         file,
         status,
+        print_encoding,
     }
 }

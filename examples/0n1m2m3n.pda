@@ -1,0 +1,24 @@
+// recognize string of the form: 0^n1^m2^m3^n
+// where n,m >= 1
+// initial state:
+1
+// accept state:
+5
+// states:
+1 2 3 4 5
+// input symbols:
+0 1 2 3
+// stack symbols:
+0 1 2 3 B
+// blank symbol:
+B
+// transitions:
+1 0 B 1 0
+1 0 0 1 0 0
+1 1 0 2 0 1
+2 1 1 2 1 1
+2 2 1 3 B
+3 2 1 3 B
+3 3 0 4 B
+4 3 0 4 B
+4 B B 5 B

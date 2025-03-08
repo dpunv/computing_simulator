@@ -7,9 +7,11 @@ use crate::automaton;
 use crate::automaton::FromString;
 use crate::options;
 
-pub fn read_turing_machine_from_file(file_path: String) -> automaton::TuringMachine {
+pub fn read_turing_machine_from_file(options: options::Options) -> automaton::TuringMachine {
     let mut tm = automaton::TuringMachine {
         initial_state: "".to_string(),
+        accept_state: "".to_string(),
+        reject_state: "".to_string(),
         final_states: Vec::new(),
         blank_symbol: "".to_string(),
         states: Vec::new(),
@@ -20,43 +22,47 @@ pub fn read_turing_machine_from_file(file_path: String) -> automaton::TuringMach
         tape_count: 1,
     };
 
-    let file = std::fs::read_to_string(file_path).expect("Error reading the file");
+    let file = std::fs::read_to_string(options.file).expect("Error reading the file");
 
     let lines: Vec<&str> = file.lines().collect();
 
     let lines: Vec<&str> = lines
         .iter()
-        .filter(|line| !line.is_empty() && !line.starts_with("//"))
+        .filter(|line| !line.starts_with("//"))
         .copied()
         .collect();
 
     tm.initial_state = lines[0].to_string();
 
-    let final_states: Vec<&str> = lines[1].split(" ").collect();
+    tm.accept_state = lines[1].to_string();
+
+    tm.reject_state = lines[2].to_string();
+
+    let final_states: Vec<&str> = lines[3].split(" ").collect();
     for final_state in final_states {
         tm.final_states.push(final_state.to_string());
     }
 
-    tm.blank_symbol = lines[2].to_string();
+    tm.blank_symbol = lines[4].to_string();
 
-    let states: Vec<&str> = lines[3].split(" ").collect();
+    let states: Vec<&str> = lines[5].split(" ").collect();
     for state in states {
         tm.states.push(state.to_string());
     }
 
-    let input_alphabet: Vec<&str> = lines[4].split(" ").collect();
+    let input_alphabet: Vec<&str> = lines[6].split(" ").collect();
     for symbol in input_alphabet {
         tm.input_alphabet.push(symbol.to_string());
     }
 
-    let tape_alphabet: Vec<&str> = lines[5].split(" ").collect();
+    let tape_alphabet: Vec<&str> = lines[7].split(" ").collect();
     for symbol in tape_alphabet {
         tm.tape_alphabet.push(symbol.to_string());
     }
-    let tape_count: usize = lines[6].parse().expect("Error parsing tape count");
+    let tape_count: usize = lines[8].parse().expect("Error parsing tape count");
     tm.tape_count = tape_count;
 
-    for line in lines.iter().skip(7) {
+    for line in lines.iter().skip(9) {
         let transition: Vec<&str> = line.split(" ").collect();
         if line.len() < 2 + tape_count * 3 {
             panic!("Error parsing transition");
@@ -85,6 +91,8 @@ pub fn read_turing_machine_from_file(file_path: String) -> automaton::TuringMach
 pub fn read_finite_state_machine_from_file(options: options::Options) -> automaton::TuringMachine {
     let mut tm = automaton::TuringMachine {
         initial_state: "".to_string(),
+        accept_state: "".to_string(),
+        reject_state: "".to_string(),
         final_states: Vec::new(),
         states: Vec::new(),
         input_alphabet: Vec::new(),
@@ -141,5 +149,103 @@ pub fn read_finite_state_machine_from_file(options: options::Options) -> automat
         new_symbols: vec![tm.blank_symbol.clone()],
         directions: vec![automaton::Direction::Right],
     });
+    tm
+}
+
+pub fn read_pushdown_automaton_from_file(options: options::Options) -> automaton::TuringMachine {
+    let mut tm = automaton::TuringMachine {
+        initial_state: "".to_string(),
+        accept_state: "".to_string(),
+        reject_state: "".to_string(),
+        final_states: Vec::new(),
+        states: Vec::new(),
+        input_alphabet: Vec::new(),
+        transitions: Vec::new(),
+        blank_symbol: " ".to_string(),
+        tape_alphabet: Vec::new(),
+        end_on_final_state: false,
+        tape_count: 2,
+    };
+
+    let file = std::fs::read_to_string(options.file).expect("Error reading the file");
+
+    let lines: Vec<&str> = file.lines().collect();
+    let lines: Vec<&str> = lines
+        .iter()
+        .filter(|line| !line.is_empty() && !line.starts_with("//"))
+        .copied()
+        .collect();
+    tm.initial_state = lines[0].to_string();
+
+    let final_states: Vec<&str> = lines[1].split(" ").collect();
+    for final_state in final_states {
+        tm.final_states.push(final_state.to_string());
+    }
+
+    let states: Vec<&str> = lines[2].split(" ").collect();
+    for state in states {
+        tm.states.push(state.to_string());
+    }
+
+    let input_alphabet: Vec<&str> = lines[3].split(" ").collect();
+    for symbol in input_alphabet {
+        tm.input_alphabet.push(symbol.to_string());
+    }
+
+    let stack_alphabet: Vec<&str> = lines[4].split(" ").collect();
+    tm.tape_alphabet = tm.input_alphabet.clone();
+    for symbol in stack_alphabet {
+        if !tm.tape_alphabet.contains(&symbol.to_string()) {
+            tm.tape_alphabet.push(symbol.to_string());
+        }
+    }
+
+    tm.blank_symbol = lines[5].to_string();
+
+    tm.transitions.push(automaton::Transition {
+        state: tm.initial_state.clone(),
+        symbols: vec![tm.blank_symbol.clone(), tm.blank_symbol.clone()],
+        new_state: tm.initial_state.clone(),
+        new_symbols: vec![tm.blank_symbol.clone(), tm.blank_symbol.clone()],
+        directions: vec![automaton::Direction::Right, automaton::Direction::Stay],
+    });
+    for line in lines.iter().skip(6) {
+        let transition_data: Vec<&str> = line.split(" ").collect();
+        if transition_data.len() < 5 {
+            panic!("Error: Transition format not valid: {}", line);
+        } else if transition_data.len() == 5 {
+            let dir = if transition_data[4] != tm.blank_symbol {
+                automaton::Direction::Stay
+            } else {
+                automaton::Direction::Left
+            };
+            tm.transitions.push(automaton::Transition {
+                state: transition_data[0].to_string(),
+                symbols: vec![transition_data[1].to_string(), transition_data[2].to_string()],
+                new_state: transition_data[3].to_string(),
+                new_symbols: vec![tm.blank_symbol.clone(), transition_data[4].to_string()],
+                directions: vec![automaton::Direction::Right, dir],
+            });
+        } else if transition_data.len() == 6 {
+            let aux_state = format!("{}_aux_{}", transition_data[3], tm.transitions.len());
+            tm.states.push(aux_state.clone());
+            tm.transitions.push(automaton::Transition {
+                state: transition_data[0].to_string(),
+                symbols: vec![transition_data[1].to_string(), transition_data[2].to_string()],
+                new_state: aux_state.clone(),
+                new_symbols: vec![tm.blank_symbol.clone(), transition_data[4].to_string()],
+                directions: vec![automaton::Direction::Stay, automaton::Direction::Right],
+            });
+            tm.transitions.push(automaton::Transition {
+                state: aux_state.clone(),
+                symbols: vec![tm.blank_symbol.clone(), tm.blank_symbol.clone()],
+                new_state: transition_data[3].to_string(),
+                new_symbols: vec![tm.blank_symbol.clone(), transition_data[5].to_string()],
+                directions: vec![automaton::Direction::Right, automaton::Direction::Stay],
+            });
+        } else {
+            panic!("Error: Transition format not valid: {}", line);
+        }
+    }
     tm
 }

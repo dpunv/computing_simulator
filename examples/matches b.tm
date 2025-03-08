@@ -2,6 +2,8 @@
 // given a string made of a number of a's, it maches the number of b's that follow
 // if the number of b's is greater or equal to the number of a's, it accepts
 1
+
+
 h
 B
 1 2 3 4 5 h

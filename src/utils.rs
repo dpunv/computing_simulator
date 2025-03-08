@@ -15,3 +15,7 @@ pub fn input_string_to_vec(input_alphabet: Vec<String>, input: String) -> Vec<St
     }
     vec
 }
+
+/* pub fn int2bin(n: i32, bitnum: usize) -> String {
+    format!("{:0>width$b}", n, width = bitnum)
+} */
