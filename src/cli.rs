@@ -43,16 +43,17 @@ fn print_version() {
 }
 
 pub fn print_tape(tape: automaton::Tape, tm: automaton::TuringMachine, trim: Option<bool>) {
-    
     let should_trim = trim.unwrap_or(false);
     let mut tape = tape;
     if should_trim {
-        tape.tape = tape.tape
+        tape.tape = tape
+            .tape
             .iter()
             .skip_while(|symbol| *symbol == &tm.blank_symbol.clone())
             .cloned()
             .collect();
-        tape.tape = tape.tape
+        tape.tape = tape
+            .tape
             .iter()
             .rev()
             .skip_while(|symbol| *symbol == &tm.blank_symbol.clone())
@@ -120,7 +121,11 @@ fn interactive_tui(tm: automaton::TuringMachine, opt: options::Options) {
 }
 
 pub fn print_encoding(tm: &automaton::TuringMachine) {
-    let encoded: (String, std::collections::HashMap<String, String>, std::collections::HashMap<String, String>) = tm.to_encoding();
+    let encoded: (
+        String,
+        std::collections::HashMap<String, String>,
+        std::collections::HashMap<String, String>,
+    ) = tm.to_encoding();
     println!("{}", encoded.0);
     println!("Alphabet:");
     for (k, v) in encoded.1.iter() {
@@ -167,7 +172,9 @@ pub fn main_cli() {
         print_version();
         return;
     }
-    if (options.type_ != "tm" && options.type_ != "fsm" && options.type_ != "pda") || options.file.is_empty() {
+    if (options.type_ != "tm" && options.type_ != "fsm" && options.type_ != "pda")
+        || options.file.is_empty()
+    {
         println!("Error: Invalid options. Use --help for more information.");
         return;
     }

@@ -221,7 +221,10 @@ pub fn read_pushdown_automaton_from_file(options: options::Options) -> automaton
             };
             tm.transitions.push(automaton::Transition {
                 state: transition_data[0].to_string(),
-                symbols: vec![transition_data[1].to_string(), transition_data[2].to_string()],
+                symbols: vec![
+                    transition_data[1].to_string(),
+                    transition_data[2].to_string(),
+                ],
                 new_state: transition_data[3].to_string(),
                 new_symbols: vec![tm.blank_symbol.clone(), transition_data[4].to_string()],
                 directions: vec![automaton::Direction::Right, dir],
@@ -231,7 +234,10 @@ pub fn read_pushdown_automaton_from_file(options: options::Options) -> automaton
             tm.states.push(aux_state.clone());
             tm.transitions.push(automaton::Transition {
                 state: transition_data[0].to_string(),
-                symbols: vec![transition_data[1].to_string(), transition_data[2].to_string()],
+                symbols: vec![
+                    transition_data[1].to_string(),
+                    transition_data[2].to_string(),
+                ],
                 new_state: aux_state.clone(),
                 new_symbols: vec![tm.blank_symbol.clone(), transition_data[4].to_string()],
                 directions: vec![automaton::Direction::Stay, automaton::Direction::Right],
@@ -256,16 +262,18 @@ pub fn read_tm_from_encoding_file(options: options::Options) -> automaton::Turin
     let lines: Vec<&str> = file.lines().collect();
     let encoding = lines[0].to_string();
     if lines.len() < 2 {
-        return automaton::encoding_to_tm(encoding);
+        automaton::encoding_to_tm(encoding)
     } else {
-        let mut tape_encoding: std::collections::HashMap<String, String> = std::collections::HashMap::new();
-        let mut state_encoding: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+        let mut tape_encoding: std::collections::HashMap<String, String> =
+            std::collections::HashMap::new();
+        let mut state_encoding: std::collections::HashMap<String, String> =
+            std::collections::HashMap::new();
         let lines_to_read: Vec<&&str> = lines.iter().skip(2).collect();
         let mut states: bool = false;
         for line in lines_to_read {
-            if line.is_empty() && states{
+            if line.is_empty() && states {
                 break;
-            } else if line.is_empty() && !states{
+            } else if line.is_empty() && !states {
                 states = true;
                 continue;
             }
@@ -277,7 +285,7 @@ pub fn read_tm_from_encoding_file(options: options::Options) -> automaton::Turin
                 tape_encoding.insert(key.to_string(), value.to_string());
             }
         }
-        let tm = automaton::encoding_to_orig(encoding, tape_encoding, state_encoding);
-        tm
+
+        automaton::encoding_to_orig(encoding, tape_encoding, state_encoding)
     }
 }

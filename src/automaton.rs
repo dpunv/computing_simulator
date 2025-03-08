@@ -43,14 +43,20 @@ pub trait Automaton: Clone {
     fn simulate(
         &self,
         input: Vec<String>,
-        max_steps: i32
+        max_steps: i32,
     ) -> (String, Vec<Tape>, i32, Vec<Configuration>);
     fn is_deterministic(&self) -> bool;
     fn is_transition_total(&self) -> bool;
     fn is_ok(&self) -> bool;
     fn make_transition_map(&self) -> std::collections::HashMap<String, Vec<Transition>>;
     fn input_alphabet(&self) -> Vec<String>;
-    fn to_encoding(&self) -> (String, std::collections::HashMap<String, String>, std::collections::HashMap<String, String>);
+    fn to_encoding(
+        &self,
+    ) -> (
+        String,
+        std::collections::HashMap<String, String>,
+        std::collections::HashMap<String, String>,
+    );
 }
 
 #[derive(Clone)]
@@ -94,7 +100,7 @@ impl Automaton for TuringMachine {
     fn simulate(
         &self,
         input: Vec<String>,
-        max_steps: i32
+        max_steps: i32,
     ) -> (String, Vec<Tape>, i32, Vec<Configuration>) {
         #[derive(Clone)]
         struct TreeElement {
@@ -138,7 +144,7 @@ impl Automaton for TuringMachine {
                     break;
                 }
                 let mut key = state.clone();
-                for tapenum in 0..self.tape_count{
+                for tapenum in 0..self.tape_count {
                     key += &element.tapes[tapenum].tape[element.tapes[tapenum].head];
                 }
                 let mut found = false;
@@ -147,7 +153,7 @@ impl Automaton for TuringMachine {
                     let possible_transitions = transitions_map.get(&key).unwrap().clone();
                     for transition in possible_transitions.iter() {
                         let mut new_tapes = Vec::new();
-                        for tapenum in 0..self.tape_count{
+                        for tapenum in 0..self.tape_count {
                             let mut new_tape = element.tapes[tapenum].clone();
                             new_tape.tape[new_tape.head] = transition.new_symbols[tapenum].clone();
                             let new_head = match transition.directions[tapenum] {
@@ -270,7 +276,10 @@ impl Automaton for TuringMachine {
                 }
             }
             for direction in &transition.directions {
-                if !matches!(direction, Direction::Left | Direction::Right | Direction::Stay) {
+                if !matches!(
+                    direction,
+                    Direction::Left | Direction::Right | Direction::Stay
+                ) {
                     is_transitions_valid = false;
                     break;
                 }
@@ -318,7 +327,13 @@ impl Automaton for TuringMachine {
         true
     }
 
-    fn to_encoding(&self) -> (String, std::collections::HashMap<String, String>, std::collections::HashMap<String, String>) {
+    fn to_encoding(
+        &self,
+    ) -> (
+        String,
+        std::collections::HashMap<String, String>,
+        std::collections::HashMap<String, String>,
+    ) {
         // find encoding for states: find the maximum number of bit needed to represent the number of states
         let mut state_bits: usize = 0;
         let mut states = self.states.len();
@@ -326,18 +341,37 @@ impl Automaton for TuringMachine {
             states >>= 1;
             state_bits += 1;
         }
-        let mut state_encoding: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+        let mut state_encoding: std::collections::HashMap<String, String> =
+            std::collections::HashMap::new();
         for (index, state) in self.states.iter().enumerate() {
-            if self.final_states.contains(state) && state != &self.accept_state && state != &self.reject_state {
-                state_encoding.insert(state.clone(), format!("h{:0>width$b}", index, width = state_bits));
+            if self.final_states.contains(state)
+                && state != &self.accept_state
+                && state != &self.reject_state
+            {
+                state_encoding.insert(
+                    state.clone(),
+                    format!("h{:0>width$b}", index, width = state_bits),
+                );
             } else if state == &self.accept_state {
-                state_encoding.insert(state.clone(), format!("y{:0>width$b}", index, width = state_bits));
+                state_encoding.insert(
+                    state.clone(),
+                    format!("y{:0>width$b}", index, width = state_bits),
+                );
             } else if state == &self.reject_state {
-                state_encoding.insert(state.clone(), format!("n{:0>width$b}", index, width = state_bits));
+                state_encoding.insert(
+                    state.clone(),
+                    format!("n{:0>width$b}", index, width = state_bits),
+                );
             } else if state == &self.initial_state {
-                state_encoding.insert(state.clone(), format!("i{:0>width$b}", index, width = state_bits));
+                state_encoding.insert(
+                    state.clone(),
+                    format!("i{:0>width$b}", index, width = state_bits),
+                );
             } else {
-                state_encoding.insert(state.clone(), format!("q{:0>width$b}", index, width = state_bits));
+                state_encoding.insert(
+                    state.clone(),
+                    format!("q{:0>width$b}", index, width = state_bits),
+                );
             }
         }
         let mut tape_bits: usize = 0;
@@ -346,14 +380,24 @@ impl Automaton for TuringMachine {
             tape_symbols >>= 1;
             tape_bits += 1;
         }
-        let mut tape_encoding: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+        let mut tape_encoding: std::collections::HashMap<String, String> =
+            std::collections::HashMap::new();
         for (index, symbol) in self.tape_alphabet.iter().enumerate() {
             if self.input_alphabet.contains(symbol) {
-                tape_encoding.insert(symbol.clone(), format!("a{:0>width$b}", index, width = tape_bits));
+                tape_encoding.insert(
+                    symbol.clone(),
+                    format!("a{:0>width$b}", index, width = tape_bits),
+                );
             } else if symbol == &self.blank_symbol {
-                tape_encoding.insert(symbol.clone(), format!("b{:0>width$b}", index, width = tape_bits));
+                tape_encoding.insert(
+                    symbol.clone(),
+                    format!("b{:0>width$b}", index, width = tape_bits),
+                );
             } else {
-                tape_encoding.insert(symbol.clone(), format!("t{:0>width$b}", index, width = tape_bits));
+                tape_encoding.insert(
+                    symbol.clone(),
+                    format!("t{:0>width$b}", index, width = tape_bits),
+                );
             }
         }
         // encode transitions as (state;symbols;new_state;new_symbols;directions)
@@ -387,7 +431,6 @@ impl Automaton for TuringMachine {
         (transitions_encoding, tape_encoding, state_encoding)
     }
 }
-
 
 /* fn convert_multi_tape_to_single_tape_tm(tm: TuringMachine) -> TuringMachine {
     let mut new_tm = tm.clone();
@@ -444,11 +487,7 @@ pub fn encoding_to_tm(encoding: String) -> TuringMachine {
         let mut found_all = false;
         while !found_all {
             let symbol = transition.next().unwrap().to_string();
-            if symbol.starts_with("a") {
-                symbols.push(symbol);
-            } else if symbol.starts_with("t") {
-                symbols.push(symbol);
-            } else if symbol.starts_with("b") {
+            if symbol.starts_with("a") || symbol.starts_with("t") || symbol.starts_with("b") {
                 symbols.push(symbol);
             } else {
                 found_all = true;
@@ -466,7 +505,7 @@ pub fn encoding_to_tm(encoding: String) -> TuringMachine {
             match direction {
                 "L" => directions.push(Direction::Left),
                 "R" => directions.push(Direction::Right),
-                "S"=> directions.push(Direction::Stay),
+                "S" => directions.push(Direction::Stay),
                 _ => (),
             }
         }
@@ -528,26 +567,56 @@ pub fn encoding_to_tm(encoding: String) -> TuringMachine {
     tm
 }
 
-pub fn encoding_to_orig(encoding: String, orig_alphabet_encoding: std::collections::HashMap<String, String>, orig_state_encoding: std::collections::HashMap<String, String>) -> TuringMachine {
+pub fn encoding_to_orig(
+    encoding: String,
+    orig_alphabet_encoding: std::collections::HashMap<String, String>,
+    orig_state_encoding: std::collections::HashMap<String, String>,
+) -> TuringMachine {
     let tm = encoding_to_tm(encoding);
     let mut orig_tm: TuringMachine = TuringMachine {
         initial_state: orig_state_encoding[&tm.initial_state].clone(),
         accept_state: "".to_string(),
         reject_state: "".to_string(),
-        final_states: tm.final_states.iter().map(|state| orig_state_encoding[state].clone()).collect(),
-        states: tm.states.iter().map(|state|{
-            orig_state_encoding[state].clone()
-        }).collect(),
-        input_alphabet: tm.input_alphabet.iter().map(|symbol| orig_alphabet_encoding[symbol].clone()).collect(),
-        transitions: tm.transitions.iter().map(|transition| Transition {
-            state: orig_state_encoding[&transition.state].clone(),
-            symbols: transition.symbols.iter().map(|symbol| orig_alphabet_encoding[symbol].clone()).collect(),
-            new_state: orig_state_encoding[&transition.new_state].clone(),
-            new_symbols: transition.new_symbols.iter().map(|symbol| orig_alphabet_encoding[symbol].clone()).collect(),
-            directions: transition.directions.clone(),
-        }).collect(),
+        final_states: tm
+            .final_states
+            .iter()
+            .map(|state| orig_state_encoding[state].clone())
+            .collect(),
+        states: tm
+            .states
+            .iter()
+            .map(|state| orig_state_encoding[state].clone())
+            .collect(),
+        input_alphabet: tm
+            .input_alphabet
+            .iter()
+            .map(|symbol| orig_alphabet_encoding[symbol].clone())
+            .collect(),
+        transitions: tm
+            .transitions
+            .iter()
+            .map(|transition| Transition {
+                state: orig_state_encoding[&transition.state].clone(),
+                symbols: transition
+                    .symbols
+                    .iter()
+                    .map(|symbol| orig_alphabet_encoding[symbol].clone())
+                    .collect(),
+                new_state: orig_state_encoding[&transition.new_state].clone(),
+                new_symbols: transition
+                    .new_symbols
+                    .iter()
+                    .map(|symbol| orig_alphabet_encoding[symbol].clone())
+                    .collect(),
+                directions: transition.directions.clone(),
+            })
+            .collect(),
         blank_symbol: orig_alphabet_encoding[&tm.blank_symbol].clone(),
-        tape_alphabet: tm.tape_alphabet.iter().map(|symbol| orig_alphabet_encoding[symbol].clone()).collect(),
+        tape_alphabet: tm
+            .tape_alphabet
+            .iter()
+            .map(|symbol| orig_alphabet_encoding[symbol].clone())
+            .collect(),
         end_on_final_state: tm.end_on_final_state,
         tape_count: tm.tape_count,
     };
