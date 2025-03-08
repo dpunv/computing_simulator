@@ -249,3 +249,35 @@ pub fn read_pushdown_automaton_from_file(options: options::Options) -> automaton
     }
     tm
 }
+
+pub fn read_tm_from_encoding_file(options: options::Options) -> automaton::TuringMachine {
+    let file = std::fs::read_to_string(options.file).expect("Error reading the file");
+
+    let lines: Vec<&str> = file.lines().collect();
+    let encoding = lines[0].to_string();
+    if lines.len() < 2 {
+        return automaton::encoding_to_tm(encoding);
+    } else {
+        let mut tape_encoding: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+        let mut state_encoding: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+        let lines_to_read: Vec<&&str> = lines.iter().skip(2).collect();
+        let mut states: bool = false;
+        for line in lines_to_read {
+            if line.is_empty() && states{
+                break;
+            } else if line.is_empty() && !states{
+                states = true;
+                continue;
+            }
+            // println!("{}", line);
+            let (key, value) = line.split_once(" ").unwrap();
+            if states {
+                state_encoding.insert(key.to_string(), value.to_string());
+            } else {
+                tape_encoding.insert(key.to_string(), value.to_string());
+            }
+        }
+        let tm = automaton::encoding_to_orig(encoding, tape_encoding, state_encoding);
+        tm
+    }
+}

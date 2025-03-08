@@ -6,6 +6,7 @@
 #[derive(Clone)]
 pub struct Options {
     pub type_: String,
+    pub from_encoding: bool,
     pub output_tape: bool,
     pub trimmed_tape: bool,
     pub steps: bool,
@@ -22,6 +23,7 @@ pub struct Options {
 
 pub fn get_options() -> Options {
     let mut type_ = "tm".to_string();
+    let mut from_encoding = false;
     let mut output_tape = false;
     let mut trimmed_tape = false;
     let mut steps = false;
@@ -79,6 +81,7 @@ pub fn get_options() -> Options {
                 }
                 "--help" => help = true,
                 "--version" => version = true,
+                "--from-encoding" => from_encoding = true,
                 "--print-encoding" => print_encoding = true,
                 "--status" => {
                     status = true;
@@ -100,6 +103,7 @@ pub fn get_options() -> Options {
 
     Options {
         type_,
+        from_encoding,
         output_tape,
         trimmed_tape,
         steps,

@@ -15,6 +15,7 @@ fn print_help() {
     println!();
     println!("Options:");
     println!("  --type: turing machine (tm), finite state machine (fsm)");
+    println!("  --from-encoding: read the Turing Machine from an encoding file");
     println!("  --output-tape: print the final tape of the Turing Machine");
     println!("  --trimmed-tape: print the final tape (trimmed) of the Turing Machine");
     println!(
@@ -119,7 +120,16 @@ fn interactive_tui(tm: automaton::TuringMachine, opt: options::Options) {
 }
 
 pub fn print_encoding(tm: &automaton::TuringMachine) {
-    println!("{}", tm.to_encoding());
+    let encoded: (String, std::collections::HashMap<String, String>, std::collections::HashMap<String, String>) = tm.to_encoding();
+    println!("{}", encoded.0);
+    println!("Alphabet:");
+    for (k, v) in encoded.1.iter() {
+        println!("{} {}", v, k);
+    }
+    println!("States: ");
+    for (k, v) in encoded.2.iter() {
+        println!("{} {}", v, k);
+    }
 }
 
 pub fn print_computation(
@@ -163,7 +173,11 @@ pub fn main_cli() {
     }
     let tm;
     if options.type_ == "tm" {
-        tm = file_handler::read_turing_machine_from_file(options.clone());
+        if options.from_encoding {
+            tm = file_handler::read_tm_from_encoding_file(options.clone());
+        } else {
+            tm = file_handler::read_turing_machine_from_file(options.clone());
+        }
     } else if options.type_ == "fsm" {
         tm = file_handler::read_finite_state_machine_from_file(options.clone());
     } else if options.type_ == "pda" {

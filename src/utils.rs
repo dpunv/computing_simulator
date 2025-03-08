@@ -19,3 +19,11 @@ pub fn input_string_to_vec(input_alphabet: Vec<String>, input: String) -> Vec<St
 /* pub fn int2bin(n: i32, bitnum: usize) -> String {
     format!("{:0>width$b}", n, width = bitnum)
 } */
+
+pub fn invert_hashmap<K, V>(hashmap: &std::collections::HashMap<K, V>) -> std::collections::HashMap<V, K>
+where
+    K: Eq + std::hash::Hash + Clone,
+    V: Eq + std::hash::Hash + Clone,
+{
+    hashmap.iter().map(|(k, v)| (v.clone(), k.clone())).collect()
+}
