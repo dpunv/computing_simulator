@@ -39,6 +39,42 @@ pub struct Transition {
     pub directions: Vec<Direction>,
 }
 
+impl PartialEq for Transition {
+    fn eq(&self, other: &Self) -> bool {
+        if self.state != other.state {
+            return false;
+        }
+        if self.new_state != other.new_state {
+            return false;
+        }
+        if self.symbols.len() != other.symbols.len() {
+            return false;
+        }
+        for (ind, symbol) in self.symbols.iter().enumerate() {
+            if *symbol != other.symbols[ind] {
+                return false;
+            }
+        }
+        if self.new_symbols.len() != other.new_symbols.len() {
+            return false;
+        }
+        for (ind, symbol) in self.new_symbols.iter().enumerate() {
+            if *symbol != other.new_symbols[ind] {
+                return false;
+            }
+        }
+        if self.directions.len() != other.directions.len() {
+            return false;
+        }
+        for (ind, direction) in self.directions.iter().enumerate() {
+            if *direction != other.directions[ind] {
+                return false;
+            }
+        }
+        true
+    }
+}
+
 pub trait Automaton: Clone {
     fn simulate(
         &self,
@@ -108,6 +144,16 @@ impl Automaton for TuringMachine {
             tapes: Vec<Tape>,
             previous: usize,
         }
+        impl PartialEq for TreeElement {
+            fn eq(&self, other: &Self) -> bool {
+                for (ind, tape) in self.tapes.iter().enumerate() {
+                    if tape.tape != other.tapes[ind].tape {
+                        return false;
+                    }
+                }
+                return self.state == other.state;
+            }
+        }
         let transitions_map = self.make_transition_map();
         let mut tree = Vec::new();
         tree.push(Vec::new());
@@ -140,6 +186,7 @@ impl Automaton for TuringMachine {
             for (ind, element) in tree[tree.len() - 1].iter().enumerate() {
                 let state = element.state.clone();
                 if self.final_states.contains(&state) && self.end_on_final_state {
+                    //println!("IS2 HERE");
                     halts = true;
                     break;
                 }
@@ -177,14 +224,37 @@ impl Automaton for TuringMachine {
                             new_tapes.push(new_tape);
                         }
                         let new_state = transition.new_state.clone();
-                        new_level.push(TreeElement {
+/*                         println!("New state: {}          Head: {}", new_state, new_tapes[0].head);
+                        for tape in &new_tapes {
+                            for symbol in &tape.tape {
+                                print!("{}", symbol);
+                            }
+                            println!();
+                        }
+                        println!("Transition: {}", key);
+                        let strdir = if transition.directions[0] == Direction::Left {
+                            "L"
+                        } else if transition.directions[0] == Direction::Right {
+                            "R"
+                        } else {
+                            "S"
+                        };
+                        println!("   {}  ,  {}  --> {}  ,  {},  {}", state, transition.symbols[0], new_state, transition.new_symbols[0], strdir);
+                        println!("size of possible_transitions: {}", possible_transitions.len());
+                        println!("tree length: {}", tree[tree.len() - 1].len());
+ */                        
+                        let el = TreeElement {
                             state: new_state,
                             tapes: new_tapes,
                             previous: ind,
-                        });
+                        };
+                        if !new_level.contains(&el){
+                            new_level.push(el);
+                        }
                     }
                 }
-                if !found {
+                if !found && new_level.len() == 0 {
+                    //println!("IS HERE");
                     halts = true;
                     break;
                 }
@@ -265,14 +335,16 @@ impl Automaton for TuringMachine {
         for transition in &self.transitions {
             for symbol in &transition.symbols {
                 if !self.tape_alphabet.contains(symbol) {
+                    //println!("Symbol A: {}", symbol);
                     is_transitions_valid = false;
-                    break;
+                    //break;
                 }
             }
             for symbol in &transition.new_symbols {
                 if !self.tape_alphabet.contains(symbol) {
+                    //println!("Symbol B: {}", symbol);
                     is_transitions_valid = false;
-                    break;
+                    //break;
                 }
             }
             for direction in &transition.directions {
@@ -280,6 +352,15 @@ impl Automaton for TuringMachine {
                     direction,
                     Direction::Left | Direction::Right | Direction::Stay
                 ) {
+                    /* if direction == &Direction::Left{
+                    println!("Direction: Left");
+                    } else if direction == &Direction::Right{
+                        println!("Direction: Right");
+                    } else if direction == &Direction::Stay{
+                        println!("Direction: Stay");
+                    } else {
+                        println!("Direction: None");
+                    } */
                     is_transitions_valid = false;
                     break;
                 }
@@ -296,6 +377,12 @@ impl Automaton for TuringMachine {
         if !self.states.contains(&self.initial_state) {
             is_initial_state_valid = false;
         }
+        /* println!("is_input_subset_of_tape: {}", is_input_subset_of_tape);
+        println!("is_blank_in_tape: {}", is_blank_in_tape);
+        println!("is_blank_not_in_input: {}", is_blank_not_in_input);
+        println!("is_final_states_valid: {}", is_final_states_valid);
+        println!("is_initial_state_valid: {}", is_initial_state_valid);
+        println!("is_transitions_valid: {}", is_transitions_valid); */
         is_blank_in_tape
             && is_blank_not_in_input
             && is_final_states_valid
@@ -432,34 +519,655 @@ impl Automaton for TuringMachine {
     }
 }
 
-/* fn convert_multi_tape_to_single_tape_tm(tm: TuringMachine) -> TuringMachine {
-    let mut new_tm = tm.clone();
-    let mut new_transitions = Vec::new();
-    for transition in tm.transitions {
-        let mut new_symbols = Vec::new();
-        let mut new_directions = Vec::new();
-        for symbol in transition.symbols {
-            new_symbols.push(symbol.clone());
+pub fn convert_multi_tape_to_single_tape_tm(tm: TuringMachine) -> TuringMachine {
+    let mut new_tm = TuringMachine {
+        initial_state: tm.initial_state.clone(),
+        accept_state: tm.accept_state.clone(),
+        reject_state: tm.reject_state.clone(),
+        final_states: tm.final_states.clone(),
+        blank_symbol: tm.blank_symbol.clone(),
+        states: Vec::new(),
+        input_alphabet: tm.input_alphabet.clone(),
+        tape_alphabet: Vec::new(),
+        transitions: Vec::new(),
+        end_on_final_state: tm.end_on_final_state,
+        tape_count: 1,
+    };
+    let head_symbols = vec!["^".to_string(), "_".to_string()];
+    let mut new_compound_symbols = Vec::new();
+    for symbol in &tm.tape_alphabet {
+        for head_symbol in &head_symbols {
+            new_compound_symbols.push(symbol.clone() + head_symbol);
         }
-        for symbol in transition.new_symbols {
-            new_symbols.push(symbol.clone());
-        }
-        for direction in transition.directions {
-            new_directions.push(direction.clone());
-        }
-        new_transitions.push(Transition {
-            state: transition.state,
-            symbols: new_symbols.clone(),
-            new_state: transition.new_state,
-            new_symbols: new_symbols.clone(),
-            directions: new_directions.clone(),
-        });
     }
-    new_tm.transitions = new_transitions;
-    new_tm.tape_count = 1;
+    let mut new_tape_alphabet = new_compound_symbols.clone();
+    for tape_symbol in &tm.tape_alphabet {
+        new_tape_alphabet.push(tape_symbol.clone());
+    }
+    let tape_sep_symbol = "#".to_string();
+    new_tape_alphabet.push(tape_sep_symbol.clone());
+    new_tm.tape_alphabet = new_tape_alphabet.clone();
+    let mut new_states = Vec::new();
+    let mut new_transitions = Vec::new();
+    for tapenum in 0..tm.tape_count {
+        let initial_state_tape = tm.initial_state.clone() + "__" + &tapenum.to_string();
+        let end_state_tape = tm.initial_state.clone() + "__" + &tapenum.to_string() + "__";
+        new_states.push(initial_state_tape.clone());
+        new_states.push(end_state_tape.clone());
+        if tapenum == 0 {
+            for symbol in &tm.tape_alphabet {
+                let new_transition = Transition {
+                    state: tm.initial_state.clone(),
+                    symbols: vec![symbol.clone()],
+                    new_state: initial_state_tape.clone(),
+                    new_symbols: vec![symbol.clone() + "^"],
+                    directions: vec![Direction::Right],
+                };
+                if !new_transitions.contains(&new_transition) {
+                    new_transitions.push(new_transition);
+                }
+                if *symbol != tm.blank_symbol.clone() {
+                    let new_transition = Transition {
+                        state: initial_state_tape.clone(),
+                        symbols: vec![symbol.clone()],
+                        new_state: initial_state_tape.clone(),
+                        new_symbols: vec![symbol.clone() + "_"],
+                        directions: vec![Direction::Right],
+                    };
+                    if !new_transitions.contains(&new_transition) {
+                        new_transitions.push(new_transition);
+                    }
+                }
+                let new_transition = Transition {
+                    state: initial_state_tape.clone(),
+                    symbols: vec![tm.blank_symbol.clone()],
+                    new_state: end_state_tape.clone(),
+                    new_symbols: vec![tm.blank_symbol.clone()],
+                    directions: vec![Direction::Stay],
+                };
+                if !new_transitions.contains(&new_transition) {
+                    new_transitions.push(new_transition);
+                }
+            }
+        } else {
+            let end_state_tape = tm.initial_state.clone() + "__" + &tapenum.to_string() + "__";
+            new_states.push(end_state_tape.clone());
+            let new_transition = Transition {
+                state: tm.initial_state.clone() + "__" + &(tapenum-1).to_string() + "__", // end state of the previous tape
+                symbols: vec![tm.blank_symbol.clone()],
+                new_state: initial_state_tape.clone(),
+                new_symbols: vec![tape_sep_symbol.clone()],
+                directions: vec![Direction::Right],
+            };
+            if !new_transitions.contains(&new_transition) {
+                new_transitions.push(new_transition);
+            }
+            let new_transition = Transition {
+                state: initial_state_tape.clone(),
+                symbols: vec![tm.blank_symbol.clone()],
+                new_state: end_state_tape.clone(),
+                new_symbols: vec![tm.blank_symbol.clone() + "^"],
+                directions: vec![Direction::Right],
+            };
+            if !new_transitions.contains(&new_transition) {
+                new_transitions.push(new_transition);
+            }
+        }
+    }
+    let setup_state = tm.initial_state.clone() + "__setup";
+    new_states.push(setup_state.clone());
+    let new_start_state = tm.initial_state.clone() + "__start";
+    new_states.push(new_start_state.clone());
+    for symbol in new_tape_alphabet.clone() {
+        if symbol != tm.blank_symbol {
+            let new_transition = Transition {
+                state: setup_state.clone(),
+                symbols: vec![symbol.clone()],
+                new_state: setup_state.clone(),
+                new_symbols: vec![symbol.clone()],
+                directions: vec![Direction::Left],
+            };
+            if !new_transitions.contains(&new_transition) {
+                new_transitions.push(new_transition);
+            }
+        } else {
+            let new_transition = Transition {
+                state: tm.initial_state.clone() + "__" + (tm.tape_count-1).to_string().as_str() + "__", // end state of the last tape
+                symbols: vec![tm.blank_symbol.clone()],
+                new_state: setup_state.clone(),
+                new_symbols: vec![tm.blank_symbol.clone()],
+                directions: vec![Direction::Left],
+            };
+            if !new_transitions.contains(&new_transition) {
+                new_transitions.push(new_transition);
+            }
+            let new_transition = Transition {
+                state: setup_state.clone(),
+                symbols: vec![tm.blank_symbol.clone()],
+                new_state: new_start_state.clone(),
+                new_symbols: vec![tm.blank_symbol.clone()],
+                directions: vec![Direction::Right],
+            };
+            if !new_transitions.contains(&new_transition) {
+                new_transitions.push(new_transition);
+            }
+        }
+    }
+    let mut states_to_process = Vec::new();
+    for state in &tm.states {
+        if state != &tm.initial_state {
+            states_to_process.push(state.clone());
+        } else {
+            states_to_process.push(new_start_state.clone());
+        }
+    }
+    let mut map_states: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+    let mut states_vec = states_to_process.clone();
+    for state in tm.final_states.clone(){
+        if states_to_process.contains(&state){
+            // remove the state from the list
+            states_to_process.retain(|x| x != &state);
+        }
+    }
+    let mut states_to_copy = Vec::new();
+    for state in states_to_process {
+        // reading phase
+        map_states.insert(state.clone()+"0", vec![state.clone()]);
+        for tapenum in 0..tm.tape_count {
+            let mut this_state_vec = Vec::new();
+            for symbol in &new_compound_symbols {
+                for actual_state in map_states[&(state.clone() + &tapenum.to_string())].clone(){
+                    let state_tape = actual_state.clone() + "  " + &tapenum.to_string();
+                    let new_state = actual_state.clone() + "  " + &tapenum.to_string() + "--" + symbol;
+                    let end_state = actual_state.clone() + "  " + &tapenum.to_string() + "--" + symbol + "__";
+                    states_vec.push(new_state.clone());
+                    states_vec.push(end_state.clone());
+                    states_vec.push(state_tape.clone());
+                    this_state_vec.push(end_state.clone());
+                    let new_transition = Transition {
+                        state: new_state.clone(),
+                        symbols: vec![tm.blank_symbol.clone()],
+                        new_state: end_state.clone(),
+                        new_symbols: vec![tm.blank_symbol.clone()],
+                        directions: vec![Direction::Stay],
+                    };
+                    if !new_transitions.contains(&new_transition) {
+                        new_transitions.push(new_transition);
+                    }    
+                    if tapenum == 0 {
+                        let new_transition = Transition {
+                            state: state.clone(),
+                            symbols: vec![symbol.clone()],
+                            new_state: state_tape.clone(),
+                            new_symbols: vec![symbol.clone()],
+                            directions: vec![Direction::Stay]
+                        };
+                        if !new_transitions.contains(&new_transition) {
+                            new_transitions.push(new_transition);
+                        }        
+                    } else {
+                        let new_transition = Transition {
+                            state: actual_state.clone(),
+                            symbols: vec![symbol.clone()],
+                            new_state: state_tape.clone(),
+                            new_symbols: vec![symbol.clone()],
+                            directions: vec![Direction::Stay]
+                        };
+                        if !new_transitions.contains(&new_transition) {
+                            new_transitions.push(new_transition);
+                        }        
+                    }
+                    if symbol.ends_with("^"){
+                        let new_transition = Transition {
+                            state: state_tape.clone(),
+                            symbols: vec![symbol.clone()],
+                            new_state: new_state.clone(),
+                            new_symbols: vec![symbol.clone()],
+                            directions: vec![Direction::Right],
+                        };
+                        if !new_transitions.contains(&new_transition) {
+                            new_transitions.push(new_transition);
+                        }        
+                    } else {
+                        let new_transition = Transition {
+                            state: state_tape.clone(),
+                            symbols: vec![symbol.clone()],
+                            new_state: state_tape.clone(),
+                            new_symbols: vec![symbol.clone()],
+                            directions: vec![Direction::Right],
+                        };
+                        if !new_transitions.contains(&new_transition) {
+                            new_transitions.push(new_transition);
+                        }        
+    
+                    }
+                    for symb in new_compound_symbols.clone(){
+                        if !symb.ends_with("^"){
+                            let new_transition = Transition {
+                                state: new_state.clone(),
+                                symbols: vec![symb.clone()],
+                                new_state: new_state.clone(),
+                                new_symbols: vec![symb.clone()],
+                                directions: vec![Direction::Right],
+                            };
+                            if !new_transitions.contains(&new_transition) {
+                                new_transitions.push(new_transition);
+                            }            
+                        }
+                    }
+                    let new_transition = Transition {
+                        state: new_state.clone(),
+                        symbols: vec![tape_sep_symbol.clone()],
+                        new_state: end_state.clone(),
+                        new_symbols: vec![tape_sep_symbol.clone()],
+                        directions: vec![Direction::Right],
+                    };
+                    if !new_transitions.contains(&new_transition) {
+                        new_transitions.push(new_transition);
+                    }
+                }
+            }
+            map_states.insert(state.clone()+&(tapenum+1).to_string(), this_state_vec.clone());
+        }
+        // writing phase
+        let old_transition_map = tm.make_transition_map();
+        // print keys:
+        /* for (key, value) in old_transition_map.iter() {
+            println!("Key: {}", key);
+        } */
+        let mut states_done = Vec::new();
+        for actual_state in map_states[&(state.clone() + &tm.tape_count.to_string())].clone(){
+            // split the state to find which symbols apply to it, and in which tape
+            let splitted0: Vec<&str> = actual_state.split("  ").collect();
+            /* println!("State: {}", actual_state);
+            println!("Key: {}", &(state.clone().strip_suffix("__start").unwrap_or(&state).to_string() + &splitted0.iter().skip(1).map(|elem| {
+                let parts: Vec<&str> = elem.split("--").collect();
+                let mut part = parts.get(1).unwrap_or(&"").to_string();
+                part = part.strip_suffix("___").unwrap_or(&part).to_string();
+                part = part.strip_suffix("^__").unwrap_or(&part).to_string();
+                part
+            }).collect::<Vec<String>>().join(""))); */
+            let key = state.clone().strip_suffix("__start").unwrap_or(&state).to_string()
+                + &splitted0.iter().skip(1).map(|elem| {
+                let parts: Vec<&str> = elem.split("--").collect();
+                let mut part = parts.get(1).unwrap_or(&"").to_string();
+                part = part.strip_suffix("___").unwrap_or(&part).to_string();
+                part = part.strip_suffix("^__").unwrap_or(&part).to_string();
+                part
+            }).collect::<Vec<String>>().join("");
+            if old_transition_map.contains_key(&key) && !states_done.contains(&key){
+                states_done.push(key.clone());
+                //println!("Key: {} {}", key, actual_state);
+                let transitions = old_transition_map[&key].clone();
+                // I have to execute all transitions (non deterministic). If deterministic, the vector contains only one transition
+                for (ind, t) in transitions.iter().enumerate(){
+                    for tapenum in 0..tm.tape_count{
+                        let state_init_tape = actual_state.clone() + " -__" + &ind.to_string() + "__" + &tapenum.to_string();
+                        let state_mid_tape = actual_state.clone() + " -__" + &ind.to_string() + "__" + &tapenum.to_string() + "__";
+                        let state_mid_mid_tape = actual_state.clone() + " -__" + &ind.to_string() + "__" + &tapenum.to_string() + "___";
+                        let state_end_tape = actual_state.clone() + " -__" + &ind.to_string() + "__" + &tapenum.to_string() + "--";
+                        states_vec.push(state_init_tape.clone());
+                        states_vec.push(state_mid_tape.clone());
+                        states_vec.push(state_mid_mid_tape.clone());
+                        states_vec.push(state_end_tape.clone());
+                        for symbol in new_compound_symbols.clone(){
+                            if symbol.ends_with("^"){
+                                if t.directions[tapenum] == Direction::Right {
+                                    let new_transition = Transition {
+                                        state: state_init_tape.clone(),
+                                        symbols: vec![t.symbols[tapenum].clone() + "^"],
+                                        new_state: state_mid_tape.clone(),
+                                        new_symbols: vec![t.new_symbols[tapenum].clone() + "_"],
+                                        directions: vec![Direction::Right],
+                                    };
+                                    if !new_transitions.contains(&new_transition) {
+                                        new_transitions.push(new_transition);
+                                    }
+                                    let new_transition = Transition {
+                                        state: state_mid_tape.clone(),
+                                        symbols: vec![tape_sep_symbol.clone()],
+                                        new_state: state_mid_mid_tape.clone(),
+                                        new_symbols: vec![tape_sep_symbol.clone()],
+                                        directions: vec![Direction::Left],
+                                    };
+                                    if !new_transitions.contains(&new_transition) {
+                                        new_transitions.push(new_transition);
+                                    }
+                                    let new_transition = Transition {
+                                        state: state_mid_tape.clone(),
+                                        symbols: vec![tm.blank_symbol.clone()],
+                                        new_state: state_mid_mid_tape.clone(),
+                                        new_symbols: vec![tm.blank_symbol.clone()],
+                                        directions: vec![Direction::Left],
+                                    };
+                                    if !new_transitions.contains(&new_transition) {
+                                        new_transitions.push(new_transition);
+                                    }
+                                    for symb in new_compound_symbols.clone(){
+                                        let new_transition = Transition {
+                                            state: state_mid_mid_tape.clone(),
+                                            symbols: vec![symb.clone()],
+                                            new_state: state_mid_mid_tape.clone() + "<COPY>A",
+                                            new_symbols: vec![symb.clone() + "<COPY>"],
+                                            directions: vec![Direction::Right],
+                                        };
+                                        states_to_copy.push(state_mid_mid_tape.clone());
+                                        if !new_transitions.contains(&new_transition) {
+                                            new_transitions.push(new_transition);
+                                        }
+                                        if !symb.ends_with("^"){
+                                            let new_transition = Transition {
+                                                state: state_mid_tape.clone(),
+                                                symbols: vec![symb.clone().strip_suffix("_").unwrap_or(&symb).to_string() + "_"],
+                                                new_state: state_end_tape.clone(),
+                                                new_symbols: vec![symb.clone().strip_suffix("_").unwrap_or(&symb).to_string() + "^"],
+                                                directions: vec![Direction::Left],
+                                            };
+                                            if !new_transitions.contains(&new_transition) {
+                                                new_transitions.push(new_transition);
+                                            }
+                                        }
+                                    }
+                                } else if t.directions[tapenum] == Direction::Left {
+                                    let new_transition = Transition {
+                                        state: state_init_tape.clone(),
+                                        symbols: vec![t.symbols[tapenum].clone() + "^"],
+                                        new_state: state_mid_tape.clone(),
+                                        new_symbols: vec![t.new_symbols[tapenum].clone() + "_"],
+                                        directions: vec![Direction::Left],
+                                    };
+                                    if !new_transitions.contains(&new_transition) {
+                                        new_transitions.push(new_transition);
+                                    }
+                                    let new_transition = Transition {
+                                        state: state_mid_tape.clone(),
+                                        symbols: vec![tape_sep_symbol.clone()],
+                                        new_state: state_mid_tape.clone() + "<COPY>A",
+                                        new_symbols: vec![tape_sep_symbol.clone() + "<COPY>"],
+                                        directions: vec![Direction::Right],
+                                    };
+                                    //states_vec.push(state_mid_tape.clone() + "<COPY>A");
+                                    states_to_copy.push(state_mid_tape.clone());
+                                    if !new_transitions.contains(&new_transition) {
+                                        new_transitions.push(new_transition);
+                                    }
+                                    for symb in new_compound_symbols.clone(){
+                                        if !symb.ends_with("^"){
+                                            let new_transition = Transition {
+                                                state: state_mid_tape.clone(),
+                                                symbols: vec![symb.clone().strip_suffix("_").unwrap_or(&symb).to_string() + "_"],
+                                                new_state: state_end_tape.clone(),
+                                                new_symbols: vec![symb.clone().strip_suffix("_").unwrap_or(&symb).to_string() + "^"],
+                                                directions: vec![Direction::Left],
+                                            };
+                                            if !new_transitions.contains(&new_transition) {
+                                                new_transitions.push(new_transition);
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    let new_transition = Transition {
+                                        state: state_init_tape.clone(),
+                                        symbols: vec![t.symbols[tapenum].clone() + "^"],
+                                        new_state: state_end_tape.clone(),
+                                        new_symbols: vec![t.new_symbols[tapenum].clone() + "^"],
+                                        directions: vec![Direction::Left],
+                                    };
+                                    if !new_transitions.contains(&new_transition) {
+                                        new_transitions.push(new_transition);
+                                    }
+                                }
+                            } else {
+                                let new_transition = Transition{
+                                    state: state_init_tape.clone(),
+                                    symbols: vec![symbol.clone()],
+                                    new_state: state_init_tape.clone(),
+                                    new_symbols: vec![symbol.clone()],
+                                    directions: vec![Direction::Left],
+                                };
+                                if !new_transitions.contains(&new_transition) {
+                                    new_transitions.push(new_transition);
+                                }
+                                let new_transition = Transition{
+                                    state: state_end_tape.clone(),
+                                    symbols: vec![symbol.clone()],
+                                    new_state: state_end_tape.clone(),
+                                    new_symbols: vec![symbol.clone()],
+                                    directions: vec![Direction::Left],
+                                };
+                                if !new_transitions.contains(&new_transition) {
+                                    new_transitions.push(new_transition);
+                                }
+                            }
+                        }
+                        if tapenum == 0{
+                            let new_transition = Transition {
+                                state: state_end_tape.clone(),
+                                symbols: vec![tm.blank_symbol.clone()],
+                                new_state: t.new_state.clone(),
+                                new_symbols: vec![tm.blank_symbol.clone()],
+                                directions: vec![Direction::Right],
+                            };
+                            if !new_transitions.contains(&new_transition) {
+                                new_transitions.push(new_transition);
+                            }
+                        } else {
+                            let new_transition = Transition {
+                                state: state_end_tape.clone(),
+                                symbols: vec![tape_sep_symbol.clone()],
+                                new_state: actual_state.clone() + " -__" + &ind.to_string() + "__" + &(tapenum-1).to_string(),
+                                new_symbols: vec![tape_sep_symbol.clone()],
+                                directions: vec![Direction::Left],
+                            };
+                            if !new_transitions.contains(&new_transition) {
+                                new_transitions.push(new_transition);
+                            }
+                        }
+                        if tapenum == tm.tape_count-1{
+                            let new_transition = Transition {
+                                state: actual_state.clone(),
+                                symbols: vec![tm.blank_symbol.clone()],
+                                new_state: state_init_tape.clone(),
+                                new_symbols: vec![tm.blank_symbol.clone()],
+                                directions: vec![Direction::Left],
+                            };
+                            if !new_transitions.contains(&new_transition) {
+                                new_transitions.push(new_transition);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    new_tape_alphabet.push(tape_sep_symbol.clone() + &"<COPY>".to_string());
+    for state in states_to_copy{
+        // println!("State: {}", state);
+        //if state.ends_with("<COPY>A") {
+        let state_copy_a = state.clone() + "<COPY>A";
+        let state_copy_b = state.clone() + "<COPY>B";
+        let state_copy_c = state.clone() + "<COPY>C";
+        let state_copy_e = state.clone() + "<COPY>E";
+        states_vec.push(state_copy_a.clone());
+        states_vec.push(state_copy_b.clone());
+        states_vec.push(state_copy_c.clone());
+        states_vec.push(state_copy_e.clone());
+        let mut symbols_to_cycle = new_compound_symbols.clone();
+        symbols_to_cycle.push(tape_sep_symbol.clone());
+        for symbol in &symbols_to_cycle{
+            let new_transition = Transition {
+                state: state_copy_a.clone(),
+                symbols: vec![symbol.clone()],
+                new_state: state_copy_a.clone(),
+                new_symbols: vec![symbol.clone()],
+                directions: vec![Direction::Right],
+            };
+            if !new_transitions.contains(&new_transition) {
+                new_transitions.push(new_transition);
+            }
+            let new_transition = Transition {
+                state: state_copy_b.clone(),
+                symbols: vec![tm.blank_symbol.clone()],
+                new_state: state_copy_c.clone(),
+                new_symbols: vec![tm.blank_symbol.clone()],
+                directions: vec![Direction::Left],
+            };
+            if !new_transitions.contains(&new_transition) {
+                new_transitions.push(new_transition);
+            }
+            let state_copy_d = state.clone() + "<COPY>D" + &symbol.clone();
+            states_vec.push(state_copy_d.clone());
+            let new_transition = Transition {
+                state: state_copy_c.clone(),
+                symbols: vec![symbol.clone()],
+                new_state: state_copy_d.clone(),
+                new_symbols: vec![tm.blank_symbol.clone()],
+                directions: vec![Direction::Right],
+            };
+            if !new_transitions.contains(&new_transition) {
+                new_transitions.push(new_transition);
+            }
+            let new_transition = Transition {
+                state: state_copy_d.clone(),
+                symbols: vec![tm.blank_symbol.clone()],
+                new_state: state_copy_b.clone(),
+                new_symbols: vec![symbol.clone()],
+                directions: vec![Direction::Left],
+            };
+            if !new_transitions.contains(&new_transition) {
+                new_transitions.push(new_transition);
+            }
+            let symbol_with_copy = symbol.clone() + "<COPY>";
+            let new_transition = Transition {
+                state: state_copy_c.clone(),
+                symbols: vec![symbol_with_copy.clone()],
+                new_state: state_copy_e.clone(),
+                new_symbols: vec![symbol.clone()],
+                directions: vec![Direction::Right],
+            };
+            new_tape_alphabet.push(symbol_with_copy);
+            if !new_transitions.contains(&new_transition) {
+                new_transitions.push(new_transition);
+            }
+            let new_transition = Transition {
+                state: state_copy_e.clone(),
+                symbols: vec![tm.blank_symbol.clone()],
+                new_state: state.strip_suffix("___").unwrap_or(&state).to_string().strip_suffix("__").unwrap_or(&state.strip_suffix("___").unwrap_or(&state).to_string()).to_string() + "__",
+                new_symbols: vec![tm.blank_symbol.clone() + "_"],
+                directions: vec![Direction::Stay],
+            };
+            if !new_transitions.contains(&new_transition) {
+                new_transitions.push(new_transition);
+            }
+            let new_transition = Transition {
+                state: state_copy_e.clone(),
+                symbols: vec![tm.blank_symbol.clone()],
+                new_state: state_copy_c.clone(),
+                new_symbols: vec![tm.blank_symbol.clone()],
+                directions: vec![Direction::Stay],
+            };
+            if !new_transitions.contains(&new_transition) {
+                new_transitions.push(new_transition);
+            }
+        }
+        let new_transition = Transition {
+            state: state_copy_a.clone(),
+            symbols: vec![tm.blank_symbol.clone()],
+            new_state: state_copy_b.clone(),
+            new_symbols: vec![tm.blank_symbol.clone()],
+            directions: vec![Direction::Stay],
+        };
+        if !new_transitions.contains(&new_transition) {
+            new_transitions.push(new_transition);
+        }
+        //}
+    }
+    let mut real_final_states = Vec::new();
+    for state in tm.final_states {
+        let state_final_1 = state.clone() + "__final_1";
+        let state_final_2 = state.clone() + "__final_2";
+        states_vec.push(state_final_1.clone());
+        states_vec.push(state_final_2.clone());
+        real_final_states.push(state_final_2.clone());
+        for symbol in new_compound_symbols.clone(){
+            let new_transition = Transition {
+                state: state.clone(),
+                symbols: vec![symbol.clone()],
+                new_state: state.clone(),
+                new_symbols: vec![symbol.clone().strip_suffix("^").unwrap_or(&symbol).to_string().strip_suffix("_").unwrap_or(&symbol.clone().strip_suffix("^").unwrap_or(&symbol).to_string()).to_string()],
+                directions: vec![Direction::Right],
+            };
+            if !new_transitions.contains(&new_transition) {
+                new_transitions.push(new_transition);
+            }
+            let new_transition = Transition {
+                state: state_final_1.clone(),
+                symbols: vec![symbol.clone()],
+                new_state: state_final_1.clone(),
+                new_symbols: vec![tm.blank_symbol.clone()],
+                directions: vec![Direction::Right],
+            };
+            if !new_transitions.contains(&new_transition) {
+                new_transitions.push(new_transition);
+            }
+        }
+        let new_transition = Transition {
+            state: state.clone(),
+            symbols: vec![tm.blank_symbol.clone()],
+            new_state: state_final_1.clone(),
+            new_symbols: vec![tm.blank_symbol.clone()],
+            directions: vec![Direction::Stay],
+        };
+        if !new_transitions.contains(&new_transition) {
+            new_transitions.push(new_transition);
+        }
+        let new_transition = Transition {
+            state: state.clone(),
+            symbols: vec![tape_sep_symbol.clone()],
+            new_state: state_final_1.clone(),
+            new_symbols: vec![tm.blank_symbol.clone()],
+            directions: vec![Direction::Right],
+        };
+        if !new_transitions.contains(&new_transition) {
+            new_transitions.push(new_transition);
+        }
+        let new_transition = Transition {
+            state: state_final_1.clone(),
+            symbols: vec![tape_sep_symbol.clone()],
+            new_state: state_final_1.clone(),
+            new_symbols: vec![tm.blank_symbol.clone()],
+            directions: vec![Direction::Right],
+        };
+        if !new_transitions.contains(&new_transition) {
+            new_transitions.push(new_transition);
+        }
+        let new_transition = Transition {
+            state: state_final_1.clone(),
+            symbols: vec![tm.blank_symbol.clone()],
+            new_state: state_final_2.clone(),
+            new_symbols: vec![tm.blank_symbol.clone()],
+            directions: vec![Direction::Right],
+        };
+        if !new_transitions.contains(&new_transition) {
+            new_transitions.push(new_transition);
+        }
+    }
+    states_vec.push(tm.initial_state.clone());
+    for state in &new_states{
+        if !states_vec.contains(state){
+            states_vec.push(state.clone());
+        }
+    }
+    new_tm.states = states_vec.clone();
+    new_tm.tape_alphabet = new_tape_alphabet.clone();
+    new_tm.transitions = new_transitions.clone();
+    /* println!("Real final states:");
+    for state in &real_final_states{
+        println!("{}", state);
+    } */
+    new_tm.final_states = real_final_states.clone();
     new_tm
 }
- */
 
 pub fn encoding_to_tm(encoding: String) -> TuringMachine {
     let mut tm = TuringMachine {

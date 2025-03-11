@@ -26,6 +26,7 @@ fn print_help() {
     println!("  --help: print the help message");
     println!("  --version: print the version of the Turing Machine Simulator");
     println!("  --max-steps: set the maximum number of steps for the Turing Machine");
+    println!("  --convert-to-singletape: convert multitape machines into single tape Turing Machines");
     println!("  --input: provide the input string for the Turing Machine");
     println!("  --file: provide the file containing the description of the Turing Machine");
     println!("  --status: print informations about the Turing Machine");
@@ -162,6 +163,44 @@ pub fn print_computation(
     }
 }
 
+pub fn print_tm(tm: automaton::TuringMachine) {
+    println!("Turing Machine:");
+    println!("States:");
+    for state in tm.states.iter() {
+        println!("{}", state);
+    }
+    println!("Input Alphabet:");
+    for symbol in tm.input_alphabet.iter() {
+        println!("{}", symbol);
+    }
+    println!("Tape Alphabet:");
+    for symbol in tm.tape_alphabet.iter() {
+        println!("{}", symbol);
+    }
+    println!("Blank Symbol: {}", tm.blank_symbol);
+    println!("Initial State: {}", tm.initial_state);
+    println!("Accepting States: {}", tm.accept_state);
+    println!("Rejecting States: {}", tm.reject_state);
+    println!("Transitions:");
+    for transition in tm.transitions.iter() {
+        println!("Transition:");
+        println!("From: {}", transition.state);
+        println!("Read: {}", transition.symbols.join(" // "));
+        println!("To: {}", transition.new_state);
+        println!("Write: {}", transition.new_symbols.join(" // "));
+        println!("Move: {}", transition.directions.iter().map(|x| {
+            if *x == automaton::Direction::Left {
+                "L".to_string()
+            } else if *x == automaton::Direction::Right {
+                "R".to_string()
+            } else {
+                "S".to_string()
+            }
+        }).collect::<Vec<String>>().join(" // "));
+    }
+    println!();
+}
+
 pub fn main_cli() {
     let options = options::get_options();
     if options.help {
@@ -178,7 +217,7 @@ pub fn main_cli() {
         println!("Error: Invalid options. Use --help for more information.");
         return;
     }
-    let tm;
+    let mut tm;
     if options.type_ == "tm" {
         if options.from_encoding {
             tm = file_handler::read_tm_from_encoding_file(options.clone());
@@ -190,6 +229,13 @@ pub fn main_cli() {
     } else if options.type_ == "pda" {
         tm = file_handler::read_pushdown_automaton_from_file(options.clone());
     } else {
+        return;
+    }
+    if options.convert_to_singletape{
+        tm = automaton::convert_multi_tape_to_single_tape_tm(tm);
+    }
+    if options.output_tm {
+        print_tm(tm);
         return;
     }
     if options.print_encoding {

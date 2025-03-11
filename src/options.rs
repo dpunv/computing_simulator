@@ -7,6 +7,8 @@
 pub struct Options {
     pub type_: String,
     pub from_encoding: bool,
+    pub convert_to_singletape: bool,
+    pub output_tm: bool,
     pub output_tape: bool,
     pub trimmed_tape: bool,
     pub steps: bool,
@@ -24,6 +26,8 @@ pub struct Options {
 pub fn get_options() -> Options {
     let mut type_ = "tm".to_string();
     let mut from_encoding = false;
+    let mut convert_to_singletape = false;
+    let mut output_tm = false;
     let mut output_tape = false;
     let mut trimmed_tape = false;
     let mut steps = false;
@@ -82,6 +86,8 @@ pub fn get_options() -> Options {
                 "--help" => help = true,
                 "--version" => version = true,
                 "--from-encoding" => from_encoding = true,
+                "--output-tm" => output_tm = true,
+                "--convert-to-singletape" => convert_to_singletape = true,
                 "--print-encoding" => print_encoding = true,
                 "--status" => {
                     status = true;
@@ -103,7 +109,9 @@ pub fn get_options() -> Options {
 
     Options {
         type_,
+        output_tm,
         from_encoding,
+        convert_to_singletape,
         output_tape,
         trimmed_tape,
         steps,
