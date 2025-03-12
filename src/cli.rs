@@ -164,29 +164,21 @@ pub fn print_computation(
 }
 
 pub fn print_tm(tm: automaton::TuringMachine) {
-    for state in tm.states.iter() {
-        println!("{}", state);
-    }
-    println!("Input Alphabet:");
-    for symbol in tm.input_alphabet.iter() {
-        println!("{}", symbol);
-    }
-    println!("Tape Alphabet:");
-    for symbol in tm.tape_alphabet.iter() {
-        println!("{}", symbol);
-    }
-    println!("Blank Symbol: {}", tm.blank_symbol);
-    println!("Initial State: {}", tm.initial_state);
-    println!("Accepting States: {}", tm.accept_state);
-    println!("Rejecting States: {}", tm.reject_state);
-    println!("Transitions:");
+    println!("{}", tm.initial_state);
+    println!("{}", tm.accept_state);
+    println!("{}", tm.reject_state);
+    println!("{} ", tm.final_states.join(" "));
+    println!("{}", tm.blank_symbol);
+    println!("{}", tm.states.join(" "));
+    println!("{}", tm.input_alphabet.join(" "));
+    println!("{}", tm.tape_alphabet.join(" "));
+    println!("{}", tm.tape_count);
     for transition in tm.transitions.iter() {
-        println!("Transition:");
-        println!("From: {}", transition.state);
-        println!("Read: {}", transition.symbols.join(" // "));
-        println!("To: {}", transition.new_state);
-        println!("Write: {}", transition.new_symbols.join(" // "));
-        println!("Move: {}", transition.directions.iter().map(|x| {
+        print!("{} ", transition.state);
+        print!("{} ", transition.new_state);
+        print!("{} ", transition.symbols.join(" "));
+        print!("{} ", transition.new_symbols.join(" "));
+        print!("{} ", transition.directions.iter().map(|x| {
             if *x == automaton::Direction::Left {
                 "L".to_string()
             } else if *x == automaton::Direction::Right {
@@ -194,9 +186,9 @@ pub fn print_tm(tm: automaton::TuringMachine) {
             } else {
                 "S".to_string()
             }
-        }).collect::<Vec<String>>().join(" // "));
+        }).collect::<Vec<String>>().join(" "));
+        println!();
     }
-    println!();
 }
 
 pub fn main_cli() {
