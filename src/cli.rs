@@ -164,8 +164,6 @@ pub fn print_computation(
 }
 
 pub fn print_tm(tm: automaton::TuringMachine) {
-    println!("Turing Machine:");
-    println!("States:");
     for state in tm.states.iter() {
         println!("{}", state);
     }
