@@ -8,12 +8,7 @@ pub struct Options {
     pub type_: String,
     pub from_encoding: bool,
     pub convert_to_singletape: bool,
-    pub output_tm: bool,
-    pub output_tape: bool,
-    pub trimmed_tape: bool,
-    pub steps: bool,
-    pub state: bool,
-    pub computation: bool,
+    pub print_tm: bool,
     pub help: bool,
     pub version: bool,
     pub max_steps: i32,
@@ -21,18 +16,14 @@ pub struct Options {
     pub file: String,
     pub status: bool,
     pub print_encoding: bool,
+    pub verbose: i32,
 }
 
 pub fn get_options() -> Options {
     let mut type_ = "tm".to_string();
     let mut from_encoding = false;
     let mut convert_to_singletape = false;
-    let mut output_tm = false;
-    let mut output_tape = false;
-    let mut trimmed_tape = false;
-    let mut steps = false;
-    let mut state = false;
-    let mut computation = false;
+    let mut print_tm = false;
     let mut help = false;
     let mut version = false;
     let mut max_steps = 1000;
@@ -40,8 +31,7 @@ pub fn get_options() -> Options {
     let mut file = String::new();
     let mut status = false;
     let mut print_encoding = false;
-
-    let mut default_out = true;
+    let mut verbose = 1;
 
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
@@ -58,41 +48,22 @@ pub fn get_options() -> Options {
             }
         } else if arg.starts_with("--type=") {
             type_ = arg.strip_prefix("--type=").unwrap_or("turing").to_string();
-            if type_ != "tm" && type_ != "fsm" && type_ != "pda" {
+            if type_ != "tm" && type_ != "fsm" && type_ != "pda" && type_ != "ram" {
                 type_ = "tm".to_string();
+            }
+        } else if arg.starts_with("--verbose=") {
+            if let Ok(value) = arg.strip_prefix("--verbose=").unwrap_or("1").parse() {
+                verbose = value;
             }
         } else {
             match arg.as_str() {
-                "--output-tape" => {
-                    output_tape = true;
-                    default_out = false;
-                }
-                "--trimmed-tape" => {
-                    trimmed_tape = true;
-                    default_out = false;
-                }
-                "--steps" => {
-                    steps = true;
-                    default_out = false;
-                }
-                "--state" => {
-                    state = true;
-                    default_out = false;
-                }
-                "--computation" => {
-                    computation = true;
-                    default_out = false;
-                }
+                "--from-encoding" => from_encoding = true,
+                "--convert-to-singletape" => convert_to_singletape = true,
+                "--print-tm" => print_tm = true,
                 "--help" => help = true,
                 "--version" => version = true,
-                "--from-encoding" => from_encoding = true,
-                "--output-tm" => output_tm = true,
-                "--convert-to-singletape" => convert_to_singletape = true,
+                "--status" => status = true,
                 "--print-encoding" => print_encoding = true,
-                "--status" => {
-                    status = true;
-                    default_out = false;
-                }
                 _ => {
                     file = arg;
                     input = args.next().unwrap();
@@ -101,22 +72,11 @@ pub fn get_options() -> Options {
         }
     }
 
-    if default_out {
-        trimmed_tape = true;
-        steps = true;
-        state = true;
-    }
-
     Options {
         type_,
-        output_tm,
+        print_tm,
         from_encoding,
         convert_to_singletape,
-        output_tape,
-        trimmed_tape,
-        steps,
-        state,
-        computation,
         help,
         version,
         max_steps,
@@ -124,5 +84,6 @@ pub fn get_options() -> Options {
         file,
         status,
         print_encoding,
+        verbose,
     }
 }

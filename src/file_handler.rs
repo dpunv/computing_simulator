@@ -3,12 +3,13 @@
 // author: dp
 // date: 2025-03-06
 
-use crate::automaton;
-use crate::automaton::FromString;
+use crate::automata;
+use crate::automata::FromString;
 use crate::options;
+use crate::utils;
 
-pub fn read_turing_machine_from_file(options: options::Options) -> automaton::TuringMachine {
-    let mut tm = automaton::TuringMachine {
+pub fn read_turing_machine_from_file(options: options::Options) -> automata::TuringMachine {
+    let mut tm = automata::TuringMachine {
         initial_state: "".to_string(),
         accept_state: "".to_string(),
         reject_state: "".to_string(),
@@ -20,6 +21,7 @@ pub fn read_turing_machine_from_file(options: options::Options) -> automaton::Tu
         transitions: Vec::new(),
         end_on_final_state: true,
         tape_count: 1,
+        last_execution: ("".to_string(), Vec::new(), 0, Vec::new()),
     };
 
     let file = std::fs::read_to_string(options.file).expect("Error reading the file");
@@ -73,9 +75,9 @@ pub fn read_turing_machine_from_file(options: options::Options) -> automaton::Tu
         for i in 0..tape_count {
             symbols.push(transition[2 + i * 3].to_string());
             new_symbols.push(transition[3 + i * 3].to_string());
-            directions.push(automaton::Direction::from_string(transition[4 + i * 3]));
+            directions.push(automata::Direction::from_string(transition[4 + i * 3]));
         }
-        let t = automaton::Transition {
+        let t = automata::Transition {
             state: transition[0].to_string(),
             new_state: transition[1].to_string(),
             symbols,
@@ -88,8 +90,8 @@ pub fn read_turing_machine_from_file(options: options::Options) -> automaton::Tu
     tm
 }
 
-pub fn read_finite_state_machine_from_file(options: options::Options) -> automaton::TuringMachine {
-    let mut tm = automaton::TuringMachine {
+pub fn read_finite_state_machine_from_file(options: options::Options) -> automata::TuringMachine {
+    let mut tm = automata::TuringMachine {
         initial_state: "".to_string(),
         accept_state: "".to_string(),
         reject_state: "".to_string(),
@@ -101,6 +103,7 @@ pub fn read_finite_state_machine_from_file(options: options::Options) -> automat
         tape_alphabet: Vec::new(),
         end_on_final_state: false,
         tape_count: 1,
+        last_execution: ("".to_string(), Vec::new(), 0, Vec::new()),
     };
 
     let file = std::fs::read_to_string(options.file).expect("Error reading the file");
@@ -134,26 +137,26 @@ pub fn read_finite_state_machine_from_file(options: options::Options) -> automat
 
     for line in lines.iter().skip(4) {
         let transition_data: Vec<&str> = line.split(" ").collect();
-        tm.transitions.push(automaton::Transition {
+        tm.transitions.push(automata::Transition {
             state: transition_data[0].to_string(),
             symbols: vec![transition_data[1].to_string()],
             new_state: transition_data[2].to_string(),
             new_symbols: vec![" ".to_string()],
-            directions: vec![automaton::Direction::Right],
+            directions: vec![automata::Direction::Right],
         });
     }
-    tm.transitions.push(automaton::Transition {
+    tm.transitions.push(automata::Transition {
         state: tm.initial_state.clone(),
         symbols: vec![tm.blank_symbol.clone()],
         new_state: tm.initial_state.clone(),
         new_symbols: vec![tm.blank_symbol.clone()],
-        directions: vec![automaton::Direction::Right],
+        directions: vec![automata::Direction::Right],
     });
     tm
 }
 
-pub fn read_pushdown_automaton_from_file(options: options::Options) -> automaton::TuringMachine {
-    let mut tm = automaton::TuringMachine {
+pub fn read_pushdown_automaton_from_file(options: options::Options) -> automata::TuringMachine {
+    let mut tm = automata::TuringMachine {
         initial_state: "".to_string(),
         accept_state: "".to_string(),
         reject_state: "".to_string(),
@@ -165,6 +168,7 @@ pub fn read_pushdown_automaton_from_file(options: options::Options) -> automaton
         tape_alphabet: Vec::new(),
         end_on_final_state: false,
         tape_count: 2,
+        last_execution: ("".to_string(), Vec::new(), 0, Vec::new()),
     };
 
     let file = std::fs::read_to_string(options.file).expect("Error reading the file");
@@ -202,12 +206,12 @@ pub fn read_pushdown_automaton_from_file(options: options::Options) -> automaton
 
     tm.blank_symbol = lines[5].to_string();
 
-    tm.transitions.push(automaton::Transition {
+    tm.transitions.push(automata::Transition {
         state: tm.initial_state.clone(),
         symbols: vec![tm.blank_symbol.clone(), tm.blank_symbol.clone()],
         new_state: tm.initial_state.clone(),
         new_symbols: vec![tm.blank_symbol.clone(), tm.blank_symbol.clone()],
-        directions: vec![automaton::Direction::Right, automaton::Direction::Stay],
+        directions: vec![automata::Direction::Right, automata::Direction::Stay],
     });
     for line in lines.iter().skip(6) {
         let transition_data: Vec<&str> = line.split(" ").collect();
@@ -215,11 +219,11 @@ pub fn read_pushdown_automaton_from_file(options: options::Options) -> automaton
             panic!("Error: Transition format not valid: {}", line);
         } else if transition_data.len() == 5 {
             let dir = if transition_data[4] != tm.blank_symbol {
-                automaton::Direction::Stay
+                automata::Direction::Stay
             } else {
-                automaton::Direction::Left
+                automata::Direction::Left
             };
-            tm.transitions.push(automaton::Transition {
+            tm.transitions.push(automata::Transition {
                 state: transition_data[0].to_string(),
                 symbols: vec![
                     transition_data[1].to_string(),
@@ -227,12 +231,12 @@ pub fn read_pushdown_automaton_from_file(options: options::Options) -> automaton
                 ],
                 new_state: transition_data[3].to_string(),
                 new_symbols: vec![tm.blank_symbol.clone(), transition_data[4].to_string()],
-                directions: vec![automaton::Direction::Right, dir],
+                directions: vec![automata::Direction::Right, dir],
             });
         } else if transition_data.len() == 6 {
             let aux_state = format!("{}_aux_{}", transition_data[3], tm.transitions.len());
             tm.states.push(aux_state.clone());
-            tm.transitions.push(automaton::Transition {
+            tm.transitions.push(automata::Transition {
                 state: transition_data[0].to_string(),
                 symbols: vec![
                     transition_data[1].to_string(),
@@ -240,14 +244,14 @@ pub fn read_pushdown_automaton_from_file(options: options::Options) -> automaton
                 ],
                 new_state: aux_state.clone(),
                 new_symbols: vec![tm.blank_symbol.clone(), transition_data[4].to_string()],
-                directions: vec![automaton::Direction::Stay, automaton::Direction::Right],
+                directions: vec![automata::Direction::Stay, automata::Direction::Right],
             });
-            tm.transitions.push(automaton::Transition {
+            tm.transitions.push(automata::Transition {
                 state: aux_state.clone(),
                 symbols: vec![tm.blank_symbol.clone(), tm.blank_symbol.clone()],
                 new_state: transition_data[3].to_string(),
                 new_symbols: vec![tm.blank_symbol.clone(), transition_data[5].to_string()],
-                directions: vec![automaton::Direction::Right, automaton::Direction::Stay],
+                directions: vec![automata::Direction::Right, automata::Direction::Stay],
             });
         } else {
             panic!("Error: Transition format not valid: {}", line);
@@ -256,13 +260,13 @@ pub fn read_pushdown_automaton_from_file(options: options::Options) -> automaton
     tm
 }
 
-pub fn read_tm_from_encoding_file(options: options::Options) -> automaton::TuringMachine {
+pub fn read_tm_from_encoding_file(options: options::Options) -> automata::TuringMachine {
     let file = std::fs::read_to_string(options.file).expect("Error reading the file");
 
     let lines: Vec<&str> = file.lines().collect();
     let encoding = lines[0].to_string();
     if lines.len() < 2 {
-        automaton::encoding_to_tm(encoding)
+        automata::encoding_to_tm(encoding)
     } else {
         let mut tape_encoding: std::collections::HashMap<String, String> =
             std::collections::HashMap::new();
@@ -286,6 +290,38 @@ pub fn read_tm_from_encoding_file(options: options::Options) -> automaton::Turin
             }
         }
 
-        automaton::encoding_to_orig(encoding, tape_encoding, state_encoding)
+        automata::encoding_to_orig(encoding, tape_encoding, state_encoding)
+    }
+}
+
+pub fn read_ram_progran_from_file(options: options::Options) -> automata::RamMachine {
+    let file = std::fs::read_to_string(options.file).expect("Error reading the file");
+
+    let lines: Vec<&str> = file.lines().collect();
+    
+    let mut instr = Vec::new();
+    for line in lines.iter() {
+        if line.starts_with("//") {
+            continue;
+        } else {
+            let instruction: Vec<&str> = line.split(" ").collect();
+            println!("{} --> {}", instruction[0], automata::ram_instruction_lookup(instruction[0].to_string()));
+            if instruction.len() == 1 {
+                instr.push(automata::Instruction {
+                    opcode: automata::ram_instruction_lookup(instruction[0].to_string()),
+                    operand: "0000000000000000".to_string(),
+                });
+            } else if instruction.len() == 2 {
+                instr.push(automata::Instruction {
+                    opcode: automata::ram_instruction_lookup(instruction[0].to_string()),
+                    operand: utils::int2bin(instruction[1].parse().expect("Error parsing operand"), 16),
+                });
+            } else {
+                panic!("Error parsing instruction");
+            }
+        }
+    }
+    automata::RamMachine {
+        instructions: instr,
     }
 }

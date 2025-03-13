@@ -3,12 +3,16 @@
 // author: dp
 // date: 2025-03-06
 
-use crate::automaton;
-use crate::automaton::Automaton;
+use crate::automata;
+use crate::automata::Automaton;
+use crate::automata::Executable;
+
 use crate::file_handler;
 use crate::options;
 use crate::utils;
+use core::panic;
 use std::io::Write;
+use std::vec;
 
 fn print_help() {
     println!("Usage: turing_machine [OPTIONS] [FILE] [INPUT]");
@@ -43,7 +47,7 @@ fn print_version() {
     println!("Turing Machine Simulator 0.1.0");
 }
 
-pub fn print_tape(tape: automaton::Tape, tm: automaton::TuringMachine, trim: Option<bool>) {
+pub fn print_tape(tape: automata::Tape, tm: automata::TuringMachine, trim: Option<bool>) {
     let should_trim = trim.unwrap_or(false);
     let mut tape = tape;
     if should_trim {
@@ -67,38 +71,52 @@ pub fn print_tape(tape: automaton::Tape, tm: automaton::TuringMachine, trim: Opt
     }
 }
 
-pub fn print_status<T: automaton::Automaton>(tm: &T) {
+pub fn print_status<T: automata::Automaton>(tm: &T) {
     println!("Deterministic: {}", tm.is_deterministic());
     println!("Ok: {}", tm.is_ok());
     println!("Transition total: {}", tm.is_transition_total());
 }
 
-fn execute(tm: automaton::TuringMachine, input: String, opt: options::Options) {
-    let input_tape = utils::input_string_to_vec(tm.input_alphabet(), input);
+fn execute_tm(tm: automata::TuringMachine, opt: options::Options) {
+    let input_tape = utils::input_string_to_vec(tm.input_alphabet(), opt.input.clone());
     let result = tm.clone().simulate(input_tape, opt.max_steps);
-    if opt.output_tape {
-        print!("Output Tape:");
-        print_tape(result.1[0].clone(), tm.clone(), Some(false));
-        println!();
-    }
-    if opt.trimmed_tape {
-        print!("Trimmed Tape:");
-        print_tape(result.1[0].clone(), tm.clone(), Some(true));
-        println!();
-    }
-    if opt.steps {
-        println!("Steps: {}", result.2);
-    }
-    if opt.state {
+    if opt.verbose == 0 {
+        println!("{}", result.0);
+        print_tape(tm.last_execution.1[0].clone(), tm.clone(), Some(true));
+    } else if opt.verbose == 1 {
         println!("State: {}", result.0);
-    }
-    if opt.computation {
+        println!("Steps: {}", result.1);
+        print!("Output Tape: ");
+        print_tape(tm.last_execution.1[0].clone(), tm.clone(), Some(true));
+        println!();
+    } else if opt.verbose == 2 {
+        println!("State: {}", result.0);
+        println!("Steps: {}", result.1);
+        print!("Output Tape: ");
+        print_tape(tm.last_execution.1[0].clone(), tm.clone(), Some(true));
+        println!();
         println!("Computation:");
-        print_computation(result.3.clone(), tm.clone(), true, false, true, true, true);
+        print_computation(tm.last_execution.3.clone(), tm.clone(), true, false, true, true, true);
+    } else {
+        panic!("Invalid verbose level");
     }
 }
 
-fn interactive_tui(tm: automaton::TuringMachine, opt: options::Options) {
+fn execute_ram(ram: automata::RamMachine, opt: options::Options) {
+    let input_tape = vec![opt.input.clone()];
+    let result: (String, i32) = ram.clone().simulate(input_tape, opt.max_steps);
+    if opt.verbose == 0 {
+        println!("{}", result.0);
+    } else if opt.verbose >= 1 {
+        println!("Execution complete:");
+        println!("  Output: {}", result.0);
+        println!("  Steps: {}", result.1);
+    } else {
+        panic!("Invalid verbose level");
+    }
+}
+
+fn interactive_tui_tm(tm: automata::TuringMachine, opt: options::Options) {
     let mut input = String::new();
     loop {
         print!("> ");
@@ -116,12 +134,36 @@ fn interactive_tui(tm: automaton::TuringMachine, opt: options::Options) {
         } else if trimmed_input == "exit" {
             break;
         } else {
-            execute(tm.clone(), trimmed_input.clone(), opt.clone());
+            execute_tm(tm.clone(), opt.clone());
         }
     }
 }
 
-pub fn print_encoding(tm: &automaton::TuringMachine) {
+fn interactive_tui_ram(ram: automata::RamMachine, opt: options::Options) {
+    let mut input = String::new();
+    loop {
+        print!("> ");
+        // flush the output buffer
+        std::io::stdout().flush().unwrap();
+        input.clear();
+        std::io::stdin().read_line(&mut input).unwrap();
+        let trimmed_input = input.trim().to_string();
+        if trimmed_input == "status" {
+            // print_status(&ram); // todo
+        } else if trimmed_input == "help" {
+            print_help();
+        } else if trimmed_input == "version" {
+            print_version();
+        } else if trimmed_input == "exit" {
+            break;
+        } else {
+            execute_ram(ram.clone(), opt.clone());
+        }
+    }
+}
+
+
+pub fn print_encoding(tm: &automata::TuringMachine) {
     let encoded: (
         String,
         std::collections::HashMap<String, String>,
@@ -139,8 +181,8 @@ pub fn print_encoding(tm: &automaton::TuringMachine) {
 }
 
 pub fn print_computation(
-    computation: Vec<automaton::Configuration>,
-    tm: automaton::TuringMachine,
+    computation: Vec<automata::Configuration>,
+    tm: automata::TuringMachine,
     output_tape: bool,
     trimmed_tape: bool,
     steps: bool,
@@ -163,7 +205,7 @@ pub fn print_computation(
     }
 }
 
-pub fn print_tm(tm: automaton::TuringMachine) {
+pub fn print_tm(tm: automata::TuringMachine) {
     println!("{}", tm.initial_state);
     println!("{}", tm.accept_state);
     println!("{}", tm.reject_state);
@@ -179,14 +221,22 @@ pub fn print_tm(tm: automaton::TuringMachine) {
         print!("{} ", transition.symbols.join(" "));
         print!("{} ", transition.new_symbols.join(" "));
         print!("{} ", transition.directions.iter().map(|x| {
-            if *x == automaton::Direction::Left {
+            if *x == automata::Direction::Left {
                 "L".to_string()
-            } else if *x == automaton::Direction::Right {
+            } else if *x == automata::Direction::Right {
                 "R".to_string()
             } else {
                 "S".to_string()
             }
         }).collect::<Vec<String>>().join(" "));
+        println!();
+    }
+}
+
+pub fn print_ram(ram: automata::RamMachine){
+    for instruction in ram.instructions.iter(){
+        print!("OPCODE: {} ", instruction.opcode);
+        print!("ARGUMENTS: {} ", instruction.operand);
         println!();
     }
 }
@@ -201,42 +251,57 @@ pub fn main_cli() {
         print_version();
         return;
     }
-    if (options.type_ != "tm" && options.type_ != "fsm" && options.type_ != "pda")
+    if (options.type_ != "tm" && options.type_ != "fsm" && options.type_ != "pda" && options.type_ != "ram")
         || options.file.is_empty()
     {
         println!("Error: Invalid options. Use --help for more information.");
         return;
     }
-    let mut tm;
-    if options.type_ == "tm" {
-        if options.from_encoding {
-            tm = file_handler::read_tm_from_encoding_file(options.clone());
-        } else {
-            tm = file_handler::read_turing_machine_from_file(options.clone());
+    if options.type_ == "ram" {
+        let ram: automata::RamMachine = file_handler::read_ram_progran_from_file(options.clone());
+        if options.print_tm {
+            print_ram(ram);
+            return;
         }
-    } else if options.type_ == "fsm" {
-        tm = file_handler::read_finite_state_machine_from_file(options.clone());
-    } else if options.type_ == "pda" {
-        tm = file_handler::read_pushdown_automaton_from_file(options.clone());
+        if options.status {
+            // print_status_ram(&ram); todo
+        } else if options.clone().input.is_empty() {
+            interactive_tui_ram(ram.clone(), options.clone());
+        } else {
+            execute_ram(ram.clone(), options.clone());
+        }
     } else {
-        return;
-    }
-    if options.convert_to_singletape{
-        tm = automaton::convert_multi_tape_to_single_tape_tm(tm);
-    }
-    if options.output_tm {
-        print_tm(tm);
-        return;
-    }
-    if options.print_encoding {
-        print_encoding(&tm);
-        return;
-    }
-    if options.status {
-        print_status(&tm);
-    } else if options.clone().input.is_empty() {
-        interactive_tui(tm.clone(), options.clone());
-    } else {
-        execute(tm.clone(), options.clone().input, options.clone());
+        let mut tm;
+        if options.type_ == "tm" {
+            if options.from_encoding {
+                tm = file_handler::read_tm_from_encoding_file(options.clone());
+            } else {
+                tm = file_handler::read_turing_machine_from_file(options.clone());
+            }
+        } else if options.type_ == "fsm" {
+            tm = file_handler::read_finite_state_machine_from_file(options.clone());
+        } else if options.type_ == "pda" {
+            tm = file_handler::read_pushdown_automaton_from_file(options.clone());
+        } else {
+            return;
+        }
+        if options.convert_to_singletape{
+            tm = automata::convert_multi_tape_to_single_tape_tm(tm);
+        }
+        if options.print_tm {
+            print_tm(tm);
+            return;
+        }
+        if options.print_encoding {
+            print_encoding(&tm);
+            return;
+        }
+        if options.status {
+            print_status(&tm);
+        } else if options.clone().input.is_empty() {
+            interactive_tui_tm(tm.clone(), options.clone());
+        } else {
+            execute_tm(tm.clone(), options.clone());
+        }
     }
 }

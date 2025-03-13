@@ -16,9 +16,13 @@ pub fn input_string_to_vec(input_alphabet: Vec<String>, input: String) -> Vec<St
     vec
 }
 
-/* pub fn int2bin(n: i32, bitnum: usize) -> String {
+pub fn int2bin(n: i32, bitnum: usize) -> String {
     format!("{:0>width$b}", n, width = bitnum)
-} */
+}
+
+pub fn bin2int(s: String) -> i32 {
+    i32::from_str_radix(s.as_str(), 2).unwrap()
+}
 
 /* pub fn invert_hashmap<K, V>(hashmap: &std::collections::HashMap<K, V>) -> std::collections::HashMap<V, K>
 where

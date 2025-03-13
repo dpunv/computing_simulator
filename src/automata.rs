@@ -3,6 +3,8 @@
 // author: dp
 // date: 2025-03-06
 
+use crate::utils;
+
 #[derive(Clone)]
 pub struct TuringMachine {
     pub initial_state: String,
@@ -16,6 +18,7 @@ pub struct TuringMachine {
     pub transitions: Vec<Transition>,
     pub end_on_final_state: bool,
     pub tape_count: usize,
+    pub last_execution: (String, Vec<Tape>, i32, Vec<Configuration>),
 }
 
 #[derive(Clone)]
@@ -37,6 +40,17 @@ pub struct Transition {
     pub new_state: String,
     pub new_symbols: Vec<String>,
     pub directions: Vec<Direction>,
+}
+
+#[derive(Clone)]
+pub struct RamMachine {
+    pub instructions: Vec<Instruction>
+}
+
+#[derive(Clone)]
+pub struct Instruction {
+    pub opcode: String,
+    pub operand: String
 }
 
 impl PartialEq for Transition {
@@ -75,12 +89,15 @@ impl PartialEq for Transition {
     }
 }
 
-pub trait Automaton: Clone {
+pub trait Executable {
     fn simulate(
-        &self,
+        &mut self,
         input: Vec<String>,
         max_steps: i32,
-    ) -> (String, Vec<Tape>, i32, Vec<Configuration>);
+    ) -> (String, i32);
+}
+
+pub trait Automaton: Clone {
     fn is_deterministic(&self) -> bool;
     fn is_transition_total(&self) -> bool;
     fn is_ok(&self) -> bool;
@@ -132,12 +149,12 @@ impl PartialEq for Direction {
     }
 }
 
-impl Automaton for TuringMachine {
+impl Executable for TuringMachine {
     fn simulate(
-        &self,
+        &mut self,
         input: Vec<String>,
         max_steps: i32,
-    ) -> (String, Vec<Tape>, i32, Vec<Configuration>) {
+    ) -> (String, i32) {
         #[derive(Clone)]
         struct TreeElement {
             state: String,
@@ -256,14 +273,17 @@ impl Automaton for TuringMachine {
         }
         computation.reverse();
         let last_element = tree[tree.len() - 1][previous].clone();
-        (
+        self.last_execution = (
             last_element.state.clone(),
             last_element.tapes.clone(),
             steps,
             computation,
-        )
+        );
+        (last_element.state.clone(), steps)
     }
+}
 
+impl Automaton for TuringMachine {
     fn input_alphabet(&self) -> Vec<String> {
         self.input_alphabet.clone()
     }
@@ -492,6 +512,7 @@ pub fn convert_multi_tape_to_single_tape_tm(tm: TuringMachine) -> TuringMachine 
         transitions: Vec::new(),
         end_on_final_state: tm.end_on_final_state,
         tape_count: 1,
+        last_execution: ("".to_string(), Vec::new(), 0, Vec::new()),
     };
     let head_symbols = vec!["^".to_string(), "_".to_string()];
     let mut new_compound_symbols = Vec::new();
@@ -1149,6 +1170,7 @@ pub fn encoding_to_tm(encoding: String) -> TuringMachine {
         tape_alphabet: Vec::new(),
         end_on_final_state: false,
         tape_count: 1,
+        last_execution: ("".to_string(), Vec::new(), 0, Vec::new()),
     };
     let mut transitions: Vec<&str> = encoding.split(")").collect();
     transitions.pop();
@@ -1294,6 +1316,7 @@ pub fn encoding_to_orig(
             .collect(),
         end_on_final_state: tm.end_on_final_state,
         tape_count: tm.tape_count,
+        last_execution: ("".to_string(), Vec::new(), 0, Vec::new()),
     };
     if !tm.accept_state.is_empty() {
         orig_tm.accept_state = orig_state_encoding[&tm.accept_state].clone();
@@ -1302,4 +1325,103 @@ pub fn encoding_to_orig(
         orig_tm.reject_state = orig_state_encoding[&tm.reject_state].clone();
     }
     orig_tm
+}
+
+pub fn ram_instruction_lookup(instruction: String) -> String {
+    let opcode = match instruction.as_str() {
+        "R" => "0000",
+        "MIR" => "0001",
+        "MIL" => "0010",
+        "W" => "0011",
+        "L" => "0100",
+        "A" => "0101",
+        "S" => "0110",
+        "INIT" => "0111",
+        "ST" => "1000",
+        "JUMP" => "1001",
+        "CJUMP" => "1010",
+        "H" => "1011",
+        _ => "0000",
+    };
+    opcode.to_string()
+}
+
+impl Executable for RamMachine {
+    fn simulate(
+            &mut self,
+            input: Vec<String>,
+            max_steps: i32,
+        ) -> (String, i32) {
+        let mut ir;
+        let r#in: String = input.join("");
+        let mut out: String = "".to_string();
+        let mut pc: String = "0000000000000000".to_string();
+        let mut acc: String = "0000000000000000".to_string();
+        let mut ar: String;
+        let mut input_head = 0;
+        let mut memory: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+        for (index, instr) in self.instructions.clone().into_iter().enumerate(){
+            memory.insert(utils::int2bin(index as i32, 16), instr.opcode.clone() + &instr.operand.clone());
+        }
+        let mut steps = 0;
+        println!("mem:");
+        for (key, value) in &memory {
+            println!("{}: {}", key, value);
+        }
+        while steps < max_steps{
+            steps += 1;
+            println!("PC: {}, ACC: {}", pc, acc);
+            ir = memory[&pc].clone()[0..4].to_string();
+            ar = memory[&pc].clone()[4..].to_string();
+            println!("IR: {}, AR: {}", ir, ar);
+            pc = utils::int2bin(utils::bin2int(pc) + 1, 16);
+            match ir.as_str(){
+                "0000" => { // R: Read [operands] bit from input
+                    let end = input_head + (utils::bin2int(ar) as usize);
+                    println!("input_head: {}, end: {}", input_head, end);
+                    acc = r#in[input_head..end].to_string();
+                },
+                "0001" => { // MIR: move input head [operands] bits to the right
+                    input_head += utils::bin2int(ar) as usize;
+                },
+                "0010" => { // MIL: move input head [operands] bits to the left
+                    input_head -= utils::bin2int(ar) as usize;
+                },
+                "0011" => { // W: Write ACC to output
+                    out = out + &acc.clone();
+                },
+                "0100" => { // L: Load AR to ACC
+                    acc = memory[&ar].clone();
+                },
+                "0101" => { // A: Add AR to ACC
+                    println!("acc: {}, ar: {}", acc, memory[&ar].clone());
+                    acc = utils::int2bin(utils::bin2int(acc) + utils::bin2int(memory[&ar].clone()), 16);
+                },
+                "0110" => { // S: Subtract AR from ACC
+                    acc = utils::int2bin(utils::bin2int(acc) - (utils::bin2int(memory[&ar].clone())), 16);
+                },
+                "0111" => { // INIT: Initialize ACC to [operands]
+                    acc = ar.clone();
+                },
+                "1000" => { // ST: Store ACC to AR
+                    memory.insert(ar.clone(), acc.clone());
+                },
+                "1001" => { // JUMP: Jump to AR
+                    pc = ar.clone();
+                },
+                "1010" => { // CJUMP: Conditional jump to AR if ACC is 0000
+                    if !acc.contains("1") {
+                        pc = ar.clone();
+                    }
+                },
+                "1011" => { // HALT: Halt
+                    break;
+                },
+                _ => { // default: Halt
+                    break;
+                }
+            }
+        }
+        (out, steps)
+    }
 }

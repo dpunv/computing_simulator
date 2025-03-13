@@ -3,7 +3,7 @@
 // author: dp
 // date: 2025-03-03
 
-mod automaton;
+mod automata;
 mod cli;
 mod file_handler;
 mod options;
