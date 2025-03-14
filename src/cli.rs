@@ -30,7 +30,9 @@ fn print_help() {
     println!("  --help: print the help message");
     println!("  --version: print the version of the Turing Machine Simulator");
     println!("  --max-steps: set the maximum number of steps for the Turing Machine");
-    println!("  --convert-to-singletape: convert multitape machines into single tape Turing Machines");
+    println!(
+        "  --convert-to-singletape: convert multitape machines into single tape Turing Machines"
+    );
     println!("  --input: provide the input string for the Turing Machine");
     println!("  --file: provide the file containing the description of the Turing Machine");
     println!("  --status: print informations about the Turing Machine");
@@ -96,7 +98,15 @@ fn execute_tm(tm: automata::TuringMachine, opt: options::Options) {
         print_tape(tm.last_execution.1[0].clone(), tm.clone(), Some(true));
         println!();
         println!("Computation:");
-        print_computation(tm.last_execution.3.clone(), tm.clone(), true, false, true, true, true);
+        print_computation(
+            tm.last_execution.3.clone(),
+            tm.clone(),
+            true,
+            false,
+            true,
+            true,
+            true,
+        );
     } else {
         panic!("Invalid verbose level");
     }
@@ -162,7 +172,6 @@ fn interactive_tui_ram(ram: automata::RamMachine, opt: options::Options) {
     }
 }
 
-
 pub fn print_encoding(tm: &automata::TuringMachine) {
     let encoded: (
         String,
@@ -220,21 +229,29 @@ pub fn print_tm(tm: automata::TuringMachine) {
         print!("{} ", transition.new_state);
         print!("{} ", transition.symbols.join(" "));
         print!("{} ", transition.new_symbols.join(" "));
-        print!("{} ", transition.directions.iter().map(|x| {
-            if *x == automata::Direction::Left {
-                "L".to_string()
-            } else if *x == automata::Direction::Right {
-                "R".to_string()
-            } else {
-                "S".to_string()
-            }
-        }).collect::<Vec<String>>().join(" "));
+        print!(
+            "{} ",
+            transition
+                .directions
+                .iter()
+                .map(|x| {
+                    if *x == automata::Direction::Left {
+                        "L".to_string()
+                    } else if *x == automata::Direction::Right {
+                        "R".to_string()
+                    } else {
+                        "S".to_string()
+                    }
+                })
+                .collect::<Vec<String>>()
+                .join(" ")
+        );
         println!();
     }
 }
 
-pub fn print_ram(ram: automata::RamMachine){
-    for instruction in ram.instructions.iter(){
+pub fn print_ram(ram: automata::RamMachine) {
+    for instruction in ram.instructions.iter() {
         print!("OPCODE: {} ", instruction.opcode);
         print!("ARGUMENTS: {} ", instruction.operand);
         println!();
@@ -251,7 +268,10 @@ pub fn main_cli() {
         print_version();
         return;
     }
-    if (options.type_ != "tm" && options.type_ != "fsm" && options.type_ != "pda" && options.type_ != "ram")
+    if (options.type_ != "tm"
+        && options.type_ != "fsm"
+        && options.type_ != "pda"
+        && options.type_ != "ram")
         || options.file.is_empty()
     {
         println!("Error: Invalid options. Use --help for more information.");
@@ -285,7 +305,7 @@ pub fn main_cli() {
         } else {
             return;
         }
-        if options.convert_to_singletape{
+        if options.convert_to_singletape {
             tm = automata::convert_multi_tape_to_single_tape_tm(tm);
         }
         if options.print_tm {

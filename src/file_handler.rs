@@ -297,7 +297,7 @@ pub fn read_ram_progran_from_file(options: options::Options) -> automata::RamMac
     let file = std::fs::read_to_string(options.file).expect("Error reading the file");
 
     let lines: Vec<&str> = file.lines().collect();
-    
+
     let mut instr = Vec::new();
     for line in lines.iter() {
         if line.starts_with("//") {
@@ -312,7 +312,10 @@ pub fn read_ram_progran_from_file(options: options::Options) -> automata::RamMac
             } else if instruction.len() == 2 {
                 instr.push(automata::Instruction {
                     opcode: automata::ram_instruction_lookup(instruction[0].to_string()),
-                    operand: utils::int2bin(instruction[1].parse().expect("Error parsing operand"), 16),
+                    operand: utils::int2bin(
+                        instruction[1].parse().expect("Error parsing operand"),
+                        16,
+                    ),
                 });
             } else {
                 panic!("Error parsing instruction");

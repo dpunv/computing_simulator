@@ -44,13 +44,13 @@ pub struct Transition {
 
 #[derive(Clone)]
 pub struct RamMachine {
-    pub instructions: Vec<Instruction>
+    pub instructions: Vec<Instruction>,
 }
 
 #[derive(Clone)]
 pub struct Instruction {
     pub opcode: String,
-    pub operand: String
+    pub operand: String,
 }
 
 impl PartialEq for Transition {
@@ -90,11 +90,7 @@ impl PartialEq for Transition {
 }
 
 pub trait Executable {
-    fn simulate(
-        &mut self,
-        input: Vec<String>,
-        max_steps: i32,
-    ) -> (String, i32);
+    fn simulate(&mut self, input: Vec<String>, max_steps: i32) -> (String, i32);
 }
 
 pub trait Automaton: Clone {
@@ -150,11 +146,7 @@ impl PartialEq for Direction {
 }
 
 impl Executable for TuringMachine {
-    fn simulate(
-        &mut self,
-        input: Vec<String>,
-        max_steps: i32,
-    ) -> (String, i32) {
+    fn simulate(&mut self, input: Vec<String>, max_steps: i32) -> (String, i32) {
         #[derive(Clone)]
         struct TreeElement {
             state: String,
@@ -168,7 +160,7 @@ impl Executable for TuringMachine {
                         return false;
                     }
                 }
-                return self.state == other.state;
+                self.state == other.state
             }
         }
         let transitions_map = self.make_transition_map();
@@ -245,12 +237,12 @@ impl Executable for TuringMachine {
                             tapes: new_tapes,
                             previous: ind,
                         };
-                        if !new_level.contains(&el){
+                        if !new_level.contains(&el) {
                             new_level.push(el);
                         }
                     }
                 }
-                if !found && new_level.len() == 0 {
+                if !found && new_level.is_empty() {
                     halts = true;
                     break;
                 }
@@ -531,7 +523,8 @@ pub fn convert_multi_tape_to_single_tape_tm(tm: TuringMachine) -> TuringMachine 
     let mut new_states = Vec::new();
     let mut new_transitions = Vec::new();
     for tapenum in 0..tm.tape_count {
-        let initial_state_tape = tm.initial_state.clone() + "<INIT_TP" + &tapenum.to_string() + "_START>";
+        let initial_state_tape =
+            tm.initial_state.clone() + "<INIT_TP" + &tapenum.to_string() + "_START>";
         let end_state_tape = tm.initial_state.clone() + "<INIT_TP" + &tapenum.to_string() + "_END>";
         new_states.push(initial_state_tape.clone());
         new_states.push(end_state_tape.clone());
@@ -572,7 +565,7 @@ pub fn convert_multi_tape_to_single_tape_tm(tm: TuringMachine) -> TuringMachine 
             }
         } else {
             let new_transition = Transition {
-                state: tm.initial_state.clone() + "<INIT_TP" + &(tapenum-1).to_string() + "_END>",
+                state: tm.initial_state.clone() + "<INIT_TP" + &(tapenum - 1).to_string() + "_END>",
                 symbols: vec![tm.blank_symbol.clone()],
                 new_state: initial_state_tape.clone(),
                 new_symbols: vec![tape_sep_symbol.clone()],
@@ -611,7 +604,10 @@ pub fn convert_multi_tape_to_single_tape_tm(tm: TuringMachine) -> TuringMachine 
             }
         } else {
             let new_transition = Transition {
-                state: tm.initial_state.clone() + "<INIT_TP" + (tm.tape_count-1).to_string().as_str() + "_END>",
+                state: tm.initial_state.clone()
+                    + "<INIT_TP"
+                    + (tm.tape_count - 1).to_string().as_str()
+                    + "_END>",
                 symbols: vec![tm.blank_symbol.clone()],
                 new_state: setup_state.clone(),
                 new_symbols: vec![tm.blank_symbol.clone()],
@@ -640,30 +636,41 @@ pub fn convert_multi_tape_to_single_tape_tm(tm: TuringMachine) -> TuringMachine 
             states_to_process.push(new_start_state.clone());
         }
     }
-    let mut map_states: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+    let mut map_states: std::collections::HashMap<String, Vec<String>> =
+        std::collections::HashMap::new();
     let mut states_vec = states_to_process.clone();
-    for state in tm.final_states.clone(){
-        if states_to_process.contains(&state){
+    for state in tm.final_states.clone() {
+        if states_to_process.contains(&state) {
             states_to_process.retain(|x| x != &state);
         }
     }
     let mut states_to_copy = Vec::new();
     for state in states_to_process {
-        map_states.insert(state.clone()+"0", vec![state.clone()]);
+        map_states.insert(state.clone() + "0", vec![state.clone()]);
         for tapenum in 0..tm.tape_count {
             let mut this_state_vec = Vec::new();
             for symbol in &new_compound_symbols {
-                for actual_state in map_states[&(state.clone() + &tapenum.to_string())].clone(){
+                for actual_state in map_states[&(state.clone() + &tapenum.to_string())].clone() {
                     let state_tape = actual_state.clone() + "<R_TP" + &tapenum.to_string() + ">";
-                    let new_state = actual_state.clone() + "<R_TP" + &tapenum.to_string() + "_S_" + symbol + ">";
-                    let end_state = actual_state.clone() + "<R_TP" + &tapenum.to_string() + "_S_" + symbol + "_END>";
-                    if !states_vec.contains(&new_state){
+                    let new_state = actual_state.clone()
+                        + "<R_TP"
+                        + &tapenum.to_string()
+                        + "_S_"
+                        + symbol
+                        + ">";
+                    let end_state = actual_state.clone()
+                        + "<R_TP"
+                        + &tapenum.to_string()
+                        + "_S_"
+                        + symbol
+                        + "_END>";
+                    if !states_vec.contains(&new_state) {
                         states_vec.push(new_state.clone());
                     }
-                    if !states_vec.contains(&end_state){
+                    if !states_vec.contains(&end_state) {
                         states_vec.push(end_state.clone());
                     }
-                    if !states_vec.contains(&state_tape){
+                    if !states_vec.contains(&state_tape) {
                         states_vec.push(state_tape.clone());
                     }
                     this_state_vec.push(end_state.clone());
@@ -676,31 +683,31 @@ pub fn convert_multi_tape_to_single_tape_tm(tm: TuringMachine) -> TuringMachine 
                     };
                     if !new_transitions.contains(&new_transition) {
                         new_transitions.push(new_transition);
-                    }    
+                    }
                     if tapenum == 0 {
                         let new_transition = Transition {
                             state: state.clone(),
                             symbols: vec![symbol.clone()],
                             new_state: state_tape.clone(),
                             new_symbols: vec![symbol.clone()],
-                            directions: vec![Direction::Stay]
+                            directions: vec![Direction::Stay],
                         };
                         if !new_transitions.contains(&new_transition) {
                             new_transitions.push(new_transition);
-                        }        
+                        }
                     } else {
                         let new_transition = Transition {
                             state: actual_state.clone(),
                             symbols: vec![symbol.clone()],
                             new_state: state_tape.clone(),
                             new_symbols: vec![symbol.clone()],
-                            directions: vec![Direction::Stay]
+                            directions: vec![Direction::Stay],
                         };
                         if !new_transitions.contains(&new_transition) {
                             new_transitions.push(new_transition);
-                        }        
+                        }
                     }
-                    if symbol.ends_with("^"){
+                    if symbol.ends_with("^") {
                         let new_transition = Transition {
                             state: state_tape.clone(),
                             symbols: vec![symbol.clone()],
@@ -710,7 +717,7 @@ pub fn convert_multi_tape_to_single_tape_tm(tm: TuringMachine) -> TuringMachine 
                         };
                         if !new_transitions.contains(&new_transition) {
                             new_transitions.push(new_transition);
-                        }        
+                        }
                     } else {
                         let new_transition = Transition {
                             state: state_tape.clone(),
@@ -721,11 +728,10 @@ pub fn convert_multi_tape_to_single_tape_tm(tm: TuringMachine) -> TuringMachine 
                         };
                         if !new_transitions.contains(&new_transition) {
                             new_transitions.push(new_transition);
-                        }        
-    
+                        }
                     }
-                    for symb in new_compound_symbols.clone(){
-                        if !symb.ends_with("^"){
+                    for symb in new_compound_symbols.clone() {
+                        if !symb.ends_with("^") {
                             let new_transition = Transition {
                                 state: new_state.clone(),
                                 symbols: vec![symb.clone()],
@@ -735,7 +741,7 @@ pub fn convert_multi_tape_to_single_tape_tm(tm: TuringMachine) -> TuringMachine 
                             };
                             if !new_transitions.contains(&new_transition) {
                                 new_transitions.push(new_transition);
-                            }            
+                            }
                         }
                     }
                     let new_transition = Transition {
@@ -750,43 +756,75 @@ pub fn convert_multi_tape_to_single_tape_tm(tm: TuringMachine) -> TuringMachine 
                     }
                 }
             }
-            map_states.insert(state.clone()+&(tapenum+1).to_string(), this_state_vec.clone());
+            map_states.insert(
+                state.clone() + &(tapenum + 1).to_string(),
+                this_state_vec.clone(),
+            );
         }
         let old_transition_map = tm.make_transition_map();
         let mut states_done = Vec::new();
-        for actual_state in map_states[&(state.clone() + &tm.tape_count.to_string())].clone(){
+        for actual_state in map_states[&(state.clone() + &tm.tape_count.to_string())].clone() {
             let splitted0: Vec<&str> = actual_state.split("<R_TP").collect();
-            let key = state.clone().strip_suffix("<START>").unwrap_or(&state).to_string()
-                + &splitted0.iter().skip(1).map(|elem| {
-                let parts: Vec<&str> = elem.split("_S_").collect();
-                let mut part = parts.get(1).unwrap_or(&"").to_string();
-                part = part.strip_suffix("__END>").unwrap_or(&part).to_string();
-                part = part.strip_suffix("^_END>").unwrap_or(&part).to_string();
-                part
-            }).collect::<Vec<String>>().join("");
-            if old_transition_map.contains_key(&key) && !states_done.contains(&key){
+            let key = state
+                .clone()
+                .strip_suffix("<START>")
+                .unwrap_or(&state)
+                .to_string()
+                + &splitted0
+                    .iter()
+                    .skip(1)
+                    .map(|elem| {
+                        let parts: Vec<&str> = elem.split("_S_").collect();
+                        let mut part = parts.get(1).unwrap_or(&"").to_string();
+                        part = part.strip_suffix("__END>").unwrap_or(&part).to_string();
+                        part = part.strip_suffix("^_END>").unwrap_or(&part).to_string();
+                        part
+                    })
+                    .collect::<Vec<String>>()
+                    .join("");
+            if old_transition_map.contains_key(&key) && !states_done.contains(&key) {
                 states_done.push(key.clone());
                 let transitions = old_transition_map[&key].clone();
-                for (ind, t) in transitions.iter().enumerate(){
-                    for tapenum in 0..tm.tape_count{
-                        let state_init_tape = actual_state.clone() + "<WRITE_TR" + &ind.to_string() + "_TP_" + &tapenum.to_string() + "_START>";
-                        let state_mid_tape = actual_state.clone() + "<WRITE_TR" + &ind.to_string() + "_TP_" + &tapenum.to_string() + "_^FOUND>";
-                        let state_mid_mid_tape = actual_state.clone() + "<WRITE_TR" + &ind.to_string() + "_TP_" + &tapenum.to_string() + "_COPY>";
-                        let state_end_tape = actual_state.clone() + "<WRITE_TR" + &ind.to_string() + "_TP_" + &tapenum.to_string() + "_END>";
-                        if !states_vec.contains(&state_init_tape){
+                for (ind, t) in transitions.iter().enumerate() {
+                    for tapenum in 0..tm.tape_count {
+                        let state_init_tape = actual_state.clone()
+                            + "<WRITE_TR"
+                            + &ind.to_string()
+                            + "_TP_"
+                            + &tapenum.to_string()
+                            + "_START>";
+                        let state_mid_tape = actual_state.clone()
+                            + "<WRITE_TR"
+                            + &ind.to_string()
+                            + "_TP_"
+                            + &tapenum.to_string()
+                            + "_^FOUND>";
+                        let state_mid_mid_tape = actual_state.clone()
+                            + "<WRITE_TR"
+                            + &ind.to_string()
+                            + "_TP_"
+                            + &tapenum.to_string()
+                            + "_COPY>";
+                        let state_end_tape = actual_state.clone()
+                            + "<WRITE_TR"
+                            + &ind.to_string()
+                            + "_TP_"
+                            + &tapenum.to_string()
+                            + "_END>";
+                        if !states_vec.contains(&state_init_tape) {
                             states_vec.push(state_init_tape.clone());
                         }
-                        if !states_vec.contains(&state_mid_tape){
+                        if !states_vec.contains(&state_mid_tape) {
                             states_vec.push(state_mid_tape.clone());
                         }
-                        if !states_vec.contains(&state_mid_mid_tape){
+                        if !states_vec.contains(&state_mid_mid_tape) {
                             states_vec.push(state_mid_mid_tape.clone());
                         }
-                        if !states_vec.contains(&state_end_tape){
+                        if !states_vec.contains(&state_end_tape) {
                             states_vec.push(state_end_tape.clone());
                         }
-                        for symbol in new_compound_symbols.clone(){
-                            if symbol.ends_with("^"){
+                        for symbol in new_compound_symbols.clone() {
+                            if symbol.ends_with("^") {
                                 if t.directions[tapenum] == Direction::Right {
                                     let new_transition = Transition {
                                         state: state_init_tape.clone(),
@@ -818,11 +856,12 @@ pub fn convert_multi_tape_to_single_tape_tm(tm: TuringMachine) -> TuringMachine 
                                     if !new_transitions.contains(&new_transition) {
                                         new_transitions.push(new_transition);
                                     }
-                                    for symb in new_compound_symbols.clone(){
+                                    for symb in new_compound_symbols.clone() {
                                         let new_transition = Transition {
                                             state: state_mid_mid_tape.clone(),
                                             symbols: vec![symb.clone()],
-                                            new_state: state_mid_mid_tape.clone() + "<COPY_CYCLE_RIGHT>",
+                                            new_state: state_mid_mid_tape.clone()
+                                                + "<COPY_CYCLE_RIGHT>",
                                             new_symbols: vec![symb.clone() + "<COPY>"],
                                             directions: vec![Direction::Right],
                                         };
@@ -830,12 +869,24 @@ pub fn convert_multi_tape_to_single_tape_tm(tm: TuringMachine) -> TuringMachine 
                                         if !new_transitions.contains(&new_transition) {
                                             new_transitions.push(new_transition);
                                         }
-                                        if !symb.ends_with("^"){
+                                        if !symb.ends_with("^") {
                                             let new_transition = Transition {
                                                 state: state_mid_tape.clone(),
-                                                symbols: vec![symb.clone().strip_suffix("_").unwrap_or(&symb).to_string() + "_"],
+                                                symbols: vec![
+                                                    symb.clone()
+                                                        .strip_suffix("_")
+                                                        .unwrap_or(&symb)
+                                                        .to_string()
+                                                        + "_",
+                                                ],
                                                 new_state: state_end_tape.clone(),
-                                                new_symbols: vec![symb.clone().strip_suffix("_").unwrap_or(&symb).to_string() + "^"],
+                                                new_symbols: vec![
+                                                    symb.clone()
+                                                        .strip_suffix("_")
+                                                        .unwrap_or(&symb)
+                                                        .to_string()
+                                                        + "^",
+                                                ],
                                                 directions: vec![Direction::Left],
                                             };
                                             if !new_transitions.contains(&new_transition) {
@@ -865,13 +916,25 @@ pub fn convert_multi_tape_to_single_tape_tm(tm: TuringMachine) -> TuringMachine 
                                     if !new_transitions.contains(&new_transition) {
                                         new_transitions.push(new_transition);
                                     }
-                                    for symb in new_compound_symbols.clone(){
-                                        if !symb.ends_with("^"){
+                                    for symb in new_compound_symbols.clone() {
+                                        if !symb.ends_with("^") {
                                             let new_transition = Transition {
                                                 state: state_mid_tape.clone(),
-                                                symbols: vec![symb.clone().strip_suffix("_").unwrap_or(&symb).to_string() + "_"],
+                                                symbols: vec![
+                                                    symb.clone()
+                                                        .strip_suffix("_")
+                                                        .unwrap_or(&symb)
+                                                        .to_string()
+                                                        + "_",
+                                                ],
                                                 new_state: state_end_tape.clone(),
-                                                new_symbols: vec![symb.clone().strip_suffix("_").unwrap_or(&symb).to_string() + "^"],
+                                                new_symbols: vec![
+                                                    symb.clone()
+                                                        .strip_suffix("_")
+                                                        .unwrap_or(&symb)
+                                                        .to_string()
+                                                        + "^",
+                                                ],
                                                 directions: vec![Direction::Left],
                                             };
                                             if !new_transitions.contains(&new_transition) {
@@ -892,7 +955,7 @@ pub fn convert_multi_tape_to_single_tape_tm(tm: TuringMachine) -> TuringMachine 
                                     }
                                 }
                             } else {
-                                let new_transition = Transition{
+                                let new_transition = Transition {
                                     state: state_init_tape.clone(),
                                     symbols: vec![symbol.clone()],
                                     new_state: state_init_tape.clone(),
@@ -902,7 +965,7 @@ pub fn convert_multi_tape_to_single_tape_tm(tm: TuringMachine) -> TuringMachine 
                                 if !new_transitions.contains(&new_transition) {
                                     new_transitions.push(new_transition);
                                 }
-                                let new_transition = Transition{
+                                let new_transition = Transition {
                                     state: state_end_tape.clone(),
                                     symbols: vec![symbol.clone()],
                                     new_state: state_end_tape.clone(),
@@ -914,7 +977,7 @@ pub fn convert_multi_tape_to_single_tape_tm(tm: TuringMachine) -> TuringMachine 
                                 }
                             }
                         }
-                        if tapenum == 0{
+                        if tapenum == 0 {
                             let new_transition = Transition {
                                 state: state_end_tape.clone(),
                                 symbols: vec![tm.blank_symbol.clone()],
@@ -929,7 +992,12 @@ pub fn convert_multi_tape_to_single_tape_tm(tm: TuringMachine) -> TuringMachine 
                             let new_transition = Transition {
                                 state: state_end_tape.clone(),
                                 symbols: vec![tape_sep_symbol.clone()],
-                                new_state: actual_state.clone() + "<WRITE_TR" + &ind.to_string() + "_TP_" + &(tapenum-1).to_string() + "_START>",
+                                new_state: actual_state.clone()
+                                    + "<WRITE_TR"
+                                    + &ind.to_string()
+                                    + "_TP_"
+                                    + &(tapenum - 1).to_string()
+                                    + "_START>",
                                 new_symbols: vec![tape_sep_symbol.clone()],
                                 directions: vec![Direction::Left],
                             };
@@ -937,7 +1005,7 @@ pub fn convert_multi_tape_to_single_tape_tm(tm: TuringMachine) -> TuringMachine 
                                 new_transitions.push(new_transition);
                             }
                         }
-                        if tapenum == tm.tape_count-1{
+                        if tapenum == tm.tape_count - 1 {
                             let new_transition = Transition {
                                 state: actual_state.clone(),
                                 symbols: vec![tm.blank_symbol.clone()],
@@ -954,27 +1022,27 @@ pub fn convert_multi_tape_to_single_tape_tm(tm: TuringMachine) -> TuringMachine 
             }
         }
     }
-    new_tape_alphabet.push(tape_sep_symbol.clone() + &"<COPY>".to_string());
-    for state in states_to_copy{
+    new_tape_alphabet.push(tape_sep_symbol.clone() + "<COPY>");
+    for state in states_to_copy {
         let state_copy_a = state.clone() + "<COPY_CYCLE_RIGHT>";
         let state_copy_b = state.clone() + "<COPY_BLANK_FOUND>";
         let state_copy_c = state.clone() + "<COPY_GO_LEFT_1>";
         let state_copy_e = state.clone() + "<COPY_FINISHED>";
-        if !states_vec.contains(&state_copy_a){
+        if !states_vec.contains(&state_copy_a) {
             states_vec.push(state_copy_a.clone());
         }
-        if !states_vec.contains(&state_copy_b){
+        if !states_vec.contains(&state_copy_b) {
             states_vec.push(state_copy_b.clone());
         }
-        if !states_vec.contains(&state_copy_c){
+        if !states_vec.contains(&state_copy_c) {
             states_vec.push(state_copy_c.clone());
         }
-        if !states_vec.contains(&state_copy_e){
+        if !states_vec.contains(&state_copy_e) {
             states_vec.push(state_copy_e.clone());
         }
         let mut symbols_to_cycle = new_compound_symbols.clone();
         symbols_to_cycle.push(tape_sep_symbol.clone());
-        for symbol in &symbols_to_cycle{
+        for symbol in &symbols_to_cycle {
             let new_transition = Transition {
                 state: state_copy_a.clone(),
                 symbols: vec![symbol.clone()],
@@ -995,8 +1063,8 @@ pub fn convert_multi_tape_to_single_tape_tm(tm: TuringMachine) -> TuringMachine 
             if !new_transitions.contains(&new_transition) {
                 new_transitions.push(new_transition);
             }
-            let state_copy_d = state.clone() + "<COPY_SYMBOL_" + &symbol.clone() +">";
-            if !states_vec.contains(&state_copy_d){
+            let state_copy_d = state.clone() + "<COPY_SYMBOL_" + &symbol.clone() + ">";
+            if !states_vec.contains(&state_copy_d) {
                 states_vec.push(state_copy_d.clone());
             }
             let new_transition = Transition {
@@ -1027,17 +1095,22 @@ pub fn convert_multi_tape_to_single_tape_tm(tm: TuringMachine) -> TuringMachine 
                 new_symbols: vec![symbol.clone()],
                 directions: vec![Direction::Right],
             };
-            if !new_tape_alphabet.contains(&symbol_with_copy){
+            if !new_tape_alphabet.contains(&symbol_with_copy) {
                 new_tape_alphabet.push(symbol_with_copy);
             }
             if !new_transitions.contains(&new_transition) {
                 new_transitions.push(new_transition);
             }
-            if state.ends_with("COPY>"){
+            if state.ends_with("COPY>") {
                 let new_transition = Transition {
                     state: state_copy_e.clone(),
                     symbols: vec![tm.blank_symbol.clone()],
-                    new_state: state.clone().strip_suffix("_COPY>").unwrap_or(&state).to_string() + "_^FOUND>",
+                    new_state: state
+                        .clone()
+                        .strip_suffix("_COPY>")
+                        .unwrap_or(&state)
+                        .to_string()
+                        + "_^FOUND>",
                     new_symbols: vec![tm.blank_symbol.clone() + "_"],
                     directions: vec![Direction::Stay],
                 };
@@ -1072,19 +1145,26 @@ pub fn convert_multi_tape_to_single_tape_tm(tm: TuringMachine) -> TuringMachine 
     for state in tm.final_states {
         let state_final_1 = state.clone() + "<OTHER_TP>";
         let state_final_2 = state.clone() + "<END>";
-        if !states_vec.contains(&state_final_1){
+        if !states_vec.contains(&state_final_1) {
             states_vec.push(state_final_1.clone());
         }
-        if !states_vec.contains(&state_final_2){
+        if !states_vec.contains(&state_final_2) {
             states_vec.push(state_final_2.clone());
         }
         real_final_states.push(state_final_2.clone());
-        for symbol in new_compound_symbols.clone(){
+        for symbol in new_compound_symbols.clone() {
             let new_transition = Transition {
                 state: state.clone(),
                 symbols: vec![symbol.clone()],
                 new_state: state.clone(),
-                new_symbols: vec![symbol.clone().strip_suffix("^").unwrap_or(&symbol).to_string().strip_suffix("_").unwrap_or(&symbol.clone().strip_suffix("^").unwrap_or(&symbol).to_string()).to_string()],
+                new_symbols: vec![symbol
+                    .clone()
+                    .strip_suffix("^")
+                    .unwrap_or(&symbol)
+                    .to_string()
+                    .strip_suffix("_")
+                    .unwrap_or(symbol.clone().strip_suffix("^").unwrap_or(&symbol))
+                    .to_string()],
                 directions: vec![Direction::Right],
             };
             if !new_transitions.contains(&new_transition) {
@@ -1142,11 +1222,11 @@ pub fn convert_multi_tape_to_single_tape_tm(tm: TuringMachine) -> TuringMachine 
             new_transitions.push(new_transition);
         }
     }
-    if !states_vec.contains(&tm.initial_state){
+    if !states_vec.contains(&tm.initial_state) {
         states_vec.push(tm.initial_state.clone());
     }
-    for state in &new_states{
-        if !states_vec.contains(state){
+    for state in &new_states {
+        if !states_vec.contains(state) {
             states_vec.push(state.clone());
         }
     }
@@ -1347,11 +1427,7 @@ pub fn ram_instruction_lookup(instruction: String) -> String {
 }
 
 impl Executable for RamMachine {
-    fn simulate(
-            &mut self,
-            input: Vec<String>,
-            max_steps: i32,
-        ) -> (String, i32) {
+    fn simulate(&mut self, input: Vec<String>, max_steps: i32) -> (String, i32) {
         let mut ir;
         let r#in: String = input.join("");
         let mut out: String = "".to_string();
@@ -1359,57 +1435,80 @@ impl Executable for RamMachine {
         let mut acc: String = "0000000000000000".to_string();
         let mut ar: String;
         let mut input_head = 0;
-        let mut memory: std::collections::HashMap<String, String> = std::collections::HashMap::new();
-        for (index, instr) in self.instructions.clone().into_iter().enumerate(){
-            memory.insert(utils::int2bin(index as i32, 16), instr.opcode.clone() + &instr.operand.clone());
+        let mut memory: std::collections::HashMap<String, String> =
+            std::collections::HashMap::new();
+        for (index, instr) in self.instructions.clone().into_iter().enumerate() {
+            memory.insert(
+                utils::int2bin(index as i32, 16),
+                instr.opcode.clone() + &instr.operand.clone(),
+            );
         }
         let mut steps = 0;
-        while steps < max_steps{
+        while steps < max_steps {
             steps += 1;
             ir = memory[&pc].clone()[0..4].to_string();
             ar = memory[&pc].clone()[4..].to_string();
             pc = utils::int2bin(utils::bin2int(pc) + 1, 16);
-            match ir.as_str(){
-                "0000" => { // R: Read [operands] bit from input
+            match ir.as_str() {
+                "0000" => {
+                    // R: Read [operands] bit from input
                     let end = input_head + (utils::bin2int(ar) as usize);
                     acc = r#in[input_head..end].to_string();
-                },
-                "0001" => { // MIR: move input head [operands] bits to the right
+                }
+                "0001" => {
+                    // MIR: move input head [operands] bits to the right
                     input_head += utils::bin2int(ar) as usize;
-                },
-                "0010" => { // MIL: move input head [operands] bits to the left
+                }
+                "0010" => {
+                    // MIL: move input head [operands] bits to the left
                     input_head -= utils::bin2int(ar) as usize;
-                },
-                "0011" => { // W: Write ACC to output
+                }
+                "0011" => {
+                    // W: Write ACC to output
                     out = out + &acc.clone();
-                },
-                "0100" => { // L: Load AR to ACC
+                }
+                "0100" => {
+                    // L: Load AR to ACC
                     acc = memory[&ar].clone();
-                },
-                "0101" => { // A: Add AR to ACC
-                    acc = utils::int2bin(utils::bin2int(acc) + utils::bin2int(memory[&ar].clone()), 16);
-                },
-                "0110" => { // S: Subtract AR from ACC
-                    acc = utils::int2bin(utils::bin2int(acc) - (utils::bin2int(memory[&ar].clone())), 16);
-                },
-                "0111" => { // INIT: Initialize ACC to [operands]
+                }
+                "0101" => {
+                    // A: Add AR to ACC
+                    acc = utils::int2bin(
+                        utils::bin2int(acc) + utils::bin2int(memory[&ar].clone()),
+                        16,
+                    );
+                }
+                "0110" => {
+                    // S: Subtract AR from ACC
+                    acc = utils::int2bin(
+                        utils::bin2int(acc) - (utils::bin2int(memory[&ar].clone())),
+                        16,
+                    );
+                }
+                "0111" => {
+                    // INIT: Initialize ACC to [operands]
                     acc = ar.clone();
-                },
-                "1000" => { // ST: Store ACC to AR
+                }
+                "1000" => {
+                    // ST: Store ACC to AR
                     memory.insert(ar.clone(), acc.clone());
-                },
-                "1001" => { // JUMP: Jump to AR
+                }
+                "1001" => {
+                    // JUMP: Jump to AR
                     pc = ar.clone();
-                },
-                "1010" => { // CJUMP: Conditional jump to AR if ACC is 0000
+                }
+                "1010" => {
+                    // CJUMP: Conditional jump to AR if ACC is 0000
                     if !acc.contains("1") {
                         pc = ar.clone();
                     }
-                },
-                "1011" => { // HALT: Halt
+                }
+                "1011" => {
+                    // HALT: Halt
                     break;
-                },
-                _ => { // default: Halt
+                }
+                _ => {
+                    // default: Halt
                     break;
                 }
             }
