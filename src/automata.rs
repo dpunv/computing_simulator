@@ -1364,21 +1364,14 @@ impl Executable for RamMachine {
             memory.insert(utils::int2bin(index as i32, 16), instr.opcode.clone() + &instr.operand.clone());
         }
         let mut steps = 0;
-        println!("mem:");
-        for (key, value) in &memory {
-            println!("{}: {}", key, value);
-        }
         while steps < max_steps{
             steps += 1;
-            println!("PC: {}, ACC: {}", pc, acc);
             ir = memory[&pc].clone()[0..4].to_string();
             ar = memory[&pc].clone()[4..].to_string();
-            println!("IR: {}, AR: {}", ir, ar);
             pc = utils::int2bin(utils::bin2int(pc) + 1, 16);
             match ir.as_str(){
                 "0000" => { // R: Read [operands] bit from input
                     let end = input_head + (utils::bin2int(ar) as usize);
-                    println!("input_head: {}, end: {}", input_head, end);
                     acc = r#in[input_head..end].to_string();
                 },
                 "0001" => { // MIR: move input head [operands] bits to the right
@@ -1394,7 +1387,6 @@ impl Executable for RamMachine {
                     acc = memory[&ar].clone();
                 },
                 "0101" => { // A: Add AR to ACC
-                    println!("acc: {}, ar: {}", acc, memory[&ar].clone());
                     acc = utils::int2bin(utils::bin2int(acc) + utils::bin2int(memory[&ar].clone()), 16);
                 },
                 "0110" => { // S: Subtract AR from ACC

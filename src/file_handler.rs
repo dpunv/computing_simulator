@@ -281,7 +281,6 @@ pub fn read_tm_from_encoding_file(options: options::Options) -> automata::Turing
                 states = true;
                 continue;
             }
-            // println!("{}", line);
             let (key, value) = line.split_once(" ").unwrap();
             if states {
                 state_encoding.insert(key.to_string(), value.to_string());
@@ -305,7 +304,6 @@ pub fn read_ram_progran_from_file(options: options::Options) -> automata::RamMac
             continue;
         } else {
             let instruction: Vec<&str> = line.split(" ").collect();
-            println!("{} --> {}", instruction[0], automata::ram_instruction_lookup(instruction[0].to_string()));
             if instruction.len() == 1 {
                 instr.push(automata::Instruction {
                     opcode: automata::ram_instruction_lookup(instruction[0].to_string()),
