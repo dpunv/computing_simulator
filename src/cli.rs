@@ -73,7 +73,7 @@ pub fn print_tape(tape: automata::Tape, tm: automata::TuringMachine, trim: Optio
     }
 }
 
-pub fn print_status<T: automata::Automaton>(tm: &T) {
+pub fn print_status_tm(tm: &automata::TuringMachine) {
     println!("Deterministic: {}", tm.is_deterministic());
     println!("Ok: {}", tm.is_ok());
     println!("Transition total: {}", tm.is_transition_total());
@@ -136,7 +136,7 @@ fn interactive_tui_tm(tm: automata::TuringMachine, opt: options::Options) {
         std::io::stdin().read_line(&mut input).unwrap();
         let trimmed_input = input.trim().to_string();
         if trimmed_input == "status" {
-            print_status(&tm);
+            print_status_tm(&tm);
         } else if trimmed_input == "help" {
             print_help();
         } else if trimmed_input == "version" {
@@ -153,13 +153,12 @@ fn interactive_tui_ram(ram: automata::RamMachine, opt: options::Options) {
     let mut input = String::new();
     loop {
         print!("> ");
-        // flush the output buffer
         std::io::stdout().flush().unwrap();
         input.clear();
         std::io::stdin().read_line(&mut input).unwrap();
         let trimmed_input = input.trim().to_string();
         if trimmed_input == "status" {
-            // print_status(&ram); // todo
+            print_status_ram(&ram);
         } else if trimmed_input == "help" {
             print_help();
         } else if trimmed_input == "version" {
@@ -267,98 +266,113 @@ pub fn print_ram(ram: automata::RamMachine) {
     }
 }
 
+fn print_status_ram(ram: &automata::RamMachine) {
+    println!("Number of instructions: {}", ram.instructions.len());
+}
+
 pub fn main_cli() {
     let options = options::get_options();
+    
     if options.help {
         print_help();
         return;
     }
+    
     if options.version {
         print_version();
         return;
     }
-    if (options.type_ != "tm"
-        && options.type_ != "fsm"
-        && options.type_ != "pda"
-        && options.type_ != "ram")
-        || options.file.is_empty()
-    {
+    
+    if !validate_options(&options) {
         println!("Error: Invalid options. Use --help for more information.");
         return;
     }
-    if options.type_ == "ram" {
-        let ram: automata::RamMachine = file_handler::read_ram_progran_from_file(options.clone());
-        if options.convert_to_tm{
-            let mut options_new = options.clone();
-            options_new.type_ = "tm".to_string();
-            options_new.file = "src/standard/ram over tm.tm".to_string();
-            options_new.input = options.input + &ram.to_encoding().0;
-            let tm = file_handler::read_turing_machine_from_file(options_new.clone());
-            if options_new.print_tm {
-                print_tm(tm);
-                return;
-            }
-            if options_new.print_encoding {
-                print_encoding_tm(&tm);
-                return;
-            }
-            if options.status {
-                print_status(&tm);
-            } else if options_new.clone().input.is_empty() {
-                interactive_tui_tm(tm.clone(), options_new.clone());
-            } else {
-                execute_tm(tm.clone(), options_new.clone());
-            }
-        } else {
-            if options.print_tm {
-                print_ram(ram);
-                return;
-            }
-            if options.print_encoding {
-                print_encoding_ram(&ram);
     
-                return;
-            }
-            if options.status {
-                // print_status_ram(&ram); todo
-            } else if options.clone().input.is_empty() {
-                interactive_tui_ram(ram.clone(), options.clone());
-            } else {
-                execute_ram(ram.clone(), options.clone());
-            }
-        }
+    match options.type_.as_str() {
+        "ram" => handle_ram_machine(options),
+        "tm" | "fsm" | "pda" => handle_automaton(options),
+        _ => println!("Error: Unsupported machine type")
+    }
+}
+
+fn validate_options(options: &options::Options) -> bool {
+    let valid_types = ["tm", "fsm", "pda", "ram"];
+    valid_types.contains(&options.type_.as_str()) && !options.file.is_empty()
+}
+
+fn handle_ram_machine(options: options::Options) {
+    let ram: automata::RamMachine = file_handler::read_ram_progran_from_file(options.clone());
+    
+    if options.convert_to_tm {
+        handle_ram_to_tm_conversion(ram, options);
+        return;
+    }
+    
+    if options.print_tm {
+        print_ram(ram);
+        return;
+    }
+    
+    if options.print_encoding {
+        print_encoding_ram(&ram);
+        return;
+    }
+    
+    if options.status {
+        print_status_ram(&ram); // TODO: Implementare questa funzione
+    } else if options.clone().input.is_empty() {
+        interactive_tui_ram(ram.clone(), options);
     } else {
-        let mut tm;
-        if options.type_ == "tm" {
+        execute_ram(ram, options);
+    }
+}
+
+fn handle_ram_to_tm_conversion(ram: automata::RamMachine, options: options::Options) {
+    let mut options_new = options.clone();
+    options_new.type_ = "tm".to_string();
+    options_new.file = "src/standard/ram over tm.tm".to_string();
+    options_new.input = options.input + &ram.to_encoding().0;
+    
+    handle_automaton(options_new);
+}
+
+fn handle_automaton(options: options::Options) {
+    let mut tm = load_automaton(options.clone());
+    
+    if options.convert_to_singletape {
+        tm = automata::convert_multi_tape_to_single_tape_tm(tm);
+    }
+    
+    if options.print_tm {
+        print_tm(tm);
+        return;
+    }
+    
+    if options.print_encoding {
+        print_encoding_tm(&tm);
+        return;
+    }
+    
+    if options.status {
+        print_status_tm(&tm);
+    } else if options.input.is_empty() {
+        interactive_tui_tm(tm.clone(), options);
+    } else {
+        execute_tm(tm, options);
+    }
+}
+
+fn load_automaton(options: options::Options) -> automata::TuringMachine {
+    match options.type_.as_str() {
+        "tm" => {
             if options.from_encoding {
-                tm = file_handler::read_tm_from_encoding_file(options.clone());
+                file_handler::read_tm_from_encoding_file(options)
             } else {
-                tm = file_handler::read_turing_machine_from_file(options.clone());
+                file_handler::read_turing_machine_from_file(options)
             }
-        } else if options.type_ == "fsm" {
-            tm = file_handler::read_finite_state_machine_from_file(options.clone());
-        } else if options.type_ == "pda" {
-            tm = file_handler::read_pushdown_automaton_from_file(options.clone());
-        } else {
-            return;
-        }
-        if options.convert_to_singletape {
-            tm = automata::convert_multi_tape_to_single_tape_tm(tm);
-        }
-        if options.print_tm {
-            print_tm(tm);
-            return;
-        }
-        if options.print_encoding {
-            print_encoding_tm(&tm);
-            return;
-        }
-        if options.status {
-            print_status(&tm);
-        } else if options.clone().input.is_empty() {
-            interactive_tui_tm(tm.clone(), options.clone());
-        } else {
-            execute_tm(tm.clone(), options.clone());
-        }
+        },
+        "fsm" => file_handler::read_finite_state_machine_from_file(options),
+        "pda" => file_handler::read_pushdown_automaton_from_file(options),
+        _ => panic!("Tipo di automa non supportato")
     }
 }

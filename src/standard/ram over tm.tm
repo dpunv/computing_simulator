@@ -544,9 +544,8 @@ _
 96 96a _ _ S _ _ S _ _ S _ _ L _ _ S _ _ L _ _ S
 96a 96a _ _ S _ _ S _ _ S _ _ S _ _ S 0 0 L _ _ S
 96a 96a _ _ S _ _ S _ _ S _ _ S _ _ S 1 1 L _ _ S
-96a 3a _ _ R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
 // 3.10.3 restart the loop
-96 3a _ _ R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
+96a 3a _ _ R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
 // 3.11 CJUMP
 // 3.11.1 check if the content of the ACC is 0
 41 41 _ _ S _ _ S _ _ S _ _ S 0 0 R _ _ S _ _ S
