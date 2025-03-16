@@ -91,6 +91,13 @@ impl PartialEq for Transition {
 
 pub trait Executable {
     fn simulate(&mut self, input: Vec<String>, max_steps: i32) -> (String, i32);
+    fn to_encoding(
+        &self,
+    ) -> (
+        String,
+        std::collections::HashMap<String, String>,
+        std::collections::HashMap<String, String>,
+    );
 }
 
 pub trait Automaton: Clone {
@@ -99,13 +106,6 @@ pub trait Automaton: Clone {
     fn is_ok(&self) -> bool;
     fn make_transition_map(&self) -> std::collections::HashMap<String, Vec<Transition>>;
     fn input_alphabet(&self) -> Vec<String>;
-    fn to_encoding(
-        &self,
-    ) -> (
-        String,
-        std::collections::HashMap<String, String>,
-        std::collections::HashMap<String, String>,
-    );
 }
 
 #[derive(Clone)]
@@ -273,6 +273,107 @@ impl Executable for TuringMachine {
         );
         (last_element.state.clone(), steps)
     }
+    fn to_encoding(
+        &self,
+    ) -> (
+        String,
+        std::collections::HashMap<String, String>,
+        std::collections::HashMap<String, String>,
+    ) {
+        let mut state_bits: usize = 0;
+        let mut states = self.states.len();
+        while states > 0 {
+            states >>= 1;
+            state_bits += 1;
+        }
+        let mut state_encoding: std::collections::HashMap<String, String> =
+            std::collections::HashMap::new();
+        for (index, state) in self.states.iter().enumerate() {
+            if self.final_states.contains(state)
+                && state != &self.accept_state
+                && state != &self.reject_state
+            {
+                state_encoding.insert(
+                    state.clone(),
+                    format!("h{:0>width$b}", index, width = state_bits),
+                );
+            } else if state == &self.accept_state {
+                state_encoding.insert(
+                    state.clone(),
+                    format!("y{:0>width$b}", index, width = state_bits),
+                );
+            } else if state == &self.reject_state {
+                state_encoding.insert(
+                    state.clone(),
+                    format!("n{:0>width$b}", index, width = state_bits),
+                );
+            } else if state == &self.initial_state {
+                state_encoding.insert(
+                    state.clone(),
+                    format!("i{:0>width$b}", index, width = state_bits),
+                );
+            } else {
+                state_encoding.insert(
+                    state.clone(),
+                    format!("q{:0>width$b}", index, width = state_bits),
+                );
+            }
+        }
+        let mut tape_bits: usize = 0;
+        let mut tape_symbols = self.tape_alphabet.len();
+        while tape_symbols > 0 {
+            tape_symbols >>= 1;
+            tape_bits += 1;
+        }
+        let mut tape_encoding: std::collections::HashMap<String, String> =
+            std::collections::HashMap::new();
+        for (index, symbol) in self.tape_alphabet.iter().enumerate() {
+            if self.input_alphabet.contains(symbol) {
+                tape_encoding.insert(
+                    symbol.clone(),
+                    format!("a{:0>width$b}", index, width = tape_bits),
+                );
+            } else if symbol == &self.blank_symbol {
+                tape_encoding.insert(
+                    symbol.clone(),
+                    format!("b{:0>width$b}", index, width = tape_bits),
+                );
+            } else {
+                tape_encoding.insert(
+                    symbol.clone(),
+                    format!("t{:0>width$b}", index, width = tape_bits),
+                );
+            }
+        }
+        let mut transitions_encoding = String::new();
+        for transition in &self.transitions {
+            let mut transition_encoding = "(".to_string();
+            transition_encoding.push_str(&state_encoding[&transition.state]);
+            transition_encoding.push(';');
+            for symbol in &transition.symbols {
+                transition_encoding.push_str(&tape_encoding[symbol]);
+                transition_encoding.push(';');
+            }
+            transition_encoding.push_str(&state_encoding[&transition.new_state]);
+            transition_encoding.push(';');
+            for symbol in &transition.new_symbols {
+                transition_encoding.push_str(&tape_encoding[symbol]);
+                transition_encoding.push(';');
+            }
+            for direction in &transition.directions {
+                match direction {
+                    Direction::Left => transition_encoding.push('L'),
+                    Direction::Right => transition_encoding.push('R'),
+                    Direction::Stay => transition_encoding.push('S'),
+                }
+                transition_encoding.push(';');
+            }
+            transition_encoding.pop();
+            transition_encoding.push(')');
+            transitions_encoding.push_str(&transition_encoding);
+        }
+        (transitions_encoding, tape_encoding, state_encoding)
+    }
 }
 
 impl Automaton for TuringMachine {
@@ -386,108 +487,6 @@ impl Automaton for TuringMachine {
             }
         }
         true
-    }
-
-    fn to_encoding(
-        &self,
-    ) -> (
-        String,
-        std::collections::HashMap<String, String>,
-        std::collections::HashMap<String, String>,
-    ) {
-        let mut state_bits: usize = 0;
-        let mut states = self.states.len();
-        while states > 0 {
-            states >>= 1;
-            state_bits += 1;
-        }
-        let mut state_encoding: std::collections::HashMap<String, String> =
-            std::collections::HashMap::new();
-        for (index, state) in self.states.iter().enumerate() {
-            if self.final_states.contains(state)
-                && state != &self.accept_state
-                && state != &self.reject_state
-            {
-                state_encoding.insert(
-                    state.clone(),
-                    format!("h{:0>width$b}", index, width = state_bits),
-                );
-            } else if state == &self.accept_state {
-                state_encoding.insert(
-                    state.clone(),
-                    format!("y{:0>width$b}", index, width = state_bits),
-                );
-            } else if state == &self.reject_state {
-                state_encoding.insert(
-                    state.clone(),
-                    format!("n{:0>width$b}", index, width = state_bits),
-                );
-            } else if state == &self.initial_state {
-                state_encoding.insert(
-                    state.clone(),
-                    format!("i{:0>width$b}", index, width = state_bits),
-                );
-            } else {
-                state_encoding.insert(
-                    state.clone(),
-                    format!("q{:0>width$b}", index, width = state_bits),
-                );
-            }
-        }
-        let mut tape_bits: usize = 0;
-        let mut tape_symbols = self.tape_alphabet.len();
-        while tape_symbols > 0 {
-            tape_symbols >>= 1;
-            tape_bits += 1;
-        }
-        let mut tape_encoding: std::collections::HashMap<String, String> =
-            std::collections::HashMap::new();
-        for (index, symbol) in self.tape_alphabet.iter().enumerate() {
-            if self.input_alphabet.contains(symbol) {
-                tape_encoding.insert(
-                    symbol.clone(),
-                    format!("a{:0>width$b}", index, width = tape_bits),
-                );
-            } else if symbol == &self.blank_symbol {
-                tape_encoding.insert(
-                    symbol.clone(),
-                    format!("b{:0>width$b}", index, width = tape_bits),
-                );
-            } else {
-                tape_encoding.insert(
-                    symbol.clone(),
-                    format!("t{:0>width$b}", index, width = tape_bits),
-                );
-            }
-        }
-        let mut transitions_encoding = String::new();
-        for transition in &self.transitions {
-            let mut transition_encoding = "(".to_string();
-            transition_encoding.push_str(&state_encoding[&transition.state]);
-            transition_encoding.push(';');
-            for symbol in &transition.symbols {
-                transition_encoding.push_str(&tape_encoding[symbol]);
-                transition_encoding.push(';');
-            }
-            transition_encoding.push_str(&state_encoding[&transition.new_state]);
-            transition_encoding.push(';');
-            for symbol in &transition.new_symbols {
-                transition_encoding.push_str(&tape_encoding[symbol]);
-                transition_encoding.push(';');
-            }
-            for direction in &transition.directions {
-                match direction {
-                    Direction::Left => transition_encoding.push('L'),
-                    Direction::Right => transition_encoding.push('R'),
-                    Direction::Stay => transition_encoding.push('S'),
-                }
-                transition_encoding.push(';');
-            }
-            transition_encoding.pop();
-            transition_encoding.push(')');
-            transitions_encoding.push_str(&transition_encoding);
-        }
-        (transitions_encoding, tape_encoding, state_encoding)
     }
 }
 
@@ -1514,5 +1513,20 @@ impl Executable for RamMachine {
             }
         }
         (out, steps)
+    }
+
+    fn to_encoding(&self) -> (String, std::collections::HashMap<String, String>, std::collections::HashMap<String, String>) {
+        let mut encoding = "#".to_string();
+        let mut counter = 0;
+        for instr in self.instructions.clone() {
+            let counter_number_bits = if counter > 0 { (counter as f32).log2().ceil() as i32 } else { 1 };
+            if instr.opcode == "1011" || instr.opcode == "0011" { // Write and Halt does not have operands
+                encoding = encoding + &utils::int2bin(counter, (counter_number_bits) as usize) + "," + &instr.opcode + "#";
+            } else {
+                encoding = encoding + &utils::int2bin(counter, (counter_number_bits) as usize) + "," + &instr.opcode + &(utils::int2bin(utils::bin2int(instr.operand), 0)) + "#";
+            }
+            counter += 1;
+        }
+        (encoding, std::collections::HashMap::new(), std::collections::HashMap::new())
     }
 }

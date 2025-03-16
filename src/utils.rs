@@ -17,7 +17,11 @@ pub fn input_string_to_vec(input_alphabet: Vec<String>, input: String) -> Vec<St
 }
 
 pub fn int2bin(n: i32, bitnum: usize) -> String {
-    format!("{:0>width$b}", n, width = bitnum)
+    if bitnum > 0 {
+        format!("{:0>width$b}", n, width = bitnum)
+    } else {
+        format!("{:b}", n)
+    }
 }
 
 pub fn bin2int(s: String) -> i32 {

@@ -79,9 +79,9 @@ pub fn print_status<T: automata::Automaton>(tm: &T) {
     println!("Transition total: {}", tm.is_transition_total());
 }
 
-fn execute_tm(tm: automata::TuringMachine, opt: options::Options) {
+fn execute_tm(mut tm: automata::TuringMachine, opt: options::Options) {
     let input_tape = utils::input_string_to_vec(tm.input_alphabet(), opt.input.clone());
-    let result = tm.clone().simulate(input_tape, opt.max_steps);
+    let result = tm.simulate(input_tape, opt.max_steps);
     if opt.verbose == 0 {
         println!("{}", result.0);
         print_tape(tm.last_execution.1[0].clone(), tm.clone(), Some(true));
@@ -172,7 +172,7 @@ fn interactive_tui_ram(ram: automata::RamMachine, opt: options::Options) {
     }
 }
 
-pub fn print_encoding(tm: &automata::TuringMachine) {
+pub fn print_encoding_tm(tm: &automata::TuringMachine) {
     let encoded: (
         String,
         std::collections::HashMap<String, String>,
@@ -187,6 +187,15 @@ pub fn print_encoding(tm: &automata::TuringMachine) {
     for (k, v) in encoded.2.iter() {
         println!("{} {}", v, k);
     }
+}
+
+pub fn print_encoding_ram(ram: &automata::RamMachine) {
+    let encoded: (
+        String,
+        std::collections::HashMap<String, String>,
+        std::collections::HashMap<String, String>,
+    ) = ram.to_encoding();
+    println!("{}", encoded.0);
 }
 
 pub fn print_computation(
@@ -279,16 +288,44 @@ pub fn main_cli() {
     }
     if options.type_ == "ram" {
         let ram: automata::RamMachine = file_handler::read_ram_progran_from_file(options.clone());
-        if options.print_tm {
-            print_ram(ram);
-            return;
-        }
-        if options.status {
-            // print_status_ram(&ram); todo
-        } else if options.clone().input.is_empty() {
-            interactive_tui_ram(ram.clone(), options.clone());
+        if options.convert_to_tm{
+            let mut options_new = options.clone();
+            options_new.type_ = "tm".to_string();
+            options_new.file = "src/standard/ram over tm.tm".to_string();
+            options_new.input = options.input + &ram.to_encoding().0;
+            let tm = file_handler::read_turing_machine_from_file(options_new.clone());
+            if options_new.print_tm {
+                print_tm(tm);
+                return;
+            }
+            if options_new.print_encoding {
+                print_encoding_tm(&tm);
+                return;
+            }
+            if options.status {
+                print_status(&tm);
+            } else if options_new.clone().input.is_empty() {
+                interactive_tui_tm(tm.clone(), options_new.clone());
+            } else {
+                execute_tm(tm.clone(), options_new.clone());
+            }
         } else {
-            execute_ram(ram.clone(), options.clone());
+            if options.print_tm {
+                print_ram(ram);
+                return;
+            }
+            if options.print_encoding {
+                print_encoding_ram(&ram);
+    
+                return;
+            }
+            if options.status {
+                // print_status_ram(&ram); todo
+            } else if options.clone().input.is_empty() {
+                interactive_tui_ram(ram.clone(), options.clone());
+            } else {
+                execute_ram(ram.clone(), options.clone());
+            }
         }
     } else {
         let mut tm;
@@ -313,7 +350,7 @@ pub fn main_cli() {
             return;
         }
         if options.print_encoding {
-            print_encoding(&tm);
+            print_encoding_tm(&tm);
             return;
         }
         if options.status {
