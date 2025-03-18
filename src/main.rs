@@ -1,7 +1,6 @@
 // File: main.rs
 // Project: Computing Simulator
 // author: dp
-// date: 2025-03-03
 
 mod automata;
 mod cli;

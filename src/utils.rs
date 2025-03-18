@@ -1,7 +1,6 @@
 // file: utils.rs
 // Project: Computing Simulator
 // author: dp
-// date: 2025-03-05
 
 pub fn input_string_to_vec(input_alphabet: Vec<String>, input: String) -> Vec<String> {
     let mut vec = Vec::new();

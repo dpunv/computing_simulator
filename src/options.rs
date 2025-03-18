@@ -1,7 +1,6 @@
 // file: options.rs
 // Project: Computing Simulator
 // author: dp
-// date: 2025-03-06
 
 #[derive(Clone)]
 pub struct Options {

@@ -1,7 +1,6 @@
 // File: file_handler.rs
 // Project: Computing Simulator
 // author: dp
-// date: 2025-03-06
 
 use crate::automata;
 use crate::automata::FromString;
