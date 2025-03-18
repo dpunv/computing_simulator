@@ -287,7 +287,15 @@ pub fn main_cli() {
         println!("Error: Invalid options. Use --help for more information.");
         return;
     }
-    
+
+    if options.print_nth_tm != -1 {
+        let tm_encoding = automata::nth_turing_machine((options.print_nth_tm) as u128);
+        println!("{}", tm_encoding);
+        //automata::test_turing_machines((options.print_nth_tm) as u64);
+        //print_tm(automata::encoding_to_tm(tm_encoding));
+        return;
+    }
+
     match options.type_.as_str() {
         "ram" => handle_ram_machine(options),
         "tm" | "fsm" | "pda" => handle_automaton(options),
@@ -297,7 +305,7 @@ pub fn main_cli() {
 
 fn validate_options(options: &options::Options) -> bool {
     let valid_types = ["tm", "fsm", "pda", "ram"];
-    valid_types.contains(&options.type_.as_str()) && !options.file.is_empty()
+    valid_types.contains(&options.type_.as_str()) && (!options.file.is_empty() || options.print_nth_tm != -1)
 }
 
 fn handle_ram_machine(options: options::Options) {
@@ -341,6 +349,11 @@ fn handle_automaton(options: options::Options) {
     
     if options.convert_to_singletape {
         tm = automata::convert_multi_tape_to_single_tape_tm(tm);
+    }
+
+    if options.print_number {
+        println!("{}", tm.number());
+        return;
     }
     
     if options.print_tm {

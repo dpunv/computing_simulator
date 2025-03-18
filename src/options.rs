@@ -10,6 +10,8 @@ pub struct Options {
     pub convert_to_tm: bool,
     pub convert_to_singletape: bool,
     pub print_tm: bool,
+    pub print_number: bool,
+    pub print_nth_tm: i128,
     pub help: bool,
     pub version: bool,
     pub max_steps: i32,
@@ -26,6 +28,8 @@ pub fn get_options() -> Options {
     let mut convert_to_tm = false;
     let mut convert_to_singletape = false;
     let mut print_tm = false;
+    let mut print_nth_tm: i128 = -1;
+    let mut print_number = false;
     let mut help = false;
     let mut version = false;
     let mut max_steps = 1000;
@@ -43,6 +47,10 @@ pub fn get_options() -> Options {
             file = arg.strip_prefix("--file=").unwrap_or("").to_string();
             if file.starts_with('"') && file.ends_with('"') {
                 file = file[1..file.len() - 1].to_string();
+            }
+        } else if arg.starts_with("--print-nth-tm=") {
+            if let Ok(value) = arg.strip_prefix("--print-nth-tm=").unwrap_or("-1").parse() {
+                print_nth_tm = value;
             }
         } else if arg.starts_with("--max-steps=") {
             if let Ok(value) = arg.strip_prefix("--max-steps=").unwrap_or("1000").parse() {
@@ -63,6 +71,7 @@ pub fn get_options() -> Options {
                 "--convert-to-tm" => convert_to_tm = true,
                 "--convert-to-singletape" => convert_to_singletape = true,
                 "--print-tm" => print_tm = true,
+                "--print-number" => print_number = true,
                 "--help" => help = true,
                 "--version" => version = true,
                 "--status" => status = true,
@@ -79,6 +88,8 @@ pub fn get_options() -> Options {
         type_,
         print_tm,
         from_encoding,
+        print_number,
+        print_nth_tm,
         convert_to_tm,
         convert_to_singletape,
         help,

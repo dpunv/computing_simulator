@@ -3,6 +3,8 @@
 // author: dp
 // date: 2025-03-06
 
+use std::vec;
+
 use crate::utils;
 
 #[derive(Clone)]
@@ -106,6 +108,7 @@ pub trait Automaton: Clone {
     fn is_ok(&self) -> bool;
     fn make_transition_map(&self) -> std::collections::HashMap<String, Vec<Transition>>;
     fn input_alphabet(&self) -> Vec<String>;
+    fn number(&self) -> i32;
 }
 
 #[derive(Clone)]
@@ -377,6 +380,23 @@ impl Executable for TuringMachine {
 }
 
 impl Automaton for TuringMachine {
+
+    fn number(&self) -> i32 {
+        let alphabet = vec!["0".to_string(), "1".to_string(), ";".to_string(), "(".to_string(), ")".to_string(), "a".to_string(), "b".to_string(), "t".to_string(), "y".to_string(), "n".to_string(), "h".to_string(), "i".to_string(), "R".to_string(), "L".to_string(), "S".to_string()];
+        let mut p = 0;
+        let mut i = 0;
+        let mut tm_string = "".to_string();
+        let encoding = self.to_encoding().0;
+        while tm_string != encoding {
+            i += 1;
+            tm_string = utils::int2str(i, alphabet.clone());
+            if check_tm_encoding(tm_string.clone()) {
+                p += 1;
+            }
+        }
+        p
+    }
+
     fn input_alphabet(&self) -> Vec<String> {
         self.input_alphabet.clone()
     }
@@ -1529,4 +1549,76 @@ impl Executable for RamMachine {
         }
         (encoding, std::collections::HashMap::new(), std::collections::HashMap::new())
     }
+}
+
+pub fn nth_turing_machine(nth: u128) -> String {
+    let alphabet = vec!["0".to_string(), "1".to_string(), ";".to_string(), "(".to_string(), ")".to_string(), "a".to_string(), "b".to_string(), "t".to_string(), "y".to_string(), "n".to_string(), "h".to_string(), "i".to_string(), "R".to_string(), "L".to_string(), "S".to_string()];
+    let mut p = 0;
+    let mut i = 0;
+    let mut tm_string = "".to_string();
+    while p != nth{
+        i += 1;
+        tm_string = utils::int2str(i, alphabet.clone());
+        if check_tm_encoding(tm_string.clone()) {
+            p += 1;
+        }
+    }
+    tm_string
+}
+
+pub fn check_tm_encoding(encoding: String) -> bool {
+    if encoding.len() < 15 {
+        return false;
+    }
+    let mut transitions: Vec<&str> = encoding.split(")").collect();
+    if transitions.last().unwrap().trim() != "" {
+        return false;
+    }
+    transitions.pop();
+    for transition in transitions {
+        let transition = transition.trim();
+        let transition = transition.strip_prefix("(").unwrap();
+        let mut transition = transition.split(";");
+        let state = transition.next().unwrap().to_string();
+        if !(state.starts_with("y") || state.starts_with("n") || state.starts_with("h") || state.starts_with("i") || state.starts_with("q")) {
+            return false;
+        }
+        for char in state.chars().skip(1) {
+            if !(char == '0' || char == '1') {
+                return false;
+            }
+        }
+        let symbol = transition.next().unwrap().to_string();
+        if !(symbol.starts_with("a") || symbol.starts_with("b") || symbol.starts_with("t")) {
+            return false;
+        }
+        for char in symbol.chars().skip(1) {
+            if !(char == '0' || char == '1') {
+                return false;
+            }
+        }
+        let new_state = transition.next().unwrap().to_string();
+        if !(new_state.starts_with("y") || new_state.starts_with("n") || new_state.starts_with("h") || new_state.starts_with("i") || new_state.starts_with("q")) {
+            return false;
+        }
+        for char in new_state.chars().skip(1) {
+            if !(char == '0' || char == '1') {
+                return false;
+            }
+        }
+        let new_symbol = transition.next().unwrap().to_string();
+        if !(new_symbol.starts_with("a") || new_symbol.starts_with("b") || new_symbol.starts_with("t")) {
+            return false;
+        }
+        for char in new_symbol.chars().skip(1) {
+            if !(char == '0' || char == '1') {
+                return false;
+            }
+        }
+        let direction = transition.next().unwrap().to_string();
+        if !(direction == "L" || direction == "R" || direction == "S") {
+            return false;
+        }
+    }
+    return true;
 }

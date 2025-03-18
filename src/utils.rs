@@ -35,3 +35,46 @@ where
 {
     hashmap.iter().map(|(k, v)| (v.clone(), k.clone())).collect()
 } */
+
+pub fn int2str(n: i32, alphabet: Vec<String>) -> String {
+    let mut i = 1;
+    let mut p = 0;
+    let mut u;
+    loop{
+        let x = int2bin(i+1, 0);
+        let m = x.len();
+        let y = x[2..m].to_string();
+        u = bin2alphabet(y, alphabet.clone());
+        if u != " ERROR ".to_string(){
+            p+=1;
+        }
+        if p == n{
+            break;
+        }
+        i+=1;
+    }
+    return u
+}
+
+pub fn bin2alphabet(s: String, alphabet: Vec<String>) -> String {
+    // number of bit needed to encode the alphabet
+    let bitnum: usize = (alphabet.len() as f64).log2().ceil() as usize;
+    if s.len() % bitnum != 0 || s.len() == 0 {
+        return " ERROR ".to_string();
+    }
+    //println!("bitnum: {}, len: {}", bitnum, s.len());
+    let mut result = String::new();
+    for i in 0..(s.len() / bitnum) {
+        let symbol = &s[i * bitnum..((i + 1) * bitnum-1)];
+        let index = bin2int(symbol.to_string());
+        //println!("i: {}", i);
+        result.push_str(&alphabet[index as usize]);
+    }
+    result
+}
+
+/* pub fn int2pair(n: i32) -> (i32, i32) {
+    assert!(n>0);
+    let d = ((((8 * n + 1) as f32).sqrt() + (1 as f32)) / (2 as f32)).floor() as i32;
+    (n - (d * (d+1)/2), d + (d * (d+1) / 2) - n)
+} */
