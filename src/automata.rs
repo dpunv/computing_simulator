@@ -380,9 +380,24 @@ impl Executable for TuringMachine {
 }
 
 impl Automaton for TuringMachine {
-
     fn number(&self) -> i32 {
-        let alphabet = vec!["0".to_string(), "1".to_string(), ";".to_string(), "(".to_string(), ")".to_string(), "a".to_string(), "b".to_string(), "t".to_string(), "y".to_string(), "n".to_string(), "h".to_string(), "i".to_string(), "R".to_string(), "L".to_string(), "S".to_string()];
+        let alphabet = vec![
+            "0".to_string(),
+            "1".to_string(),
+            ";".to_string(),
+            "(".to_string(),
+            ")".to_string(),
+            "a".to_string(),
+            "b".to_string(),
+            "t".to_string(),
+            "y".to_string(),
+            "n".to_string(),
+            "h".to_string(),
+            "i".to_string(),
+            "R".to_string(),
+            "L".to_string(),
+            "S".to_string(),
+        ];
         let mut p = 0;
         let mut i = 0;
         let mut tm_string = "".to_string();
@@ -1535,28 +1550,66 @@ impl Executable for RamMachine {
         (out, steps)
     }
 
-    fn to_encoding(&self) -> (String, std::collections::HashMap<String, String>, std::collections::HashMap<String, String>) {
+    fn to_encoding(
+        &self,
+    ) -> (
+        String,
+        std::collections::HashMap<String, String>,
+        std::collections::HashMap<String, String>,
+    ) {
         let mut encoding = "#".to_string();
-        let mut counter = 0;
-        for instr in self.instructions.clone() {
-            let counter_number_bits = if counter > 0 { (counter as f32).log2().ceil() as i32 } else { 1 };
-            if instr.opcode == "1011" || instr.opcode == "0011" { // Write and Halt does not have operands
-                encoding = encoding + &utils::int2bin(counter, (counter_number_bits) as usize) + "," + &instr.opcode + "#";
+        for (counter, instr) in self.instructions.clone().into_iter().enumerate() {
+            let counter_number_bits = if counter > 0 {
+                (counter as f32).log2().ceil() as i32
             } else {
-                encoding = encoding + &utils::int2bin(counter, (counter_number_bits) as usize) + "," + &instr.opcode + &(utils::int2bin(utils::bin2int(instr.operand), 0)) + "#";
+                1
+            };
+            if instr.opcode == "1011" || instr.opcode == "0011" {
+                // Write and Halt does not have operands
+                encoding = encoding
+                    + &utils::int2bin(counter as i32, (counter_number_bits) as usize)
+                    + ","
+                    + &instr.opcode
+                    + "#";
+            } else {
+                encoding = encoding
+                    + &utils::int2bin(counter as i32, (counter_number_bits) as usize)
+                    + ","
+                    + &instr.opcode
+                    + &(utils::int2bin(utils::bin2int(instr.operand), 0))
+                    + "#";
             }
-            counter += 1;
         }
-        (encoding, std::collections::HashMap::new(), std::collections::HashMap::new())
+        (
+            encoding,
+            std::collections::HashMap::new(),
+            std::collections::HashMap::new(),
+        )
     }
 }
 
 pub fn nth_turing_machine(nth: u128) -> String {
-    let alphabet = vec!["0".to_string(), "1".to_string(), ";".to_string(), "(".to_string(), ")".to_string(), "a".to_string(), "b".to_string(), "t".to_string(), "y".to_string(), "n".to_string(), "h".to_string(), "i".to_string(), "R".to_string(), "L".to_string(), "S".to_string()];
+    let alphabet = vec![
+        "0".to_string(),
+        "1".to_string(),
+        ";".to_string(),
+        "(".to_string(),
+        ")".to_string(),
+        "a".to_string(),
+        "b".to_string(),
+        "t".to_string(),
+        "y".to_string(),
+        "n".to_string(),
+        "h".to_string(),
+        "i".to_string(),
+        "R".to_string(),
+        "L".to_string(),
+        "S".to_string(),
+    ];
     let mut p = 0;
     let mut i = 0;
     let mut tm_string = "".to_string();
-    while p != nth{
+    while p != nth {
         i += 1;
         tm_string = utils::int2str(i, alphabet.clone());
         if check_tm_encoding(tm_string.clone()) {
@@ -1580,7 +1633,12 @@ pub fn check_tm_encoding(encoding: String) -> bool {
         let transition = transition.strip_prefix("(").unwrap();
         let mut transition = transition.split(";");
         let state = transition.next().unwrap().to_string();
-        if !(state.starts_with("y") || state.starts_with("n") || state.starts_with("h") || state.starts_with("i") || state.starts_with("q")) {
+        if !(state.starts_with("y")
+            || state.starts_with("n")
+            || state.starts_with("h")
+            || state.starts_with("i")
+            || state.starts_with("q"))
+        {
             return false;
         }
         for char in state.chars().skip(1) {
@@ -1598,7 +1656,12 @@ pub fn check_tm_encoding(encoding: String) -> bool {
             }
         }
         let new_state = transition.next().unwrap().to_string();
-        if !(new_state.starts_with("y") || new_state.starts_with("n") || new_state.starts_with("h") || new_state.starts_with("i") || new_state.starts_with("q")) {
+        if !(new_state.starts_with("y")
+            || new_state.starts_with("n")
+            || new_state.starts_with("h")
+            || new_state.starts_with("i")
+            || new_state.starts_with("q"))
+        {
             return false;
         }
         for char in new_state.chars().skip(1) {
@@ -1607,7 +1670,10 @@ pub fn check_tm_encoding(encoding: String) -> bool {
             }
         }
         let new_symbol = transition.next().unwrap().to_string();
-        if !(new_symbol.starts_with("a") || new_symbol.starts_with("b") || new_symbol.starts_with("t")) {
+        if !(new_symbol.starts_with("a")
+            || new_symbol.starts_with("b")
+            || new_symbol.starts_with("t"))
+        {
             return false;
         }
         for char in new_symbol.chars().skip(1) {
@@ -1620,5 +1686,5 @@ pub fn check_tm_encoding(encoding: String) -> bool {
             return false;
         }
     }
-    return true;
+    true
 }
