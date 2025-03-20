@@ -2,12 +2,12 @@
 // Project: Computing Simulator
 // author: dp
 
-use crate::automata;
-use crate::automata::Automaton;
-use crate::automata::Executable;
+use crate::turing_machine;
 
 use crate::file_handler;
 use crate::options;
+use crate::regex;
+use crate::ram_machine;
 use crate::utils;
 use core::panic;
 use std::io::Write;
@@ -48,7 +48,7 @@ fn print_version() {
     println!("Turing Machine Simulator 0.1.0");
 }
 
-pub fn print_tape(tape: automata::Tape, tm: automata::TuringMachine, trim: Option<bool>) {
+pub fn print_tape(tape: turing_machine::Tape, tm: turing_machine::TuringMachine, trim: Option<bool>) {
     let should_trim = trim.unwrap_or(false);
     let mut tape = tape;
     if should_trim {
@@ -72,30 +72,35 @@ pub fn print_tape(tape: automata::Tape, tm: automata::TuringMachine, trim: Optio
     }
 }
 
-pub fn print_status_tm(tm: &automata::TuringMachine) {
+pub fn print_status_tm(tm: &turing_machine::TuringMachine) {
     println!("Deterministic: {}", tm.is_deterministic());
     println!("Ok: {}", tm.is_ok());
     println!("Transition total: {}", tm.is_transition_total());
 }
 
-fn execute_tm(mut tm: automata::TuringMachine, opt: options::Options) {
+fn execute_tm(mut tm: turing_machine::TuringMachine, opt: options::Options) {
     let input_tape = utils::input_string_to_vec(tm.input_alphabet(), opt.input.clone());
     let result = tm.simulate(input_tape, opt.max_steps);
     if opt.verbose == 0 {
         println!("{}", result.0);
         print_tape(tm.last_execution.1[0].clone(), tm.clone(), Some(true));
-    } else if opt.verbose == 1 {
+    } else if opt.verbose >= 1 {
         println!("State: {}", result.0);
         println!("Steps: {}", result.1);
         print!("Output Tape: ");
         print_tape(tm.last_execution.1[0].clone(), tm.clone(), Some(true));
         println!();
-    } else if opt.verbose == 2 {
-        println!("State: {}", result.0);
-        println!("Steps: {}", result.1);
-        print!("Output Tape: ");
-        print_tape(tm.last_execution.1[0].clone(), tm.clone(), Some(true));
-        println!();
+        if tm.final_states.contains(&result.0) && (tm.accept_state == result.0 || !tm.end_on_final_state) && (tm.end_on_final_state || tm.last_execution.1[0].tape.iter().all(|x| x == &tm.blank_symbol)) {
+            println!("Accept");
+        } else if tm.final_states.contains(&result.0) && tm.reject_state != result.0 {
+            println!("Halt");
+        } else {
+            println!("Reject");
+        }
+    } else if opt.verbose < 0 || opt.verbose > 2 {
+        panic!("Invalid verbose level");
+    }
+    if opt.verbose >= 2 {
         println!("Computation:");
         print_computation(
             tm.last_execution.3.clone(),
@@ -106,26 +111,23 @@ fn execute_tm(mut tm: automata::TuringMachine, opt: options::Options) {
             true,
             true,
         );
-    } else {
-        panic!("Invalid verbose level");
     }
 }
 
-fn execute_ram(ram: automata::RamMachine, opt: options::Options) {
+fn execute_ram(ram: ram_machine::RamMachine, opt: options::Options) {
     let input_tape = vec![opt.input.clone()];
     let result: (String, i32) = ram.clone().simulate(input_tape, opt.max_steps);
     if opt.verbose == 0 {
         println!("{}", result.0);
     } else if opt.verbose >= 1 {
-        println!("Execution complete:");
-        println!("  Output: {}", result.0);
-        println!("  Steps: {}", result.1);
+        println!("Output: {}", result.0);
+        println!("Steps: {}", result.1);
     } else {
         panic!("Invalid verbose level");
     }
 }
 
-fn interactive_tui_tm(tm: automata::TuringMachine, opt: options::Options) {
+fn interactive_tui_tm(tm: turing_machine::TuringMachine, opt: options::Options) {
     let mut input = String::new();
     loop {
         print!("> ");
@@ -134,6 +136,8 @@ fn interactive_tui_tm(tm: automata::TuringMachine, opt: options::Options) {
         input.clear();
         std::io::stdin().read_line(&mut input).unwrap();
         let trimmed_input = input.trim().to_string();
+        let mut new_opt = opt.clone();
+        new_opt.input = input.clone();
         if trimmed_input == "status" {
             print_status_tm(&tm);
         } else if trimmed_input == "help" {
@@ -143,18 +147,20 @@ fn interactive_tui_tm(tm: automata::TuringMachine, opt: options::Options) {
         } else if trimmed_input == "exit" {
             break;
         } else {
-            execute_tm(tm.clone(), opt.clone());
+            execute_tm(tm.clone(), new_opt.clone());
         }
     }
 }
 
-fn interactive_tui_ram(ram: automata::RamMachine, opt: options::Options) {
+fn interactive_tui_ram(ram: ram_machine::RamMachine, opt: options::Options) {
     let mut input = String::new();
     loop {
         print!("> ");
         std::io::stdout().flush().unwrap();
         input.clear();
         std::io::stdin().read_line(&mut input).unwrap();
+        let mut new_opt = opt.clone();
+        new_opt.input = input.clone();
         let trimmed_input = input.trim().to_string();
         if trimmed_input == "status" {
             print_status_ram(&ram);
@@ -165,12 +171,12 @@ fn interactive_tui_ram(ram: automata::RamMachine, opt: options::Options) {
         } else if trimmed_input == "exit" {
             break;
         } else {
-            execute_ram(ram.clone(), opt.clone());
+            execute_ram(ram.clone(), new_opt.clone());
         }
     }
 }
 
-pub fn print_encoding_tm(tm: &automata::TuringMachine) {
+pub fn print_encoding_tm(tm: &turing_machine::TuringMachine) {
     let encoded: (
         String,
         std::collections::HashMap<String, String>,
@@ -187,7 +193,7 @@ pub fn print_encoding_tm(tm: &automata::TuringMachine) {
     }
 }
 
-pub fn print_encoding_ram(ram: &automata::RamMachine) {
+pub fn print_encoding_ram(ram: &ram_machine::RamMachine) {
     let encoded: (
         String,
         std::collections::HashMap<String, String>,
@@ -197,8 +203,8 @@ pub fn print_encoding_ram(ram: &automata::RamMachine) {
 }
 
 pub fn print_computation(
-    computation: Vec<automata::Configuration>,
-    tm: automata::TuringMachine,
+    computation: Vec<turing_machine::Configuration>,
+    tm: turing_machine::TuringMachine,
     output_tape: bool,
     trimmed_tape: bool,
     steps: bool,
@@ -221,7 +227,7 @@ pub fn print_computation(
     }
 }
 
-pub fn print_tm(tm: automata::TuringMachine) {
+pub fn print_tm(tm: turing_machine::TuringMachine) {
     println!("{}", tm.initial_state);
     println!("{}", tm.accept_state);
     println!("{}", tm.reject_state);
@@ -242,9 +248,9 @@ pub fn print_tm(tm: automata::TuringMachine) {
                 .directions
                 .iter()
                 .map(|x| {
-                    if *x == automata::Direction::Left {
+                    if *x == turing_machine::Direction::Left {
                         "L".to_string()
-                    } else if *x == automata::Direction::Right {
+                    } else if *x == turing_machine::Direction::Right {
                         "R".to_string()
                     } else {
                         "S".to_string()
@@ -257,7 +263,7 @@ pub fn print_tm(tm: automata::TuringMachine) {
     }
 }
 
-pub fn print_ram(ram: automata::RamMachine) {
+pub fn print_ram(ram: ram_machine::RamMachine) {
     for instruction in ram.instructions.iter() {
         print!("OPCODE: {} ", instruction.opcode);
         print!("ARGUMENTS: {} ", instruction.operand);
@@ -265,7 +271,7 @@ pub fn print_ram(ram: automata::RamMachine) {
     }
 }
 
-fn print_status_ram(ram: &automata::RamMachine) {
+fn print_status_ram(ram: &ram_machine::RamMachine) {
     println!("Number of instructions: {}", ram.instructions.len());
 }
 
@@ -288,7 +294,7 @@ pub fn main_cli() {
     }
 
     if options.print_nth_tm != -1 {
-        let tm_encoding = automata::nth_turing_machine((options.print_nth_tm) as u128);
+        let tm_encoding = turing_machine::nth_turing_machine((options.print_nth_tm) as u128);
         println!("{}", tm_encoding);
         //automata::test_turing_machines((options.print_nth_tm) as u64);
         //print_tm(automata::encoding_to_tm(tm_encoding));
@@ -309,7 +315,12 @@ fn validate_options(options: &options::Options) -> bool {
 }
 
 fn handle_ram_machine(options: options::Options) {
-    let ram: automata::RamMachine = file_handler::read_ram_progran_from_file(options.clone());
+    let ram: ram_machine::RamMachine;
+    if options.from_encoding {
+        ram = file_handler::read_ram_program_from_encoding_file(options.clone())
+    } else {
+        ram = file_handler::read_ram_program_from_file(options.clone());
+    }
 
     if options.convert_to_tm {
         handle_ram_to_tm_conversion(ram, options);
@@ -335,7 +346,7 @@ fn handle_ram_machine(options: options::Options) {
     }
 }
 
-fn handle_ram_to_tm_conversion(ram: automata::RamMachine, options: options::Options) {
+fn handle_ram_to_tm_conversion(ram: ram_machine::RamMachine, options: options::Options) {
     let mut options_new = options.clone();
     options_new.type_ = "tm".to_string();
     options_new.file = "src/standard/ram over tm.tm".to_string();
@@ -348,7 +359,7 @@ fn handle_automaton(options: options::Options) {
     let mut tm = load_automaton(options.clone());
 
     if options.convert_to_singletape {
-        tm = automata::convert_multi_tape_to_single_tape_tm(tm);
+        tm = tm.convert_multi_tape_to_single_tape_tm();
     }
 
     if options.print_number {
@@ -375,7 +386,37 @@ fn handle_automaton(options: options::Options) {
     }
 }
 
-fn load_automaton(options: options::Options) -> automata::TuringMachine {
+/* pub fn print_regex(regex: &regex::Regex, level: usize) {
+    match regex.operation {
+        regex::Operation::Symbol => {
+            println!("{}Symbol: {}", "  ".repeat(level), regex.symbol);
+        },
+        regex::Operation::Concat => {
+            println!("{}Concat", "  ".repeat(level));
+            print_regex(regex.left.as_ref().unwrap(), level + 1);
+            print_regex(regex.right.as_ref().unwrap(), level + 1);
+        },
+        regex::Operation::Or => {
+            println!("{}Or", "  ".repeat(level));
+            print_regex(regex.left.as_ref().unwrap(), level + 1);
+            print_regex(regex.right.as_ref().unwrap(), level + 1);
+        },
+        regex::Operation::KleeneStar => {
+            println!("{}KleeneStar", "  ".repeat(level));
+            print_regex(regex.left.as_ref().unwrap(), level + 1);
+        },
+        regex::Operation::KleneePlus => {
+            println!("{}KleneePlus", "  ".repeat(level));
+            print_regex(regex.left.as_ref().unwrap(), level + 1);
+        },
+        regex::Operation::Optional => {
+            println!("{}Optional", "  ".repeat(level));
+            print_regex(regex.left.as_ref().unwrap(), level + 1);
+        },
+    }
+} */
+
+fn load_automaton(options: options::Options) -> turing_machine::TuringMachine {
     match options.type_.as_str() {
         "tm" => {
             if options.from_encoding {
@@ -384,7 +425,27 @@ fn load_automaton(options: options::Options) -> automata::TuringMachine {
                 file_handler::read_turing_machine_from_file(options)
             }
         }
-        "fsm" => file_handler::read_finite_state_machine_from_file(options),
+        "fsm" => {
+            if options.regex {
+                let file = std::fs::read_to_string(options.clone().file).expect("Error reading the file");
+
+                let lines: Vec<&str> = file.lines().collect();
+            
+                let line = lines[0];
+                let result = regex::build_regex_tree(line);
+                match result {
+                    Ok(regex) => {
+                        //print_regex(&regex, 0);
+                        regex::regex_to_fsa(&regex)
+                    }
+                    Err(e) => {
+                        panic!("Error parsing the regex: {}", e);
+                    }
+                }
+            } else {
+                file_handler::read_finite_state_machine_from_file(options)
+            }
+        }
         "pda" => file_handler::read_pushdown_automaton_from_file(options),
         _ => panic!("Tipo di automa non supportato"),
     }

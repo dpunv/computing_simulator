@@ -18,6 +18,7 @@ pub struct Options {
     pub file: String,
     pub status: bool,
     pub print_encoding: bool,
+    pub regex: bool,
     pub verbose: i32,
 }
 
@@ -25,6 +26,7 @@ pub fn get_options() -> Options {
     let mut type_ = "tm".to_string();
     let mut from_encoding = false;
     let mut convert_to_tm = false;
+    let mut regex = false;
     let mut convert_to_singletape = false;
     let mut print_tm = false;
     let mut print_nth_tm: i128 = -1;
@@ -74,6 +76,7 @@ pub fn get_options() -> Options {
                 "--help" => help = true,
                 "--version" => version = true,
                 "--status" => status = true,
+                "--regex" => regex = true,
                 "--print-encoding" => print_encoding = true,
                 _ => {
                     file = arg;
@@ -86,6 +89,7 @@ pub fn get_options() -> Options {
     Options {
         type_,
         print_tm,
+        regex,
         from_encoding,
         print_number,
         print_nth_tm,
