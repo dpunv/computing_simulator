@@ -1,15 +1,4 @@
 // file: automaton.rs
 // Project: Computing Simulator
 // author: dp
-R 8
-ST 20
-MIR 8
-R 8
-ST 21
-L 20
-A 21
-A 20
-A 20
-S 20
-W
-H
+a(b|c)?

@@ -1,3 +1,6 @@
+// file: regex.rs
+// Project: Computing Simulator
+// author: dp
 
 use std::iter::Peekable;
 use std::str::Chars;

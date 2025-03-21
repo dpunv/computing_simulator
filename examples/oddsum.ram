@@ -1,3 +1,6 @@
+// file: oddsum.ram
+// Project: Computing Simulator
+// author: dp
 INIT 0
 ST 24
 R 8

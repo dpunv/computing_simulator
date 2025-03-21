@@ -17,27 +17,24 @@ fn print_help() {
     println!("Usage: turing_machine [OPTIONS] [FILE] [INPUT]");
     println!();
     println!("Options:");
-    println!("  --type: turing machine (tm), finite state machine (fsm)");
+    println!("  --type: turing machine (tm), finite state machine (fsm), pushdown automaton (pda), random access machine (ram)");
+    println!("  --convert-to-tm: convert a RAM machine into a Turing Machine");
     println!("  --from-encoding: read the Turing Machine from an encoding file");
-    println!("  --output-tape: print the final tape of the Turing Machine");
-    println!("  --trimmed-tape: print the final tape (trimmed) of the Turing Machine");
-    println!(
-        "  --steps: print the number of steps taken by the Turing Machine to reach the final state"
-    );
-    println!("  --state: print the final state of the Turing Machine");
-    println!("  --computation: print the full computation of the Turing Machine");
     println!("  --help: print the help message");
     println!("  --version: print the version of the Turing Machine Simulator");
+    println!("  --print-nth-tm: print the nth Turing Machine");
+    println!("  --print-tm: print the Turing Machine");
+    println!("  --print-number: print the number of the Turing Machine");
+    println!("  --verbose: set the verbosity level of the Turing Machine");
     println!("  --max-steps: set the maximum number of steps for the Turing Machine");
     println!(
         "  --convert-to-singletape: convert multitape machines into single tape Turing Machines"
     );
     println!("  --input: provide the input string for the Turing Machine");
     println!("  --file: provide the file containing the description of the Turing Machine");
+    println!("  --regex: read the regular expression from the file (works only with FSM type)");
     println!("  --status: print informations about the Turing Machine");
     println!("  --print-encoding: print the encoding of the Turing Machine");
-    println!();
-    println!("Default: read from a custom file, don't print the tape, print the trimmed tape, print the number of steps, print the final state, don't print the status, don't print the computation");
     println!();
     println!("Acknowledgements:");
     println!("  This program is made by dp. Licensed under the MIT License.");
@@ -386,36 +383,6 @@ fn handle_automaton(options: options::Options) {
     }
 }
 
-/* pub fn print_regex(regex: &regex::Regex, level: usize) {
-    match regex.operation {
-        regex::Operation::Symbol => {
-            println!("{}Symbol: {}", "  ".repeat(level), regex.symbol);
-        },
-        regex::Operation::Concat => {
-            println!("{}Concat", "  ".repeat(level));
-            print_regex(regex.left.as_ref().unwrap(), level + 1);
-            print_regex(regex.right.as_ref().unwrap(), level + 1);
-        },
-        regex::Operation::Or => {
-            println!("{}Or", "  ".repeat(level));
-            print_regex(regex.left.as_ref().unwrap(), level + 1);
-            print_regex(regex.right.as_ref().unwrap(), level + 1);
-        },
-        regex::Operation::KleeneStar => {
-            println!("{}KleeneStar", "  ".repeat(level));
-            print_regex(regex.left.as_ref().unwrap(), level + 1);
-        },
-        regex::Operation::KleneePlus => {
-            println!("{}KleneePlus", "  ".repeat(level));
-            print_regex(regex.left.as_ref().unwrap(), level + 1);
-        },
-        regex::Operation::Optional => {
-            println!("{}Optional", "  ".repeat(level));
-            print_regex(regex.left.as_ref().unwrap(), level + 1);
-        },
-    }
-} */
-
 fn load_automaton(options: options::Options) -> turing_machine::TuringMachine {
     match options.type_.as_str() {
         "tm" => {
@@ -427,15 +394,9 @@ fn load_automaton(options: options::Options) -> turing_machine::TuringMachine {
         }
         "fsm" => {
             if options.regex {
-                let file = std::fs::read_to_string(options.clone().file).expect("Error reading the file");
-
-                let lines: Vec<&str> = file.lines().collect();
-            
-                let line = lines[0];
-                let result = regex::build_regex_tree(line);
+                let result = file_handler::read_regex_from_file(options);
                 match result {
                     Ok(regex) => {
-                        //print_regex(&regex, 0);
                         regex::regex_to_fsa(&regex)
                     }
                     Err(e) => {

@@ -535,60 +535,6 @@ _
 95a 95a _ _ S _ _ S _ _ S _ _ S 1 1 L _ _ S _ _ S
 // 3.8.3 restart the loop
 95a 3a _ _ R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
-// 3.10 JUMP
-// 3.10.1 remove the content of the PC
-40 40 _ _ S _ _ S _ _ S _ _ S _ _ S 0 _ R _ _ S
-40 40 _ _ S _ _ S _ _ S _ _ S _ _ S 1 _ R _ _ S
-40 96 _ _ S _ _ S _ _ S _ _ R _ _ S _ _ S _ _ S
-// 3.10.2 copy the content of the AR to the PC
-96 96 _ _ S _ _ S _ _ S 0 _ R _ _ S _ 0 R _ _ S
-96 96 _ _ S _ _ S _ _ S 1 _ R _ _ S _ 1 R _ _ S
-// 3.10.3 go to the initial position of the PC tape
-96 96a _ _ S _ _ S _ _ S _ _ L _ _ S _ _ L _ _ S
-96a 96a _ _ S _ _ S _ _ S _ _ S _ _ S 0 0 L _ _ S
-96a 96a _ _ S _ _ S _ _ S _ _ S _ _ S 1 1 L _ _ S
-// 3.10.3 restart the loop
-96a 3a _ _ R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
-// 3.11 CJUMP
-// 3.11.1 check if the content of the ACC is 0
-41 41 _ _ S _ _ S _ _ S _ _ S 0 0 R _ _ S _ _ S
-41 97 _ _ S _ _ S _ _ S _ _ S 1 1 L _ _ S _ _ S
-41 98 _ _ S _ _ S _ _ S _ _ S _ _ S _ _ R _ _ S
-// 3.11.2 if the content of the ACC is 0 jump
-// 3.11.2.1 remove the content of the PC
-98 98 _ _ S _ _ S _ _ S _ _ S _ _ S 0 _ R _ _ S
-98 98 _ _ S _ _ S _ _ S _ _ S _ _ S 1 _ R _ _ S
-98 99 _ _ S _ _ S _ _ S _ _ R _ _ S _ _ S _ _ S
-// 3.11.2.2 copy the content of the AR to the PC
-99 99 _ _ S _ _ S _ _ S 0 _ R _ _ S _ 0 R _ _ S
-99 99 _ _ S _ _ S _ _ S 1 _ R _ _ S _ 1 R _ _ S
-99 99a _ _ S _ _ S _ _ S _ _ S _ _ S _ _ L _ _ S
-99a 99a _ _ S _ _ S _ _ S _ _ S _ _ S 0 0 L _ _ S
-99a 99a _ _ S _ _ S _ _ S _ _ S _ _ S 1 1 L _ _ S
-// 3.11.3 if the content of ACC is not 0 continue
-// 3.11.3.1 go to the beginning of the ACC tape
-97 100 _ _ S _ _ S _ _ S _ _ S 1 1 L _ _ S _ _ S
-97 100 _ _ S _ _ S _ _ S _ _ S 0 0 L _ _ S _ _ S
-97 101 _ _ S _ _ S _ _ S _ _ R _ _ S _ _ S _ _ S
-100 100 _ _ S _ _ S _ _ S _ _ S 1 1 L _ _ S _ _ S
-100 100 _ _ S _ _ S _ _ S _ _ S 0 0 L _ _ S _ _ S
-100 101 _ _ S _ _ S _ _ S _ _ R _ _ S _ _ S _ _ S
-// 3.11.3.2 remove the content of the AR
-101 101 _ _ S _ _ S _ _ S 0 _ R _ _ S _ _ S _ _ S
-101 101 _ _ S _ _ S _ _ S 1 _ R _ _ S _ _ S _ _ S
-// 3.11.4 restart the cycle
-101 3a _ _ R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
-99a 3a _ _ R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
-// 3.12 HALT
-42 125 _ _ R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
-125 125 0 _ R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
-125 125 1 _ R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
-125 125 , _ R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
-125 125 # _ R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
-125 126 _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S _ _ L
-126 126 _ 0 L _ _ S _ _ S _ _ S _ _ S _ _ S 0 0 L
-126 126 _ 1 L _ _ S _ _ S _ _ S _ _ S _ _ S 1 1 L
-126 h _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
 // 3.9 STORE
 // 3.9.1 go to the right cell of the memory
 39 39 # # R _ _ S _ _ S _ _ R _ _ S _ _ S _ _ S
@@ -744,3 +690,57 @@ _
 124 124 # # L _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
 // restart the loop
 124 3a _ _ R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
+// 3.10 JUMP
+// 3.10.1 remove the content of the PC
+40 40 _ _ S _ _ S _ _ S _ _ S _ _ S 0 _ R _ _ S
+40 40 _ _ S _ _ S _ _ S _ _ S _ _ S 1 _ R _ _ S
+40 96 _ _ S _ _ S _ _ S _ _ R _ _ S _ _ S _ _ S
+// 3.10.2 copy the content of the AR to the PC
+96 96 _ _ S _ _ S _ _ S 0 _ R _ _ S _ 0 R _ _ S
+96 96 _ _ S _ _ S _ _ S 1 _ R _ _ S _ 1 R _ _ S
+// 3.10.3 go to the initial position of the PC tape
+96 96a _ _ S _ _ S _ _ S _ _ L _ _ S _ _ L _ _ S
+96a 96a _ _ S _ _ S _ _ S _ _ S _ _ S 0 0 L _ _ S
+96a 96a _ _ S _ _ S _ _ S _ _ S _ _ S 1 1 L _ _ S
+// 3.10.3 restart the loop
+96a 3a _ _ R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
+// 3.11 CJUMP
+// 3.11.1 check if the content of the ACC is 0
+41 41 _ _ S _ _ S _ _ S _ _ S 0 0 R _ _ S _ _ S
+41 97 _ _ S _ _ S _ _ S _ _ S 1 1 L _ _ S _ _ S
+41 98 _ _ S _ _ S _ _ S _ _ S _ _ S _ _ R _ _ S
+// 3.11.2 if the content of the ACC is 0 jump
+// 3.11.2.1 remove the content of the PC
+98 98 _ _ S _ _ S _ _ S _ _ S _ _ S 0 _ R _ _ S
+98 98 _ _ S _ _ S _ _ S _ _ S _ _ S 1 _ R _ _ S
+98 99 _ _ S _ _ S _ _ S _ _ R _ _ S _ _ S _ _ S
+// 3.11.2.2 copy the content of the AR to the PC
+99 99 _ _ S _ _ S _ _ S 0 _ R _ _ S _ 0 R _ _ S
+99 99 _ _ S _ _ S _ _ S 1 _ R _ _ S _ 1 R _ _ S
+99 99a _ _ S _ _ S _ _ S _ _ S _ _ S _ _ L _ _ S
+99a 99a _ _ S _ _ S _ _ S _ _ S _ _ S 0 0 L _ _ S
+99a 99a _ _ S _ _ S _ _ S _ _ S _ _ S 1 1 L _ _ S
+// 3.11.3 if the content of ACC is not 0 continue
+// 3.11.3.1 go to the beginning of the ACC tape
+97 100 _ _ S _ _ S _ _ S _ _ S 1 1 L _ _ S _ _ S
+97 100 _ _ S _ _ S _ _ S _ _ S 0 0 L _ _ S _ _ S
+97 101 _ _ S _ _ S _ _ S _ _ R _ _ S _ _ S _ _ S
+100 100 _ _ S _ _ S _ _ S _ _ S 1 1 L _ _ S _ _ S
+100 100 _ _ S _ _ S _ _ S _ _ S 0 0 L _ _ S _ _ S
+100 101 _ _ S _ _ S _ _ S _ _ R _ _ S _ _ S _ _ S
+// 3.11.3.2 remove the content of the AR
+101 101 _ _ S _ _ S _ _ S 0 _ R _ _ S _ _ S _ _ S
+101 101 _ _ S _ _ S _ _ S 1 _ R _ _ S _ _ S _ _ S
+// 3.11.4 restart the cycle
+101 3a _ _ R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
+99a 3a _ _ R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
+// 3.12 HALT
+42 125 _ _ R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
+125 125 0 _ R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
+125 125 1 _ R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
+125 125 , _ R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
+125 125 # _ R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
+125 126 _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S _ _ L
+126 126 _ 0 L _ _ S _ _ S _ _ S _ _ S _ _ S 0 0 L
+126 126 _ 1 L _ _ S _ _ S _ _ S _ _ S _ _ S 1 1 L
+126 h _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S

@@ -2,6 +2,7 @@
 // Project: Computing Simulator
 // author: dp
 
+use crate::regex;
 use crate::turing_machine;
 use crate::ram_machine;
 use crate::turing_machine::FromString;
@@ -388,4 +389,17 @@ pub fn read_ram_program_from_encoding_file(options: options::Options) -> ram_mac
         instructions: instr,
     };
     ram
+}
+
+pub fn read_regex_from_file(options: options::Options) -> Result<regex::Regex, String> {
+    let file = std::fs::read_to_string(options.clone().file).expect("Error reading the file");
+
+    let lines: Vec<&str> = file.lines().collect();
+    let mut i = 0;
+    let mut line = lines[i];
+    while line.starts_with("//") {
+        i+=1;
+        line = lines[i];
+    }
+    regex::build_regex_tree(line)
 }
