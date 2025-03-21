@@ -2,11 +2,11 @@
 // Project: Computing Simulator
 // author: dp
 
+use crate::options;
+use crate::ram_machine;
 use crate::regex;
 use crate::turing_machine;
-use crate::ram_machine;
 use crate::turing_machine::FromString;
-use crate::options;
 use crate::utils;
 
 pub fn read_turing_machine_from_file(options: options::Options) -> turing_machine::TuringMachine {
@@ -63,15 +63,25 @@ pub fn read_turing_machine_from_file(options: options::Options) -> turing_machin
         for i in 0..tape_count {
             symbols.push(transition[2 + i * 3].to_string());
             new_symbols.push(transition[3 + i * 3].to_string());
-            directions.push(turing_machine::Direction::from_string(transition[4 + i * 3]));
+            directions.push(turing_machine::Direction::from_string(
+                transition[4 + i * 3],
+            ));
         }
-        tm.add_transition(transition[0].to_string(), symbols, transition[1].to_string(), new_symbols, directions);
+        tm.add_transition(
+            transition[0].to_string(),
+            symbols,
+            transition[1].to_string(),
+            new_symbols,
+            directions,
+        );
     }
 
     tm
 }
 
-pub fn read_finite_state_machine_from_file(options: options::Options) -> turing_machine::TuringMachine {
+pub fn read_finite_state_machine_from_file(
+    options: options::Options,
+) -> turing_machine::TuringMachine {
     let mut tm = turing_machine::TuringMachine::new();
     tm.blank_symbol = " ".to_string();
 
@@ -139,7 +149,9 @@ pub fn read_finite_state_machine_from_file(options: options::Options) -> turing_
     tm
 }
 
-pub fn read_pushdown_automaton_from_file(options: options::Options) -> turing_machine::TuringMachine {
+pub fn read_pushdown_automaton_from_file(
+    options: options::Options,
+) -> turing_machine::TuringMachine {
     let mut tm = turing_machine::TuringMachine::new();
     tm.tape_count = 2;
 
@@ -183,7 +195,10 @@ pub fn read_pushdown_automaton_from_file(options: options::Options) -> turing_ma
         vec![tm.blank_symbol.clone(), tm.blank_symbol.clone()],
         tm.initial_state.clone(),
         vec![tm.blank_symbol.clone(), tm.blank_symbol.clone()],
-        vec![turing_machine::Direction::Right, turing_machine::Direction::Stay],
+        vec![
+            turing_machine::Direction::Right,
+            turing_machine::Direction::Stay,
+        ],
     );
     for line in lines.iter().skip(6) {
         let transition_data: Vec<&str> = line.split(" ").collect();
@@ -200,10 +215,7 @@ pub fn read_pushdown_automaton_from_file(options: options::Options) -> turing_ma
                 for symb in tm.input_alphabet.clone().iter() {
                     tm.add_transition(
                         transition_data[0].to_string(),
-                        vec![
-                            symb.to_string(),
-                            transition_data[2].to_string(),
-                        ],
+                        vec![symb.to_string(), transition_data[2].to_string()],
                         transition_data[3].to_string(),
                         vec![symb.clone(), transition_data[4].to_string()],
                         vec![turing_machine::Direction::Stay, dir.clone()],
@@ -211,10 +223,7 @@ pub fn read_pushdown_automaton_from_file(options: options::Options) -> turing_ma
                 }
                 tm.add_transition(
                     transition_data[0].to_string(),
-                    vec![
-                        tm.blank_symbol.clone(),
-                        transition_data[2].to_string(),
-                    ],
+                    vec![tm.blank_symbol.clone(), transition_data[2].to_string()],
                     transition_data[3].to_string(),
                     vec![tm.blank_symbol.clone(), transition_data[4].to_string()],
                     vec![turing_machine::Direction::Stay, dir.clone()],
@@ -239,38 +248,44 @@ pub fn read_pushdown_automaton_from_file(options: options::Options) -> turing_ma
                 for symb in tm.input_alphabet.clone().iter() {
                     tm.add_transition(
                         transition_data[0].to_string(),
-                        vec![
-                            symb.clone(),
-                            transition_data[2].to_string(),
-                        ],
+                        vec![symb.clone(), transition_data[2].to_string()],
                         aux_state.clone(),
                         vec![symb.clone(), transition_data[4].to_string()],
-                        vec![turing_machine::Direction::Stay, turing_machine::Direction::Right],
+                        vec![
+                            turing_machine::Direction::Stay,
+                            turing_machine::Direction::Right,
+                        ],
                     );
                     tm.add_transition(
                         aux_state.clone(),
                         vec![symb.clone(), tm.blank_symbol.clone()],
                         transition_data[3].to_string(),
                         vec![symb.clone(), transition_data[5].to_string()],
-                        vec![turing_machine::Direction::Stay, turing_machine::Direction::Stay],
+                        vec![
+                            turing_machine::Direction::Stay,
+                            turing_machine::Direction::Stay,
+                        ],
                     );
                 }
                 tm.add_transition(
                     transition_data[0].to_string(),
-                    vec![
-                        tm.blank_symbol.clone(),
-                        transition_data[2].to_string(),
-                    ],
+                    vec![tm.blank_symbol.clone(), transition_data[2].to_string()],
                     aux_state.clone(),
                     vec![tm.blank_symbol.clone(), transition_data[4].to_string()],
-                    vec![turing_machine::Direction::Stay, turing_machine::Direction::Right],
+                    vec![
+                        turing_machine::Direction::Stay,
+                        turing_machine::Direction::Right,
+                    ],
                 );
                 tm.add_transition(
                     aux_state.clone(),
                     vec![tm.blank_symbol.clone(), tm.blank_symbol.clone()],
                     transition_data[3].to_string(),
                     vec![tm.blank_symbol.clone(), transition_data[5].to_string()],
-                    vec![turing_machine::Direction::Stay, turing_machine::Direction::Stay],
+                    vec![
+                        turing_machine::Direction::Stay,
+                        turing_machine::Direction::Stay,
+                    ],
                 );
             } else {
                 tm.add_transition(
@@ -281,14 +296,20 @@ pub fn read_pushdown_automaton_from_file(options: options::Options) -> turing_ma
                     ],
                     aux_state.clone(),
                     vec![tm.blank_symbol.clone(), transition_data[4].to_string()],
-                    vec![turing_machine::Direction::Stay, turing_machine::Direction::Right],
+                    vec![
+                        turing_machine::Direction::Stay,
+                        turing_machine::Direction::Right,
+                    ],
                 );
                 tm.add_transition(
                     aux_state.clone(),
                     vec![tm.blank_symbol.clone(), tm.blank_symbol.clone()],
                     transition_data[3].to_string(),
                     vec![tm.blank_symbol.clone(), transition_data[5].to_string()],
-                    vec![turing_machine::Direction::Right, turing_machine::Direction::Stay],
+                    vec![
+                        turing_machine::Direction::Right,
+                        turing_machine::Direction::Stay,
+                    ],
                 );
             }
         } else {
@@ -344,12 +365,16 @@ pub fn read_ram_program_from_file(options: options::Options) -> ram_machine::Ram
             let instruction: Vec<&str> = line.split(" ").collect();
             if instruction.len() == 1 {
                 instr.push(ram_machine::Instruction {
-                    opcode: ram_machine::RamMachine::ram_instruction_lookup(instruction[0].to_string()),
+                    opcode: ram_machine::RamMachine::ram_instruction_lookup(
+                        instruction[0].to_string(),
+                    ),
                     operand: "0000000000000000".to_string(),
                 });
             } else if instruction.len() == 2 {
                 instr.push(ram_machine::Instruction {
-                    opcode: ram_machine::RamMachine::ram_instruction_lookup(instruction[0].to_string()),
+                    opcode: ram_machine::RamMachine::ram_instruction_lookup(
+                        instruction[0].to_string(),
+                    ),
                     operand: utils::int2bin(
                         instruction[1].parse().expect("Error parsing operand"),
                         16,
@@ -370,7 +395,11 @@ pub fn read_ram_program_from_encoding_file(options: options::Options) -> ram_mac
 
     let lines: Vec<&str> = file.lines().collect();
 
-    let line = lines[0].strip_prefix("#").unwrap().strip_suffix("#").unwrap();
+    let line = lines[0]
+        .strip_prefix("#")
+        .unwrap()
+        .strip_suffix("#")
+        .unwrap();
     let mut instr = Vec::new();
     for elem in line.split("#") {
         let splitted = elem.split(",").collect::<Vec<&str>>();
@@ -380,15 +409,14 @@ pub fn read_ram_program_from_encoding_file(options: options::Options) -> ram_mac
                 ram_machine::Instruction {
                     opcode: splitted[1][0..4].to_string(),
                     operand: splitted[1][4..].to_string(),
-                }
+                },
             );
         }
     }
 
-    let ram = ram_machine::RamMachine {
+    ram_machine::RamMachine {
         instructions: instr,
-    };
-    ram
+    }
 }
 
 pub fn read_regex_from_file(options: options::Options) -> Result<regex::Regex, String> {
@@ -398,7 +426,7 @@ pub fn read_regex_from_file(options: options::Options) -> Result<regex::Regex, S
     let mut i = 0;
     let mut line = lines[i];
     while line.starts_with("//") {
-        i+=1;
+        i += 1;
         line = lines[i];
     }
     regex::build_regex_tree(line)

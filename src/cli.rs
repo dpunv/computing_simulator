@@ -6,8 +6,8 @@ use crate::turing_machine;
 
 use crate::file_handler;
 use crate::options;
-use crate::regex;
 use crate::ram_machine;
+use crate::regex;
 use crate::utils;
 use core::panic;
 use std::io::Write;
@@ -45,7 +45,11 @@ fn print_version() {
     println!("Turing Machine Simulator 0.1.0");
 }
 
-pub fn print_tape(tape: turing_machine::Tape, tm: turing_machine::TuringMachine, trim: Option<bool>) {
+pub fn print_tape(
+    tape: turing_machine::Tape,
+    tm: turing_machine::TuringMachine,
+    trim: Option<bool>,
+) {
     let should_trim = trim.unwrap_or(false);
     let mut tape = tape;
     if should_trim {
@@ -87,7 +91,14 @@ fn execute_tm(mut tm: turing_machine::TuringMachine, opt: options::Options) {
         print!("Output Tape: ");
         print_tape(tm.last_execution.1[0].clone(), tm.clone(), Some(true));
         println!();
-        if tm.final_states.contains(&result.0) && (tm.accept_state == result.0 || !tm.end_on_final_state) && (tm.end_on_final_state || tm.last_execution.1[0].tape.iter().all(|x| x == &tm.blank_symbol)) {
+        if tm.final_states.contains(&result.0)
+            && (tm.accept_state == result.0 || !tm.end_on_final_state)
+            && (tm.end_on_final_state
+                || tm.last_execution.1[0]
+                    .tape
+                    .iter()
+                    .all(|x| x == &tm.blank_symbol))
+        {
             println!("Accept");
         } else if tm.final_states.contains(&result.0) && tm.reject_state != result.0 {
             println!("Halt");
@@ -312,12 +323,11 @@ fn validate_options(options: &options::Options) -> bool {
 }
 
 fn handle_ram_machine(options: options::Options) {
-    let ram: ram_machine::RamMachine;
-    if options.from_encoding {
-        ram = file_handler::read_ram_program_from_encoding_file(options.clone())
+    let ram: ram_machine::RamMachine = if options.from_encoding {
+        file_handler::read_ram_program_from_encoding_file(options.clone())
     } else {
-        ram = file_handler::read_ram_program_from_file(options.clone());
-    }
+        file_handler::read_ram_program_from_file(options.clone())
+    };
 
     if options.convert_to_tm {
         handle_ram_to_tm_conversion(ram, options);
@@ -396,9 +406,7 @@ fn load_automaton(options: options::Options) -> turing_machine::TuringMachine {
             if options.regex {
                 let result = file_handler::read_regex_from_file(options);
                 match result {
-                    Ok(regex) => {
-                        regex::regex_to_fsa(&regex)
-                    }
+                    Ok(regex) => regex::regex_to_fsa(&regex),
                     Err(e) => {
                         panic!("Error parsing the regex: {}", e);
                     }

@@ -166,7 +166,14 @@ impl TuringMachine {
         state
     }
 
-    pub fn add_transition (&mut self, state: String, symbols: Vec<String>, new_state: String, new_symbols: Vec<String>, directions: Vec<Direction>) {
+    pub fn add_transition(
+        &mut self,
+        state: String,
+        symbols: Vec<String>,
+        new_state: String,
+        new_symbols: Vec<String>,
+        directions: Vec<Direction>,
+    ) {
         let transition = Transition {
             state,
             symbols,
@@ -273,12 +280,12 @@ impl TuringMachine {
         let mut changed = false;
         for (ind, element) in tree[index as usize].clone().into_iter().enumerate() {
             if element.state == self.accept_state {
-                previous = ind as usize;
+                previous = ind;
                 break;
             } else if element.state == self.reject_state && !changed {
-                previous = ind as usize;
+                previous = ind;
             } else if self.final_states.contains(&element.state) {
-                previous = ind as usize;
+                previous = ind;
                 changed = true;
             }
         }
@@ -583,7 +590,8 @@ impl TuringMachine {
         for tapenum in 0..self.tape_count {
             let initial_state_tape =
                 self.initial_state.clone() + "<INIT_TP" + &tapenum.to_string() + "_START>";
-            let end_state_tape = self.initial_state.clone() + "<INIT_TP" + &tapenum.to_string() + "_END>";
+            let end_state_tape =
+                self.initial_state.clone() + "<INIT_TP" + &tapenum.to_string() + "_END>";
             new_states.push(initial_state_tape.clone());
             new_states.push(end_state_tape.clone());
             if tapenum == 0 {
@@ -684,8 +692,10 @@ impl TuringMachine {
             for tapenum in 0..self.tape_count {
                 let mut this_state_vec = Vec::new();
                 for symbol in &new_compound_symbols {
-                    for actual_state in map_states[&(state.clone() + &tapenum.to_string())].clone() {
-                        let state_tape = actual_state.clone() + "<R_TP" + &tapenum.to_string() + ">";
+                    for actual_state in map_states[&(state.clone() + &tapenum.to_string())].clone()
+                    {
+                        let state_tape =
+                            actual_state.clone() + "<R_TP" + &tapenum.to_string() + ">";
                         let new_state = actual_state.clone()
                             + "<R_TP"
                             + &tapenum.to_string()
@@ -776,7 +786,8 @@ impl TuringMachine {
             }
             let old_transition_map = self.make_transition_map();
             let mut states_done = Vec::new();
-            for actual_state in map_states[&(state.clone() + &self.tape_count.to_string())].clone() {
+            for actual_state in map_states[&(state.clone() + &self.tape_count.to_string())].clone()
+            {
                 let splitted0: Vec<&str> = actual_state.split("<R_TP").collect();
                 let key = state
                     .clone()
@@ -864,8 +875,7 @@ impl TuringMachine {
                                             new_tm.add_transition(
                                                 state_mid_mid_tape.clone(),
                                                 vec![symb.clone()],
-                                                state_mid_mid_tape.clone()
-                                                    + "<COPY_CYCLE_RIGHT>",
+                                                state_mid_mid_tape.clone() + "<COPY_CYCLE_RIGHT>",
                                                 vec![symb.clone() + "<COPY>"],
                                                 vec![Direction::Right],
                                             );

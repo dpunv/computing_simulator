@@ -2,13 +2,13 @@
 // Project: Computing Simulator
 // author: dp
 
-mod turing_machine;
 mod cli;
 mod file_handler;
 mod options;
-mod utils;
-mod regex;
 mod ram_machine;
+mod regex;
+mod turing_machine;
+mod utils;
 
 fn main() {
     cli::main_cli();
