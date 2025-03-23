@@ -2,15 +2,21 @@
 // Project: Computing Simulator
 // author: dp
 
-use crate::utils;
 use crate::ram_machine;
 use crate::turing_machine;
+use crate::utils;
+
+pub type EncodingResult = (
+    String,
+    std::collections::HashMap<String, String>,
+    std::collections::HashMap<String, String>,
+);
 
 #[derive(Clone)]
 pub struct Computer {
     pub ram_machine: Option<ram_machine::RamMachine>,
     pub turing_machine: Option<turing_machine::TuringMachine>,
-    pub mapping: std::collections::HashMap<String, String>
+    pub mapping: std::collections::HashMap<String, String>,
 }
 
 #[derive(Clone)]
@@ -32,11 +38,10 @@ impl Computer {
         Computer {
             ram_machine: None,
             turing_machine: None,
-            mapping: std::collections::HashMap::new()
+            mapping: std::collections::HashMap::new(),
         }
     }
-
-    pub fn to_encoding(&self) -> Result<(String, std::collections::HashMap<String, String>, std::collections::HashMap<String, String>), String> {
+    pub fn to_encoding(&self) -> Result<EncodingResult, String> {
         if self.is_ram() {
             return Ok(self.ram_machine.as_ref().unwrap().to_encoding());
         } else if self.is_turing() {
@@ -56,12 +61,27 @@ impl Computer {
         self.ram_machine = None;
     }
 
-    pub fn simulate(self, input: String, max_steps: i32, context: Server, head: usize) -> Result<(String, usize, Vec<String>, i32), String> {
+    pub fn simulate(
+        self,
+        input: String,
+        max_steps: i32,
+        context: Server,
+        head: usize,
+    ) -> Result<(String, usize, Vec<String>, i32), String> {
         if self.is_ram() {
-            self.ram_machine.clone().unwrap().simulate(input.clone(), max_steps, self, context)
+            self.ram_machine
+                .clone()
+                .unwrap()
+                .simulate(input.clone(), max_steps, self, context)
         } else {
-            let input_vec = utils::input_string_to_vec(self.turing_machine.clone().unwrap().tape_alphabet.clone(), input);
-            self.turing_machine.clone().unwrap().simulate(input_vec, max_steps, self, context, head)
+            let input_vec = utils::input_string_to_vec(
+                self.turing_machine.clone().unwrap().tape_alphabet.clone(),
+                input,
+            );
+            self.turing_machine
+                .clone()
+                .unwrap()
+                .simulate(input_vec, max_steps, self, context, head)
         }
     }
     pub fn add_mapping(&mut self, name: String, value: String) {
@@ -77,7 +97,6 @@ impl Computer {
 }
 
 impl Server {
-
     pub fn new() -> Server {
         Server {
             map_computers: std::collections::HashMap::new(),
@@ -117,21 +136,27 @@ impl Server {
         }
     }
 
-    pub fn execute(&mut self, input: String, max_steps: i32) -> Result<(String, usize, String, i32), String> {
+    pub fn execute(
+        &mut self,
+        input: String,
+        max_steps: i32,
+    ) -> Result<(String, usize, String, i32), String> {
         let mut steps: i32 = 0;
         let mut output: String = input;
         let mut final_state = "".to_string();
         let mut current_head = 0;
         for name in self.computation_order.clone() {
             let computer = self.get_computer(name.clone()).unwrap();
-            let result = computer.clone().simulate(output, max_steps - steps, self.clone(), 0);
+            let result = computer
+                .clone()
+                .simulate(output, max_steps - steps, self.clone(), 0);
             match result {
                 Ok((state, head, tape, s)) => {
                     final_state = state;
                     current_head = head;
                     output = tape.join("");
                     steps += s;
-                },
+                }
                 Err(e) => {
                     return Err(e);
                 }

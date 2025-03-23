@@ -2,8 +2,8 @@
 // Project: Computing Simulator
 // author: dp
 
-use crate::utils;
 use crate::computer;
+use crate::utils;
 
 #[derive(Clone)]
 pub struct TuringMachine {
@@ -186,8 +186,15 @@ impl TuringMachine {
             self.transitions.push(transition);
         }
     }
-    
-    pub fn simulate(self, input: Vec<String>, max_steps: i32, this_computer_object: computer::Computer, context: computer::Server, prev_head: usize) -> Result<(String, usize, Vec<String>, i32), String> {
+
+    pub fn simulate(
+        self,
+        input: Vec<String>,
+        max_steps: i32,
+        this_computer_object: computer::Computer,
+        context: computer::Server,
+        prev_head: usize,
+    ) -> Result<(String, usize, Vec<String>, i32), String> {
         let transitions_map = self.make_transition_map();
         let mut tree = Vec::new();
         tree.push(Vec::new());
@@ -259,27 +266,43 @@ impl TuringMachine {
                             new_tapes.push(new_tape);
                         }
                         let new_state = transition.new_state.clone();
-                        let subroutine_name: String = this_computer_object.clone().get_mapping(new_state.clone());
-                        if subroutine_name != "".to_string() {
+                        let subroutine_name: String =
+                            this_computer_object.clone().get_mapping(new_state.clone());
+                        if subroutine_name != *"" {
                             let remaining_steps = max_steps - steps;
-                            let subroutine = context.clone().get_computer(subroutine_name).unwrap().clone();
-                            let new_tape_input;
-                            if subroutine.is_ram() {
-                                new_tape_input = new_tapes[0].tape.clone().into_iter().filter(|symb| *symb != self.blank_symbol.clone()).collect::<Vec<String>>().join("");
+                            let subroutine = context
+                                .clone()
+                                .get_computer(subroutine_name)
+                                .unwrap()
+                                .clone();
+                            let new_tape_input = if subroutine.is_ram() {
+                                new_tapes[0]
+                                    .tape
+                                    .clone()
+                                    .into_iter()
+                                    .filter(|symb| *symb != self.blank_symbol.clone())
+                                    .collect::<Vec<String>>()
+                                    .join("")
                             } else {
-                                new_tape_input = new_tapes[0].tape.clone().join("");
-                            }
-                            match subroutine.clone().simulate(new_tape_input, remaining_steps, context.clone(), new_tapes[0].head) {
-                                Ok((_, head_result,tape_result, steps_result )) => {
-                                    if subroutine.is_ram(){
-                                        new_tapes[0].tape = [vec![self.blank_symbol.clone()], tape_result].concat();
+                                new_tapes[0].tape.clone().join("")
+                            };
+                            match subroutine.clone().simulate(
+                                new_tape_input,
+                                remaining_steps,
+                                context.clone(),
+                                new_tapes[0].head,
+                            ) {
+                                Ok((_, head_result, tape_result, steps_result)) => {
+                                    if subroutine.is_ram() {
+                                        new_tapes[0].tape =
+                                            [vec![self.blank_symbol.clone()], tape_result].concat();
                                     } else {
                                         new_tapes[0].tape = tape_result;
                                     }
                                     new_tapes[0].head = head_result;
                                     steps += steps_result;
-                                },
-                                Err(error) => return Err(error)
+                                }
+                                Err(error) => return Err(error),
                             }
                         }
                         let el = TreeElement {
@@ -333,24 +356,38 @@ impl TuringMachine {
             steps,
             computation,
         ); */
-        return if self.accept_state == last_element.state.clone() {
-            Ok(("accept".to_string(), last_element.tapes[0].head, last_element.tapes[0].tape.clone(), steps))
+        if self.accept_state == last_element.state.clone() {
+            Ok((
+                "accept".to_string(),
+                last_element.tapes[0].head,
+                last_element.tapes[0].tape.clone(),
+                steps,
+            ))
         } else if self.reject_state == last_element.state.clone() {
-            Ok(("reject".to_string(), last_element.tapes[0].head, last_element.tapes[0].tape.clone(), steps))
+            Ok((
+                "reject".to_string(),
+                last_element.tapes[0].head,
+                last_element.tapes[0].tape.clone(),
+                steps,
+            ))
         } else if self.final_states.contains(&last_element.state.clone()) {
-            Ok(("halt".to_string(), last_element.tapes[0].head, last_element.tapes[0].tape.clone(), steps))
+            Ok((
+                "halt".to_string(),
+                last_element.tapes[0].head,
+                last_element.tapes[0].tape.clone(),
+                steps,
+            ))
         } else {
-            Ok((last_element.state.clone(), last_element.tapes[0].head, last_element.tapes[0].tape.clone(), steps))
+            Ok((
+                last_element.state.clone(),
+                last_element.tapes[0].head,
+                last_element.tapes[0].tape.clone(),
+                steps,
+            ))
         }
     }
 
-    pub fn to_encoding(
-        &self,
-    ) -> (
-        String,
-        std::collections::HashMap<String, String>,
-        std::collections::HashMap<String, String>,
-    ) {
+    pub fn to_encoding(&self) -> computer::EncodingResult {
         let mut state_bits: usize = 0;
         let mut states = self.states.len();
         while states > 0 {

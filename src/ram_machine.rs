@@ -2,9 +2,9 @@
 // Project: Computing Simulator
 // author: dp
 
-use crate::utils;
 use crate::computer;
 use crate::turing_machine;
+use crate::utils;
 
 #[derive(Clone)]
 pub struct RamMachine {
@@ -38,7 +38,13 @@ impl RamMachine {
         opcode.to_string()
     }
 
-    pub fn simulate(self, input: String, max_steps: i32, this_computer_object: computer::Computer, context: computer::Server) -> Result<(String, usize, Vec<String>, i32), String> {
+    pub fn simulate(
+        self,
+        input: String,
+        max_steps: i32,
+        this_computer_object: computer::Computer,
+        context: computer::Server,
+    ) -> Result<(String, usize, Vec<String>, i32), String> {
         let mut ir;
         let mut out: String = "".to_string();
         let mut pc: String = "0".to_string();
@@ -64,7 +70,11 @@ impl RamMachine {
                     // R: Read [operands] bit from input
                     let end = input_head + (utils::bin2int(ar) as usize);
                     if input.len() < end {
-                        acc = format!("{:0>width$b}", utils::bin2int(input[input_head..input.len()].to_string()), width = end - input_head)
+                        acc = format!(
+                            "{:0>width$b}",
+                            utils::bin2int(input[input_head..input.len()].to_string()),
+                            width = end - input_head
+                        )
                     } else {
                         acc = input[input_head..end].to_string();
                     }
@@ -124,21 +134,28 @@ impl RamMachine {
                 "1100" => {
                     // CALL: call a subroutine
                     let mapping_key = (utils::bin2int(ar.clone())).to_string();
-                    let mapping = this_computer_object.clone().get_mapping(mapping_key.clone());
+                    let mapping = this_computer_object
+                        .clone()
+                        .get_mapping(mapping_key.clone());
                     let subroutine = context.clone().get_computer(mapping).unwrap().clone();
-                    match subroutine.clone().simulate(acc.clone(), max_steps-steps, context.clone(), 0) {
+                    match subroutine.clone().simulate(
+                        acc.clone(),
+                        max_steps - steps,
+                        context.clone(),
+                        0,
+                    ) {
                         Ok((state, _, tape, steps)) => {
                             if state == "accept" || state == "halt" {
-                                if subroutine.is_turing(){
+                                if subroutine.is_turing() {
                                     acc = tape.into_iter().filter(|symb| *symb != <Option<turing_machine::TuringMachine> as Clone>::clone(&subroutine.turing_machine).unwrap().blank_symbol).collect::<Vec<String>>().join("")
                                 } else {
                                     acc = tape.join("");
                                 }
                             } else {
-                                return Ok(("reject".to_string(), 0, vec![out], steps))
+                                return Ok(("reject".to_string(), 0, vec![out], steps));
                             }
-                        },
-                        Err(error) => return Err(error)
+                        }
+                        Err(error) => return Err(error),
                     }
                 }
                 _ => {
@@ -150,13 +167,7 @@ impl RamMachine {
         Ok(("halt".to_string(), 0, vec![out], steps))
     }
 
-    pub fn to_encoding(
-        &self,
-    ) -> (
-        String,
-        std::collections::HashMap<String, String>,
-        std::collections::HashMap<String, String>,
-    ) {
+    pub fn to_encoding(&self) -> computer::EncodingResult {
         let mut encoding = "#".to_string();
         for (counter, instr) in self.instructions.clone().into_iter().enumerate() {
             let counter_number_bits = if counter > 0 {

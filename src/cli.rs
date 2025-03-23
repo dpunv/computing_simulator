@@ -4,10 +4,10 @@
 
 use crate::turing_machine;
 
+use crate::computer;
 use crate::file_handler;
 use crate::options;
 use crate::ram_machine;
-use crate::computer;
 use std::io::Write;
 
 fn print_help() {
@@ -78,7 +78,7 @@ pub fn print_status_tm(tm: &turing_machine::TuringMachine) {
 }
 
 fn process_results(server: computer::Server, opt: options::Options) {
-    let result= server.clone().execute(opt.input.clone(), opt.max_steps);
+    let result = server.clone().execute(opt.input.clone(), opt.max_steps);
     match result {
         Ok((state, _, tape, steps)) => {
             if opt.verbose < 0 {
@@ -109,10 +109,28 @@ fn interactive_tui(server: &mut computer::Server, opt: options::Options) {
         let trimmed_input = input.trim().to_string();
         new_opt.input = input.clone();
         if trimmed_input == "status" {
-            if server.get_computer(server.computes_at(0).clone()).unwrap().is_turing() {
-                print_status_tm(server.get_computer(server.computes_at(0).clone()).unwrap().turing_machine.as_ref().unwrap());
+            if server
+                .get_computer(server.computes_at(0).clone())
+                .unwrap()
+                .is_turing()
+            {
+                print_status_tm(
+                    server
+                        .get_computer(server.computes_at(0).clone())
+                        .unwrap()
+                        .turing_machine
+                        .as_ref()
+                        .unwrap(),
+                );
             } else {
-                print_status_ram(server.get_computer(server.computes_at(0).clone()).unwrap().ram_machine.as_ref().unwrap())
+                print_status_ram(
+                    server
+                        .get_computer(server.computes_at(0).clone())
+                        .unwrap()
+                        .ram_machine
+                        .as_ref()
+                        .unwrap(),
+                )
             }
         } else if trimmed_input == "help" {
             print_help();
@@ -131,14 +149,13 @@ pub fn print_encoding(c: &computer::Computer) {
         String,
         std::collections::HashMap<String, String>,
         std::collections::HashMap<String, String>,
-    );
-    match c.to_encoding() {
-        Ok(res) => encoded = res,
+    ) = match c.to_encoding() {
+        Ok(res) => res,
         Err(error) => {
             println!("Error: {}", error);
             return;
         }
-    }
+    };
     println!("{}", encoded.0);
     println!();
     for (k, v) in encoded.1.iter() {
@@ -149,7 +166,7 @@ pub fn print_encoding(c: &computer::Computer) {
         println!("{} {}", v, k);
     }
 }
-/* 
+/*
 pub fn print_computation(
     computation: Vec<turing_machine::Configuration>,
     tm: turing_machine::TuringMachine,
@@ -242,13 +259,13 @@ pub fn main_cli() {
     }
 
     if options.print_nth_tm != -1 {
-        let tm_encoding = turing_machine::TuringMachine::nth_turing_machine((options.print_nth_tm) as u128);
+        let tm_encoding =
+            turing_machine::TuringMachine::nth_turing_machine((options.print_nth_tm) as u128);
         println!("{}", tm_encoding);
         return;
     }
 
     handle_computation(&mut options);
-
 }
 
 fn validate_options(options: &options::Options) -> bool {
@@ -261,7 +278,7 @@ fn handle_computation(options: &mut options::Options) {
     match file_handler::handle_file_reads(options.file.clone(), &mut s) {
         Ok(comp) => {
             c = comp;
-        },
+        }
         Err(error) => {
             println!("Error: {}", error);
             return;
@@ -288,7 +305,12 @@ fn handle_computation(options: &mut options::Options) {
         }
     } else {
         if options.convert_to_singletape {
-            c.turing_machine = std::option::Option::Some(c.turing_machine.as_ref().unwrap().convert_multi_tape_to_single_tape_tm());
+            c.turing_machine = std::option::Option::Some(
+                c.turing_machine
+                    .as_ref()
+                    .unwrap()
+                    .convert_multi_tape_to_single_tape_tm(),
+            );
         }
         if options.print_number {
             println!("{}", c.turing_machine.as_ref().unwrap().number());
@@ -300,7 +322,7 @@ fn handle_computation(options: &mut options::Options) {
     }
 
     if options.print_computer {
-        if c.is_ram(){
+        if c.is_ram() {
             print_ram(c.ram_machine.unwrap());
         } else {
             print_tm(c.turing_machine.unwrap());
@@ -314,7 +336,7 @@ fn handle_computation(options: &mut options::Options) {
     }
 
     if options.status {
-        if c.is_turing(){
+        if c.is_turing() {
             print_status_tm(c.turing_machine.as_ref().unwrap());
         } else {
             print_status_ram(c.ram_machine.as_ref().unwrap())
@@ -326,8 +348,12 @@ fn handle_computation(options: &mut options::Options) {
     }
 }
 
-fn handle_ram_to_tm_conversion(c: computer::Computer, options: &mut options::Options, s: &mut computer::Server) -> Result<computer::Computer, String> {
+fn handle_ram_to_tm_conversion(
+    c: computer::Computer,
+    options: &mut options::Options,
+    s: &mut computer::Server,
+) -> Result<computer::Computer, String> {
     options.file = "src/standard/ram over tm.tm".to_string();
     options.input = options.input.clone() + &c.ram_machine.as_ref().unwrap().to_encoding().0;
-    return file_handler::handle_file_reads(options.file.clone(), s)
+    file_handler::handle_file_reads(options.file.clone(), s)
 }

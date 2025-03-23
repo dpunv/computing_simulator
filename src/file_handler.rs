@@ -10,72 +10,74 @@ use crate::turing_machine;
 use crate::turing_machine::FromString;
 use crate::utils;
 
-pub fn handle_file_reads(file_name: String, context: &mut computer::Server) -> Result<computer::Computer, String> {
+pub fn handle_file_reads(
+    file_name: String,
+    context: &mut computer::Server,
+) -> Result<computer::Computer, String> {
     let file = match std::fs::read_to_string(file_name.clone()) {
-        Ok (f) => f,
-        Err(_) => return Err("Error reading the file".to_string())
+        Ok(f) => f,
+        Err(_) => return Err("Error reading the file".to_string()),
     };
 
-    let mut lines: Vec<String> = file.lines()
+    let mut lines: Vec<String> = file
+        .lines()
         .filter(|line| !line.starts_with("//"))
         .map(|line| line.to_string())
         .collect();
-    
+
     let line = lines[0].clone();
-    
+
     lines = lines.into_iter().skip(1).map(|e| e.to_string()).collect();
-    
+
     let binding = lines.clone();
-    let mapping_raw = binding.iter().filter(|el| el.starts_with(": ")).map(|el| {let splitted: Vec<&str> = el.split(" ").collect(); (splitted[1].to_string(), splitted.iter().skip(2).cloned().collect::<Vec<&str>>().join(" "))});
-    
-    lines = lines.into_iter().filter(|e| !e.starts_with(": ")).collect();
+    let mapping_raw = binding.iter().filter(|el| el.starts_with(": ")).map(|el| {
+        let splitted: Vec<&str> = el.split(" ").collect();
+        (
+            splitted[1].to_string(),
+            splitted
+                .iter()
+                .skip(2)
+                .cloned()
+                .collect::<Vec<&str>>()
+                .join(" "),
+        )
+    });
+
+    lines.retain(|e| !e.starts_with(": "));
 
     let mut c = computer::Computer::new();
 
     for (name, f) in mapping_raw {
         if f == file_name {
             c.add_mapping(name, f);
-        } else if !context.contains(f.clone()){
+        } else if !context.contains(f.clone()) {
             match handle_file_reads(f.clone(), context) {
                 Ok(comp) => {
                     context.add_computer(f.clone(), comp);
                     c.add_mapping(name, f);
-                },
-                Err(error) => return Err(error)
+                }
+                Err(error) => return Err(error),
             }
         } else if c.get_mapping(name.clone()) == "" {
             c.add_mapping(name.clone(), f.clone());
         }
     }
     match line.as_str() {
-        "tm" => {
-            read_turing_machine(lines, &mut c)
-        },
-        "tm_e" => {
-            read_tm_from_encoding(lines, &mut c)
-        },
-        "pda" => {
-            read_pushdown_automaton(lines, &mut c)
-        },
-        "fsm" => {
-            read_finite_state_machine(lines, &mut c)
-        },
-        "regex" => {
-            read_regex(lines, &mut c)
-        },
-        "ram" => {
-            read_ram_program(lines, &mut c)
-        },
-        "ram_e" => {
-            read_ram_program_from_encoding(lines, &mut c)
-        } &_ => {
-            Err("No valid type to read".to_string())
-        }
+        "tm" => read_turing_machine(lines, &mut c),
+        "tm_e" => read_tm_from_encoding(lines, &mut c),
+        "pda" => read_pushdown_automaton(lines, &mut c),
+        "fsm" => read_finite_state_machine(lines, &mut c),
+        "regex" => read_regex(lines, &mut c),
+        "ram" => read_ram_program(lines, &mut c),
+        "ram_e" => read_ram_program_from_encoding(lines, &mut c),
+        &_ => Err("No valid type to read".to_string()),
     }
-
 }
 
-pub fn read_turing_machine(lines: Vec<String>, computer:&mut computer::Computer) -> Result<computer::Computer, String> {
+pub fn read_turing_machine(
+    lines: Vec<String>,
+    computer: &mut computer::Computer,
+) -> Result<computer::Computer, String> {
     let mut tm = turing_machine::TuringMachine::new();
 
     tm.initial_state = lines[0].to_string();
@@ -140,7 +142,8 @@ pub fn read_turing_machine(lines: Vec<String>, computer:&mut computer::Computer)
 }
 
 pub fn read_finite_state_machine(
-    lines: Vec<String>, computer: &mut computer::Computer,
+    lines: Vec<String>,
+    computer: &mut computer::Computer,
 ) -> Result<computer::Computer, String> {
     let mut tm = turing_machine::TuringMachine::new();
     tm.blank_symbol = " ".to_string();
@@ -201,7 +204,8 @@ pub fn read_finite_state_machine(
 }
 
 pub fn read_pushdown_automaton(
-    lines: Vec<String>, computer: &mut computer::Computer,
+    lines: Vec<String>,
+    computer: &mut computer::Computer,
 ) -> Result<computer::Computer, String> {
     let mut tm = turing_machine::TuringMachine::new();
     tm.tape_count = 2;
@@ -363,7 +367,10 @@ pub fn read_pushdown_automaton(
     Ok(computer.clone())
 }
 
-pub fn read_tm_from_encoding(lines: Vec<String>,  computer: &mut computer::Computer,) -> Result<computer::Computer, String> {
+pub fn read_tm_from_encoding(
+    lines: Vec<String>,
+    computer: &mut computer::Computer,
+) -> Result<computer::Computer, String> {
     let encoding = lines[0].to_string();
     if lines.len() < 2 {
         computer.set_turing(turing_machine::TuringMachine::encoding_to_tm(encoding));
@@ -389,12 +396,19 @@ pub fn read_tm_from_encoding(lines: Vec<String>,  computer: &mut computer::Compu
                 tape_encoding.insert(key.to_string(), value.to_string());
             }
         }
-        computer.set_turing(turing_machine::TuringMachine::encoding_to_orig(encoding, tape_encoding, state_encoding));
+        computer.set_turing(turing_machine::TuringMachine::encoding_to_orig(
+            encoding,
+            tape_encoding,
+            state_encoding,
+        ));
         Ok(computer.clone())
     }
 }
 
-pub fn read_ram_program(lines: Vec<String>, computer: &mut computer::Computer,) -> Result<computer::Computer, String> {
+pub fn read_ram_program(
+    lines: Vec<String>,
+    computer: &mut computer::Computer,
+) -> Result<computer::Computer, String> {
     let mut instr = Vec::new();
     for line in lines.iter() {
         if line.starts_with("//") {
@@ -419,7 +433,7 @@ pub fn read_ram_program(lines: Vec<String>, computer: &mut computer::Computer,) 
                     ),
                 });
             } else {
-                return Err(format!("Error parsing instruction"));
+                return Err("Error parsing instruction".to_string());
             }
         }
     }
@@ -429,7 +443,10 @@ pub fn read_ram_program(lines: Vec<String>, computer: &mut computer::Computer,) 
     Ok(computer.clone())
 }
 
-pub fn read_ram_program_from_encoding(lines: Vec<String>, computer: &mut computer::Computer,) -> Result<computer::Computer, String> {
+pub fn read_ram_program_from_encoding(
+    lines: Vec<String>,
+    computer: &mut computer::Computer,
+) -> Result<computer::Computer, String> {
     let line = lines[0]
         .strip_prefix("#")
         .unwrap()
@@ -455,17 +472,18 @@ pub fn read_ram_program_from_encoding(lines: Vec<String>, computer: &mut compute
     Ok(computer.clone())
 }
 
-pub fn read_regex(lines: Vec<String>, computer: &mut computer::Computer,) -> Result<computer::Computer, String> {
+pub fn read_regex(
+    lines: Vec<String>,
+    computer: &mut computer::Computer,
+) -> Result<computer::Computer, String> {
     match regex::build_regex_tree(&lines[0]) {
-        Ok(regex) => return {
-            match regex_to_fsa(&regex) {
-                Ok(tm) => {
-                    computer.set_turing(tm);
-                    Ok(computer.clone())
-                },
-                Err(error) => return Err(error)
+        Ok(regex) => match regex_to_fsa(&regex) {
+            Ok(tm) => {
+                computer.set_turing(tm);
+                Ok(computer.clone())
             }
+            Err(error) => Err(error),
         },
-        Err(error) => return Err(error)
+        Err(error) => Err(error),
     }
 }
