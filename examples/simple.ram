@@ -1,6 +1,7 @@
 // file: automaton.rs
 // Project: Computing Simulator
 // author: dp
+ram
 R 8
 ST 20
 MIR 8

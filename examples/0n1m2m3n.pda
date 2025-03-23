@@ -1,6 +1,7 @@
 // recognize string of the form: 0^n1^m2^m3^n
 // where n,m >= 1
 // initial state:
+pda
 1
 // accept state:
 5

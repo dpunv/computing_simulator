@@ -4,11 +4,9 @@
 
 #[derive(Clone)]
 pub struct Options {
-    pub type_: String,
-    pub from_encoding: bool,
     pub convert_to_tm: bool,
     pub convert_to_singletape: bool,
-    pub print_tm: bool,
+    pub print_computer: bool,
     pub print_number: bool,
     pub print_nth_tm: i128,
     pub help: bool,
@@ -18,17 +16,13 @@ pub struct Options {
     pub file: String,
     pub status: bool,
     pub print_encoding: bool,
-    pub regex: bool,
     pub verbose: i32,
 }
 
 pub fn get_options() -> Options {
-    let mut type_ = "tm".to_string();
-    let mut from_encoding = false;
     let mut convert_to_tm = false;
-    let mut regex = false;
     let mut convert_to_singletape = false;
-    let mut print_tm = false;
+    let mut print_computer = false;
     let mut print_nth_tm: i128 = -1;
     let mut print_number = false;
     let mut help = false;
@@ -57,26 +51,19 @@ pub fn get_options() -> Options {
             if let Ok(value) = arg.strip_prefix("--max-steps=").unwrap_or("1000").parse() {
                 max_steps = value;
             }
-        } else if arg.starts_with("--type=") {
-            type_ = arg.strip_prefix("--type=").unwrap_or("turing").to_string();
-            if type_ != "tm" && type_ != "fsm" && type_ != "pda" && type_ != "ram" {
-                type_ = "tm".to_string();
-            }
         } else if arg.starts_with("--verbose=") {
             if let Ok(value) = arg.strip_prefix("--verbose=").unwrap_or("1").parse() {
                 verbose = value;
             }
         } else {
             match arg.as_str() {
-                "--from-encoding" => from_encoding = true,
                 "--convert-to-tm" => convert_to_tm = true,
                 "--convert-to-singletape" => convert_to_singletape = true,
-                "--print-tm" => print_tm = true,
+                "--print-computer" => print_computer = true,
                 "--print-number" => print_number = true,
                 "--help" => help = true,
                 "--version" => version = true,
                 "--status" => status = true,
-                "--regex" => regex = true,
                 "--print-encoding" => print_encoding = true,
                 _ => {
                     file = arg;
@@ -87,10 +74,7 @@ pub fn get_options() -> Options {
     }
 
     Options {
-        type_,
-        print_tm,
-        regex,
-        from_encoding,
+        print_computer,
         print_number,
         print_nth_tm,
         convert_to_tm,

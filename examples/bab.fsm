@@ -1,11 +1,13 @@
 // file: bab.fsm
 // Project: Computing Simulator
 // author: dp
+fsm
 // w in {a, b}* such that every a in w is preceeded and followed by a b
 1
 1 2
-1 2 3
+1 2 3 4
 a b
+1 a 4
 1 b 2
 2 b 2
 2 a 3

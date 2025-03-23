@@ -3,6 +3,7 @@
 // author: dp
 
 use crate::utils;
+use crate::computer;
 
 #[derive(Clone)]
 pub struct TuringMachine {
@@ -17,7 +18,7 @@ pub struct TuringMachine {
     pub transitions: Vec<Transition>,
     pub end_on_final_state: bool,
     pub tape_count: usize,
-    pub last_execution: (String, Vec<Tape>, i32, Vec<Configuration>),
+    //pub last_execution: (String, Vec<Tape>, i32, Vec<Configuration>),
     pub next_state_id: usize,
 }
 
@@ -27,11 +28,11 @@ pub struct Tape {
     pub head: usize,
 }
 
-#[derive(Clone)]
+/* #[derive(Clone)]
 pub struct Configuration {
     pub state: String,
     pub tapes: Vec<Tape>,
-}
+} */
 
 #[derive(Clone)]
 pub struct Transition {
@@ -155,7 +156,7 @@ impl TuringMachine {
             transitions: Vec::new(),
             end_on_final_state: false,
             tape_count: 1,
-            last_execution: ("".to_string(), Vec::new(), 0, Vec::new()),
+            //last_execution: ("".to_string(), Vec::new(), 0, Vec::new()),
             next_state_id: 0,
         }
     }
@@ -185,20 +186,22 @@ impl TuringMachine {
             self.transitions.push(transition);
         }
     }
-
-    pub fn simulate(&mut self, input: Vec<String>, max_steps: i32) -> (String, i32) {
+    
+    pub fn simulate(self, input: Vec<String>, max_steps: i32, this_computer_object: computer::Computer, context: computer::Server, prev_head: usize) -> Result<(String, usize, Vec<String>, i32), String> {
         let transitions_map = self.make_transition_map();
         let mut tree = Vec::new();
         tree.push(Vec::new());
         let mut tape = Vec::new();
-        tape.push(self.blank_symbol.clone());
+        if input[0] != self.blank_symbol {
+            tape.push(self.blank_symbol.clone());
+        }
         for symbol in input {
             tape.push(symbol);
         }
         let mut tapes = Vec::new();
         tapes.push(Tape {
             tape: tape.clone(),
-            head: 0,
+            head: prev_head,
         });
         for _ in 1..self.tape_count {
             tapes.push(Tape {
@@ -256,6 +259,29 @@ impl TuringMachine {
                             new_tapes.push(new_tape);
                         }
                         let new_state = transition.new_state.clone();
+                        let subroutine_name: String = this_computer_object.clone().get_mapping(new_state.clone());
+                        if subroutine_name != "".to_string() {
+                            let remaining_steps = max_steps - steps;
+                            let subroutine = context.clone().get_computer(subroutine_name).unwrap().clone();
+                            let new_tape_input;
+                            if subroutine.is_ram() {
+                                new_tape_input = new_tapes[0].tape.clone().into_iter().filter(|symb| *symb != self.blank_symbol.clone()).collect::<Vec<String>>().join("");
+                            } else {
+                                new_tape_input = new_tapes[0].tape.clone().join("");
+                            }
+                            match subroutine.clone().simulate(new_tape_input, remaining_steps, context.clone(), new_tapes[0].head) {
+                                Ok((_, head_result,tape_result, steps_result )) => {
+                                    if subroutine.is_ram(){
+                                        new_tapes[0].tape = [vec![self.blank_symbol.clone()], tape_result].concat();
+                                    } else {
+                                        new_tapes[0].tape = tape_result;
+                                    }
+                                    new_tapes[0].head = head_result;
+                                    steps += steps_result;
+                                },
+                                Err(error) => return Err(error)
+                            }
+                        }
                         let el = TreeElement {
                             state: new_state,
                             tapes: new_tapes,
@@ -274,7 +300,7 @@ impl TuringMachine {
             tree.push(new_level);
         }
         tree.pop();
-        let mut computation = Vec::new();
+        //let mut computation = Vec::new();
         let mut index = (tree.len() - 1) as i32;
         let mut previous = 0;
         let mut changed = false;
@@ -294,20 +320,28 @@ impl TuringMachine {
             let element = &tree[(index) as usize][previous];
             previous = element.previous;
             index -= 1;
-            let configuration = Configuration {
+            /* let configuration = Configuration {
                 state: element.state.clone(),
                 tapes: element.tapes.clone(),
             };
-            computation.push(configuration);
+            computation.push(configuration); */
         }
-        computation.reverse();
-        self.last_execution = (
+        //computation.reverse();
+        /* self.last_execution = (
             last_element.state.clone(),
             last_element.tapes.clone(),
             steps,
             computation,
-        );
-        (last_element.state.clone(), steps)
+        ); */
+        return if self.accept_state == last_element.state.clone() {
+            Ok(("accept".to_string(), last_element.tapes[0].head, last_element.tapes[0].tape.clone(), steps))
+        } else if self.reject_state == last_element.state.clone() {
+            Ok(("reject".to_string(), last_element.tapes[0].head, last_element.tapes[0].tape.clone(), steps))
+        } else if self.final_states.contains(&last_element.state.clone()) {
+            Ok(("halt".to_string(), last_element.tapes[0].head, last_element.tapes[0].tape.clone(), steps))
+        } else {
+            Ok((last_element.state.clone(), last_element.tapes[0].head, last_element.tapes[0].tape.clone(), steps))
+        }
     }
 
     pub fn to_encoding(
@@ -437,16 +471,16 @@ impl TuringMachine {
         while tm_string != encoding {
             i += 1;
             tm_string = utils::int2str(i, alphabet.clone());
-            if check_tm_encoding(tm_string.clone()) {
+            if TuringMachine::check_tm_encoding(tm_string.clone()) {
                 p += 1;
             }
         }
         p
     }
 
-    pub fn input_alphabet(&self) -> Vec<String> {
+    /* pub fn input_alphabet(&self) -> Vec<String> {
         self.input_alphabet.clone()
-    }
+    } */
 
     pub fn make_transition_map(&self) -> std::collections::HashMap<String, Vec<Transition>> {
         let mut transition_map: std::collections::HashMap<String, Vec<Transition>> =
@@ -569,7 +603,7 @@ impl TuringMachine {
             transitions: Vec::new(),
             end_on_final_state: self.end_on_final_state,
             tape_count: 1,
-            last_execution: ("".to_string(), Vec::new(), 0, Vec::new()),
+            //last_execution: ("".to_string(), Vec::new(), 0, Vec::new()),
             next_state_id: 0,
         };
         let head_symbols = vec!["^".to_string(), "_".to_string()];
@@ -1174,262 +1208,262 @@ impl TuringMachine {
         new_tm.final_states = real_final_states.clone();
         new_tm
     }
-}
 
-pub fn encoding_to_tm(encoding: String) -> TuringMachine {
-    let mut tm = TuringMachine::new();
-    let mut transitions: Vec<&str> = encoding.split(")").collect();
-    transitions.pop();
-    for transition in transitions {
-        let transition = transition.trim();
-        let transition = transition.strip_prefix("(").unwrap();
-        let mut transition = transition.split(";");
-        let state = transition.next().unwrap().to_string();
-        let mut new_state = String::new();
-        let mut symbols = Vec::new();
-        let mut found_all = false;
-        while !found_all {
+    pub fn encoding_to_tm(encoding: String) -> TuringMachine {
+        let mut tm = TuringMachine::new();
+        let mut transitions: Vec<&str> = encoding.split(")").collect();
+        transitions.pop();
+        for transition in transitions {
+            let transition = transition.trim();
+            let transition = transition.strip_prefix("(").unwrap();
+            let mut transition = transition.split(";");
+            let state = transition.next().unwrap().to_string();
+            let mut new_state = String::new();
+            let mut symbols = Vec::new();
+            let mut found_all = false;
+            while !found_all {
+                let symbol = transition.next().unwrap().to_string();
+                if symbol.starts_with("a") || symbol.starts_with("t") || symbol.starts_with("b") {
+                    symbols.push(symbol);
+                } else {
+                    found_all = true;
+                    new_state = symbol.to_string();
+                }
+            }
+            tm.tape_count = symbols.len();
+            let mut new_symbols = Vec::new();
+            for _ in 0..tm.tape_count {
+                new_symbols.push(transition.next().unwrap().to_string());
+            }
+            let mut directions = Vec::new();
+            for _ in 0..tm.tape_count {
+                let direction = transition.next().unwrap();
+                match direction {
+                    "L" => directions.push(Direction::Left),
+                    "R" => directions.push(Direction::Right),
+                    "S" => directions.push(Direction::Stay),
+                    _ => (),
+                }
+            }
+            tm.add_transition(
+                state.to_string(),
+                symbols.clone(),
+                new_state.to_string(),
+                new_symbols.clone(),
+                directions.clone(),
+            );
+            if !tm.states.contains(&state.to_string()) {
+                tm.states.push(state.to_string());
+            }
+            if state.starts_with("y") {
+                tm.accept_state = state.to_string();
+                tm.final_states.push(state.to_string());
+            } else if state.starts_with("n") {
+                tm.reject_state = state.to_string();
+                tm.final_states.push(state.to_string());
+            } else if state.starts_with("h") {
+                tm.final_states.push(state.to_string());
+            } else if state.starts_with("i") {
+                tm.initial_state = state.to_string();
+            }
+            if !tm.states.contains(&new_state.to_string()) {
+                tm.states.push(new_state.to_string());
+            }
+            if state.starts_with("y") {
+                tm.accept_state = state.to_string();
+                tm.final_states.push(state.to_string());
+            } else if state.starts_with("n") {
+                tm.reject_state = state.to_string();
+                tm.final_states.push(state.to_string());
+            } else if state.starts_with("h") {
+                tm.final_states.push(state.to_string());
+            }
+            for symbol in symbols {
+                if !tm.tape_alphabet.contains(&symbol) {
+                    tm.tape_alphabet.push(symbol.clone());
+                }
+                if symbol.starts_with("a") && !tm.input_alphabet.contains(&symbol) {
+                    tm.input_alphabet.push(symbol.clone());
+                } else if symbol.starts_with("b") {
+                    tm.blank_symbol = symbol.clone();
+                }
+            }
+            for symbol in new_symbols {
+                if !tm.tape_alphabet.contains(&symbol) {
+                    tm.tape_alphabet.push(symbol.clone());
+                }
+                if symbol.starts_with("a") && !tm.input_alphabet.contains(&symbol) {
+                    tm.input_alphabet.push(symbol.clone());
+                } else if symbol.starts_with("b") {
+                    tm.blank_symbol = symbol.clone();
+                }
+            }
+        }
+        tm
+    }
+
+    pub fn encoding_to_orig(
+        encoding: String,
+        orig_alphabet_encoding: std::collections::HashMap<String, String>,
+        orig_state_encoding: std::collections::HashMap<String, String>,
+    ) -> TuringMachine {
+        let tm = TuringMachine::encoding_to_tm(encoding);
+        let mut orig_tm: TuringMachine = TuringMachine {
+            initial_state: orig_state_encoding[&tm.initial_state].clone(),
+            accept_state: "".to_string(),
+            reject_state: "".to_string(),
+            final_states: tm
+                .final_states
+                .iter()
+                .map(|state| orig_state_encoding[state].clone())
+                .collect(),
+            states: tm
+                .states
+                .iter()
+                .map(|state| orig_state_encoding[state].clone())
+                .collect(),
+            input_alphabet: tm
+                .input_alphabet
+                .iter()
+                .map(|symbol| orig_alphabet_encoding[symbol].clone())
+                .collect(),
+            transitions: tm
+                .transitions
+                .iter()
+                .map(|transition| Transition {
+                    state: orig_state_encoding[&transition.state].clone(),
+                    symbols: transition
+                        .symbols
+                        .iter()
+                        .map(|symbol| orig_alphabet_encoding[symbol].clone())
+                        .collect(),
+                    new_state: orig_state_encoding[&transition.new_state].clone(),
+                    new_symbols: transition
+                        .new_symbols
+                        .iter()
+                        .map(|symbol| orig_alphabet_encoding[symbol].clone())
+                        .collect(),
+                    directions: transition.directions.clone(),
+                })
+                .collect(),
+            blank_symbol: orig_alphabet_encoding[&tm.blank_symbol].clone(),
+            tape_alphabet: tm
+                .tape_alphabet
+                .iter()
+                .map(|symbol| orig_alphabet_encoding[symbol].clone())
+                .collect(),
+            end_on_final_state: tm.end_on_final_state,
+            tape_count: tm.tape_count,
+            //last_execution: ("".to_string(), Vec::new(), 0, Vec::new()),
+            next_state_id: 0,
+        };
+        if !tm.accept_state.is_empty() {
+            orig_tm.accept_state = orig_state_encoding[&tm.accept_state].clone();
+        }
+        if !tm.reject_state.is_empty() {
+            orig_tm.reject_state = orig_state_encoding[&tm.reject_state].clone();
+        }
+        orig_tm
+    }
+
+    pub fn nth_turing_machine(nth: u128) -> String {
+        let alphabet = vec![
+            "0".to_string(),
+            "1".to_string(),
+            ";".to_string(),
+            "(".to_string(),
+            ")".to_string(),
+            "a".to_string(),
+            "b".to_string(),
+            "t".to_string(),
+            "y".to_string(),
+            "n".to_string(),
+            "h".to_string(),
+            "i".to_string(),
+            "R".to_string(),
+            "L".to_string(),
+            "S".to_string(),
+        ];
+        let mut p = 0;
+        let mut i = 0;
+        let mut tm_string = "".to_string();
+        while p != nth {
+            i += 1;
+            tm_string = utils::int2str(i, alphabet.clone());
+            if TuringMachine::check_tm_encoding(tm_string.clone()) {
+                p += 1;
+            }
+        }
+        tm_string
+    }
+
+    pub fn check_tm_encoding(encoding: String) -> bool {
+        if encoding.len() < 15 {
+            return false;
+        }
+        let mut transitions: Vec<&str> = encoding.split(")").collect();
+        if transitions.last().unwrap().trim() != "" {
+            return false;
+        }
+        transitions.pop();
+        for transition in transitions {
+            let transition = transition.trim();
+            let transition = transition.strip_prefix("(").unwrap();
+            let mut transition = transition.split(";");
+            let state = transition.next().unwrap().to_string();
+            if !(state.starts_with("y")
+                || state.starts_with("n")
+                || state.starts_with("h")
+                || state.starts_with("i")
+                || state.starts_with("q"))
+            {
+                return false;
+            }
+            for char in state.chars().skip(1) {
+                if !(char == '0' || char == '1') {
+                    return false;
+                }
+            }
             let symbol = transition.next().unwrap().to_string();
-            if symbol.starts_with("a") || symbol.starts_with("t") || symbol.starts_with("b") {
-                symbols.push(symbol);
-            } else {
-                found_all = true;
-                new_state = symbol.to_string();
+            if !(symbol.starts_with("a") || symbol.starts_with("b") || symbol.starts_with("t")) {
+                return false;
             }
-        }
-        tm.tape_count = symbols.len();
-        let mut new_symbols = Vec::new();
-        for _ in 0..tm.tape_count {
-            new_symbols.push(transition.next().unwrap().to_string());
-        }
-        let mut directions = Vec::new();
-        for _ in 0..tm.tape_count {
-            let direction = transition.next().unwrap();
-            match direction {
-                "L" => directions.push(Direction::Left),
-                "R" => directions.push(Direction::Right),
-                "S" => directions.push(Direction::Stay),
-                _ => (),
+            for char in symbol.chars().skip(1) {
+                if !(char == '0' || char == '1') {
+                    return false;
+                }
             }
-        }
-        tm.add_transition(
-            state.to_string(),
-            symbols.clone(),
-            new_state.to_string(),
-            new_symbols.clone(),
-            directions.clone(),
-        );
-        if !tm.states.contains(&state.to_string()) {
-            tm.states.push(state.to_string());
-        }
-        if state.starts_with("y") {
-            tm.accept_state = state.to_string();
-            tm.final_states.push(state.to_string());
-        } else if state.starts_with("n") {
-            tm.reject_state = state.to_string();
-            tm.final_states.push(state.to_string());
-        } else if state.starts_with("h") {
-            tm.final_states.push(state.to_string());
-        } else if state.starts_with("i") {
-            tm.initial_state = state.to_string();
-        }
-        if !tm.states.contains(&new_state.to_string()) {
-            tm.states.push(new_state.to_string());
-        }
-        if state.starts_with("y") {
-            tm.accept_state = state.to_string();
-            tm.final_states.push(state.to_string());
-        } else if state.starts_with("n") {
-            tm.reject_state = state.to_string();
-            tm.final_states.push(state.to_string());
-        } else if state.starts_with("h") {
-            tm.final_states.push(state.to_string());
-        }
-        for symbol in symbols {
-            if !tm.tape_alphabet.contains(&symbol) {
-                tm.tape_alphabet.push(symbol.clone());
+            let new_state = transition.next().unwrap().to_string();
+            if !(new_state.starts_with("y")
+                || new_state.starts_with("n")
+                || new_state.starts_with("h")
+                || new_state.starts_with("i")
+                || new_state.starts_with("q"))
+            {
+                return false;
             }
-            if symbol.starts_with("a") && !tm.input_alphabet.contains(&symbol) {
-                tm.input_alphabet.push(symbol.clone());
-            } else if symbol.starts_with("b") {
-                tm.blank_symbol = symbol.clone();
+            for char in new_state.chars().skip(1) {
+                if !(char == '0' || char == '1') {
+                    return false;
+                }
             }
-        }
-        for symbol in new_symbols {
-            if !tm.tape_alphabet.contains(&symbol) {
-                tm.tape_alphabet.push(symbol.clone());
+            let new_symbol = transition.next().unwrap().to_string();
+            if !(new_symbol.starts_with("a")
+                || new_symbol.starts_with("b")
+                || new_symbol.starts_with("t"))
+            {
+                return false;
             }
-            if symbol.starts_with("a") && !tm.input_alphabet.contains(&symbol) {
-                tm.input_alphabet.push(symbol.clone());
-            } else if symbol.starts_with("b") {
-                tm.blank_symbol = symbol.clone();
+            for char in new_symbol.chars().skip(1) {
+                if !(char == '0' || char == '1') {
+                    return false;
+                }
             }
-        }
-    }
-    tm
-}
-
-pub fn encoding_to_orig(
-    encoding: String,
-    orig_alphabet_encoding: std::collections::HashMap<String, String>,
-    orig_state_encoding: std::collections::HashMap<String, String>,
-) -> TuringMachine {
-    let tm = encoding_to_tm(encoding);
-    let mut orig_tm: TuringMachine = TuringMachine {
-        initial_state: orig_state_encoding[&tm.initial_state].clone(),
-        accept_state: "".to_string(),
-        reject_state: "".to_string(),
-        final_states: tm
-            .final_states
-            .iter()
-            .map(|state| orig_state_encoding[state].clone())
-            .collect(),
-        states: tm
-            .states
-            .iter()
-            .map(|state| orig_state_encoding[state].clone())
-            .collect(),
-        input_alphabet: tm
-            .input_alphabet
-            .iter()
-            .map(|symbol| orig_alphabet_encoding[symbol].clone())
-            .collect(),
-        transitions: tm
-            .transitions
-            .iter()
-            .map(|transition| Transition {
-                state: orig_state_encoding[&transition.state].clone(),
-                symbols: transition
-                    .symbols
-                    .iter()
-                    .map(|symbol| orig_alphabet_encoding[symbol].clone())
-                    .collect(),
-                new_state: orig_state_encoding[&transition.new_state].clone(),
-                new_symbols: transition
-                    .new_symbols
-                    .iter()
-                    .map(|symbol| orig_alphabet_encoding[symbol].clone())
-                    .collect(),
-                directions: transition.directions.clone(),
-            })
-            .collect(),
-        blank_symbol: orig_alphabet_encoding[&tm.blank_symbol].clone(),
-        tape_alphabet: tm
-            .tape_alphabet
-            .iter()
-            .map(|symbol| orig_alphabet_encoding[symbol].clone())
-            .collect(),
-        end_on_final_state: tm.end_on_final_state,
-        tape_count: tm.tape_count,
-        last_execution: ("".to_string(), Vec::new(), 0, Vec::new()),
-        next_state_id: 0,
-    };
-    if !tm.accept_state.is_empty() {
-        orig_tm.accept_state = orig_state_encoding[&tm.accept_state].clone();
-    }
-    if !tm.reject_state.is_empty() {
-        orig_tm.reject_state = orig_state_encoding[&tm.reject_state].clone();
-    }
-    orig_tm
-}
-
-pub fn nth_turing_machine(nth: u128) -> String {
-    let alphabet = vec![
-        "0".to_string(),
-        "1".to_string(),
-        ";".to_string(),
-        "(".to_string(),
-        ")".to_string(),
-        "a".to_string(),
-        "b".to_string(),
-        "t".to_string(),
-        "y".to_string(),
-        "n".to_string(),
-        "h".to_string(),
-        "i".to_string(),
-        "R".to_string(),
-        "L".to_string(),
-        "S".to_string(),
-    ];
-    let mut p = 0;
-    let mut i = 0;
-    let mut tm_string = "".to_string();
-    while p != nth {
-        i += 1;
-        tm_string = utils::int2str(i, alphabet.clone());
-        if check_tm_encoding(tm_string.clone()) {
-            p += 1;
-        }
-    }
-    tm_string
-}
-
-pub fn check_tm_encoding(encoding: String) -> bool {
-    if encoding.len() < 15 {
-        return false;
-    }
-    let mut transitions: Vec<&str> = encoding.split(")").collect();
-    if transitions.last().unwrap().trim() != "" {
-        return false;
-    }
-    transitions.pop();
-    for transition in transitions {
-        let transition = transition.trim();
-        let transition = transition.strip_prefix("(").unwrap();
-        let mut transition = transition.split(";");
-        let state = transition.next().unwrap().to_string();
-        if !(state.starts_with("y")
-            || state.starts_with("n")
-            || state.starts_with("h")
-            || state.starts_with("i")
-            || state.starts_with("q"))
-        {
-            return false;
-        }
-        for char in state.chars().skip(1) {
-            if !(char == '0' || char == '1') {
+            let direction = transition.next().unwrap().to_string();
+            if !(direction == "L" || direction == "R" || direction == "S") {
                 return false;
             }
         }
-        let symbol = transition.next().unwrap().to_string();
-        if !(symbol.starts_with("a") || symbol.starts_with("b") || symbol.starts_with("t")) {
-            return false;
-        }
-        for char in symbol.chars().skip(1) {
-            if !(char == '0' || char == '1') {
-                return false;
-            }
-        }
-        let new_state = transition.next().unwrap().to_string();
-        if !(new_state.starts_with("y")
-            || new_state.starts_with("n")
-            || new_state.starts_with("h")
-            || new_state.starts_with("i")
-            || new_state.starts_with("q"))
-        {
-            return false;
-        }
-        for char in new_state.chars().skip(1) {
-            if !(char == '0' || char == '1') {
-                return false;
-            }
-        }
-        let new_symbol = transition.next().unwrap().to_string();
-        if !(new_symbol.starts_with("a")
-            || new_symbol.starts_with("b")
-            || new_symbol.starts_with("t"))
-        {
-            return false;
-        }
-        for char in new_symbol.chars().skip(1) {
-            if !(char == '0' || char == '1') {
-                return false;
-            }
-        }
-        let direction = transition.next().unwrap().to_string();
-        if !(direction == "L" || direction == "R" || direction == "S") {
-            return false;
-        }
+        true
     }
-    true
 }

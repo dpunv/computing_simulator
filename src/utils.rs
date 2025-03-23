@@ -61,12 +61,10 @@ pub fn bin2alphabet(s: String, alphabet: Vec<String>) -> String {
     if s.len() % bitnum != 0 || s.is_empty() {
         return " ERROR ".to_string();
     }
-    //println!("bitnum: {}, len: {}", bitnum, s.len());
     let mut result = String::new();
     for i in 0..(s.len() / bitnum) {
         let symbol = &s[i * bitnum..((i + 1) * bitnum - 1)];
         let index = bin2int(symbol.to_string());
-        //println!("i: {}", i);
         result.push_str(&alphabet[index as usize]);
     }
     result

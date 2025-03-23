@@ -1,4 +1,5 @@
 // file: automaton.rs
 // Project: Computing Simulator
 // author: dp
+regex
 a(b|c)?

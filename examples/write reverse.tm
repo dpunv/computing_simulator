@@ -1,4 +1,5 @@
 // Contents: Turing machine that writes the reverse of a string
+tm
 1
 
 

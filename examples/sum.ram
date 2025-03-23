@@ -1,6 +1,7 @@
 // file: sum.ram
 // Project: Computing Simulator
 // author: dp
+ram
 R 8
 MIR 8
 ST 10

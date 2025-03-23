@@ -1,0 +1,11 @@
+ram
+R 8
+ST 20
+CALL 1
+CALL 1
+CALL 1
+CALL 1
+CALL 1
+W
+H
+: 1 examples/plusone.tm

@@ -3,6 +3,8 @@
 // author: dp
 
 use crate::utils;
+use crate::computer;
+use crate::turing_machine;
 
 #[derive(Clone)]
 pub struct RamMachine {
@@ -30,24 +32,24 @@ impl RamMachine {
             "JUMP" => "1001",
             "CJUMP" => "1010",
             "H" => "1011",
+            "CALL" => "1100",
             _ => "0000",
         };
         opcode.to_string()
     }
 
-    pub fn simulate(&mut self, input: Vec<String>, max_steps: i32) -> (String, i32) {
+    pub fn simulate(self, input: String, max_steps: i32, this_computer_object: computer::Computer, context: computer::Server) -> Result<(String, usize, Vec<String>, i32), String> {
         let mut ir;
-        let r#in: String = input.join("");
         let mut out: String = "".to_string();
-        let mut pc: String = "0000000000000000".to_string();
-        let mut acc: String = "0000000000000000".to_string();
+        let mut pc: String = "0".to_string();
+        let mut acc: String = "0".to_string();
         let mut ar: String;
         let mut input_head = 0;
         let mut memory: std::collections::HashMap<String, String> =
             std::collections::HashMap::new();
         for (index, instr) in self.instructions.clone().into_iter().enumerate() {
             memory.insert(
-                utils::int2bin(index as i32, 16),
+                utils::int2bin(index as i32, 0),
                 instr.opcode.clone() + &instr.operand.clone(),
             );
         }
@@ -56,12 +58,16 @@ impl RamMachine {
             steps += 1;
             ir = memory[&pc].clone()[0..4].to_string();
             ar = memory[&pc].clone()[4..].to_string();
-            pc = utils::int2bin(utils::bin2int(pc) + 1, 16);
+            pc = utils::int2bin(utils::bin2int(pc) + 1, 0);
             match ir.as_str() {
                 "0000" => {
                     // R: Read [operands] bit from input
                     let end = input_head + (utils::bin2int(ar) as usize);
-                    acc = r#in[input_head..end].to_string();
+                    if input.len() < end {
+                        acc = format!("{:0>width$b}", utils::bin2int(input[input_head..input.len()].to_string()), width = end - input_head)
+                    } else {
+                        acc = input[input_head..end].to_string();
+                    }
                 }
                 "0001" => {
                     // MIR: move input head [operands] bits to the right
@@ -83,14 +89,14 @@ impl RamMachine {
                     // A: Add AR to ACC
                     acc = utils::int2bin(
                         utils::bin2int(acc) + utils::bin2int(memory[&ar].clone()),
-                        16,
+                        0,
                     );
                 }
                 "0110" => {
                     // S: Subtract AR from ACC
                     acc = utils::int2bin(
                         utils::bin2int(acc) - (utils::bin2int(memory[&ar].clone())),
-                        16,
+                        0,
                     );
                 }
                 "0111" => {
@@ -115,13 +121,33 @@ impl RamMachine {
                     // HALT: Halt
                     break;
                 }
+                "1100" => {
+                    // CALL: call a subroutine
+                    let mapping_key = (utils::bin2int(ar.clone())).to_string();
+                    let mapping = this_computer_object.clone().get_mapping(mapping_key.clone());
+                    let subroutine = context.clone().get_computer(mapping).unwrap().clone();
+                    match subroutine.clone().simulate(acc.clone(), max_steps-steps, context.clone(), 0) {
+                        Ok((state, _, tape, steps)) => {
+                            if state == "accept" || state == "halt" {
+                                if subroutine.is_turing(){
+                                    acc = tape.into_iter().filter(|symb| *symb != <Option<turing_machine::TuringMachine> as Clone>::clone(&subroutine.turing_machine).unwrap().blank_symbol).collect::<Vec<String>>().join("")
+                                } else {
+                                    acc = tape.join("");
+                                }
+                            } else {
+                                return Ok(("reject".to_string(), 0, vec![out], steps))
+                            }
+                        },
+                        Err(error) => return Err(error)
+                    }
+                }
                 _ => {
                     // default: Halt
                     break;
                 }
             }
         }
-        (out, steps)
+        Ok(("halt".to_string(), 0, vec![out], steps))
     }
 
     pub fn to_encoding(

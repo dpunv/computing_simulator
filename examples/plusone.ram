@@ -1,0 +1,7 @@
+ram
+INIT 1
+ST 10
+R 8
+A 10
+W
+H

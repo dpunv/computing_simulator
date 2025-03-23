@@ -147,7 +147,7 @@ fn parse_primary(chars: &mut Peekable<Chars>) -> Result<Regex, String> {
     }
 }
 
-pub fn regex_to_fsa(regex: &Regex) -> turing_machine::TuringMachine {
+pub fn regex_to_fsa(regex: &Regex) -> Result<turing_machine::TuringMachine, String> {
     let mut fsa = turing_machine::TuringMachine::new();
     fsa.blank_symbol = " ".to_string();
 
@@ -191,7 +191,7 @@ pub fn regex_to_fsa(regex: &Regex) -> turing_machine::TuringMachine {
     fsa.final_states.push(final_state.clone());
     fsa.accept_state = final_state;
 
-    fsa
+    Ok(fsa)
 }
 
 fn build_fsa(fsa: &mut turing_machine::TuringMachine, regex: &Regex) -> (String, String) {
