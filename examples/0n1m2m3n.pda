@@ -1,3 +1,6 @@
+// file: 0n1m2m3n.fsm
+// Project: Computing Simulator
+// author: dp
 // recognize string of the form: 0^n1^m2^m3^n
 // where n,m >= 1
 // initial state:

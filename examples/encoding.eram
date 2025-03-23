@@ -1,2 +1,5 @@
+// file: encoding.eram
+// Project: Computing Simulator
+// author: dp
 ram_e
 #0,00001000#1,00011000#10,10001010#11,00001000#100,01011010#101,0011#110,1011#

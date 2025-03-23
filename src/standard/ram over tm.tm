@@ -1,4 +1,4 @@
-// file: automaton.rs
+// file: ram over tm.rs
 // Project: Computing Simulator
 // author: dp
 // turing machine to execute a ram program

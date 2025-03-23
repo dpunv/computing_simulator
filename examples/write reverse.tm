@@ -1,3 +1,6 @@
+// file: write reverse.tm
+// Project: Computing Simulator
+// author: dp
 // Contents: Turing machine that writes the reverse of a string
 tm
 1
