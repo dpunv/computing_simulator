@@ -2,6 +2,7 @@
 // Project: Computing Simulator
 // author: dp
 // turing machine to execute a ram program
+tm
 // initial state
 1
 // accept state
@@ -744,3 +745,71 @@ _
 126 126 _ 0 L _ _ S _ _ S _ _ S _ _ S _ _ S 0 0 L
 126 126 _ 1 L _ _ S _ _ S _ _ S _ _ S _ _ S 1 1 L
 126 h _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
+// 3.13 CALL
+// invert the memory and acc tapes
+43 127 _ _ R _ _ S _ _ S _ _ S _ _ R _ _ S _ _ S
+127 127 0 0 R _ _ S _ _ S _ _ S 0 0 R _ _ S _ _ S
+127 127 0 1 R _ _ S _ _ S _ _ S 1 0 R _ _ S _ _ S
+127 127 1 0 R _ _ S _ _ S _ _ S 0 1 R _ _ S _ _ S
+127 127 1 1 R _ _ S _ _ S _ _ S 1 1 R _ _ S _ _ S
+127 127 # 0 R _ _ S _ _ S _ _ S 0 # R _ _ S _ _ S
+127 127 # 1 R _ _ S _ _ S _ _ S 1 # R _ _ S _ _ S
+127 127 , 0 R _ _ S _ _ S _ _ S 0 , R _ _ S _ _ S
+127 127 , 1 R _ _ S _ _ S _ _ S 1 , R _ _ S _ _ S
+127 127 _ 0 R _ _ S _ _ S _ _ S 0 _ R _ _ S _ _ S
+127 127 _ 1 R _ _ S _ _ S _ _ S 1 _ R _ _ S _ _ S
+127 127 0 _ R _ _ S _ _ S _ _ S _ 0 R _ _ S _ _ S
+127 127 1 _ R _ _ S _ _ S _ _ S _ 1 R _ _ S _ _ S
+127 127 # _ R _ _ S _ _ S _ _ S _ # R _ _ S _ _ S
+127 127 , _ R _ _ S _ _ S _ _ S _ , R _ _ S _ _ S
+127 128 _ _ L _ _ S _ _ S _ _ S _ _ L _ _ S _ _ S
+// go to the beginning of the tapes
+128 128 _ _ L _ _ S _ _ S _ _ S 0 0 L _ _ S _ _ S
+128 128 _ _ L _ _ S _ _ S _ _ S 1 1 L _ _ S _ _ S
+128 128 _ _ L _ _ S _ _ S _ _ S , , L _ _ S _ _ S
+128 128 _ _ L _ _ S _ _ S _ _ S # # L _ _ S _ _ S
+128 128 0 0 L _ _ S _ _ S _ _ S 0 0 L _ _ S _ _ S
+128 128 0 0 L _ _ S _ _ S _ _ S 1 1 L _ _ S _ _ S
+128 128 0 0 L _ _ S _ _ S _ _ S , , L _ _ S _ _ S
+128 128 0 0 L _ _ S _ _ S _ _ S # # L _ _ S _ _ S
+128 128 0 0 L _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
+128 128 1 1 L _ _ S _ _ S _ _ S 0 0 L _ _ S _ _ S
+128 128 1 1 L _ _ S _ _ S _ _ S 1 1 L _ _ S _ _ S
+128 128 1 1 L _ _ S _ _ S _ _ S , , L _ _ S _ _ S
+128 128 1 1 L _ _ S _ _ S _ _ S # # L _ _ S _ _ S
+128 128 1 1 L _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
+// execute the subroutine
+128 131 _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
+// copy back memory and acc
+129 129 _ 0 R _ _ S _ _ S _ _ S 0 _ R _ _ S _ _ S
+129 129 _ 1 R _ _ S _ _ S _ _ S 1 _ R _ _ S _ _ S
+129 129 _ , R _ _ S _ _ S _ _ S , _ R _ _ S _ _ S
+129 129 _ # R _ _ S _ _ S _ _ S # _ R _ _ S _ _ S
+129 129 0 0 R _ _ S _ _ S _ _ S 0 0 R _ _ S _ _ S
+129 129 0 1 R _ _ S _ _ S _ _ S 1 0 R _ _ S _ _ S
+129 129 0 , R _ _ S _ _ S _ _ S , 0 R _ _ S _ _ S
+129 129 0 # R _ _ S _ _ S _ _ S # 0 R _ _ S _ _ S
+129 129 0 _ R _ _ S _ _ S _ _ S _ 0 R _ _ S _ _ S
+129 129 1 0 R _ _ S _ _ S _ _ S 0 1 R _ _ S _ _ S
+129 129 1 1 R _ _ S _ _ S _ _ S 1 1 R _ _ S _ _ S
+129 129 1 , R _ _ S _ _ S _ _ S , 1 R _ _ S _ _ S
+129 129 1 # R _ _ S _ _ S _ _ S # 1 R _ _ S _ _ S
+129 129 1 _ R _ _ S _ _ S _ _ S _ 1 R _ _ S _ _ S
+129 130 _ _ L _ _ S _ _ S _ _ S _ _ L _ _ S _ _ S
+// go to the begin of the tapes
+130 130 0 0 L _ _ S _ _ S _ _ S _ _ L _ _ S _ _ S
+130 130 1 1 L _ _ S _ _ S _ _ S _ _ L _ _ S _ _ S
+130 130 , , L _ _ S _ _ S _ _ S _ _ L _ _ S _ _ S
+130 130 # # L _ _ S _ _ S _ _ S _ _ L _ _ S _ _ S
+130 130 0 0 L _ _ S _ _ S _ _ S 0 0 L _ _ S _ _ S
+130 130 1 1 L _ _ S _ _ S _ _ S 0 0 L _ _ S _ _ S
+130 130 , , L _ _ S _ _ S _ _ S 0 0 L _ _ S _ _ S
+130 130 # # L _ _ S _ _ S _ _ S 0 0 L _ _ S _ _ S
+130 130 _ _ L _ _ S _ _ S _ _ S 0 0 L _ _ S _ _ S
+130 130 0 0 L _ _ S _ _ S _ _ S 1 1 L _ _ S _ _ S
+130 130 1 1 L _ _ S _ _ S _ _ S 1 1 L _ _ S _ _ S
+130 130 , , L _ _ S _ _ S _ _ S 1 1 L _ _ S _ _ S
+130 130 # # L _ _ S _ _ S _ _ S 1 1 L _ _ S _ _ S
+130 130 _ _ L _ _ S _ _ S _ _ S 1 1 L _ _ S _ _ S
+// restart the cycle
+130 3a _ _ R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S

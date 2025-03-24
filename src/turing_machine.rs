@@ -199,7 +199,7 @@ impl TuringMachine {
         let mut tree = Vec::new();
         tree.push(Vec::new());
         let mut tape = Vec::new();
-        if input[0] != self.blank_symbol {
+        if input.len() == 0 || input[0] != self.blank_symbol {
             tape.push(self.blank_symbol.clone());
         }
         for symbol in input {
@@ -295,7 +295,7 @@ impl TuringMachine {
                                 Ok((_, head_result, tape_result, steps_result)) => {
                                     if subroutine.is_ram() {
                                         new_tapes[0].tape =
-                                            [vec![self.blank_symbol.clone()], tape_result].concat();
+                                            [vec![self.blank_symbol.clone()], utils::input_string_to_vec(self.input_alphabet.clone(),tape_result[0].clone())].concat();
                                     } else {
                                         new_tapes[0].tape = tape_result;
                                     }

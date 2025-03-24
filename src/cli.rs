@@ -284,12 +284,9 @@ fn handle_computation(options: &mut options::Options) {
             return;
         }
     }
-    s.add_computer(options.file.clone(), c.clone());
-    s.set_computation_order_at(0, options.file.clone());
-
     if c.is_ram() {
         if options.convert_to_tm {
-            match handle_ram_to_tm_conversion(c, options, &mut s) {
+            match c.ram_to_tm(options, &mut s) {
                 Ok(comp) => c = comp,
                 Err(error) => {
                     println!("Error: {}", error);
@@ -320,7 +317,8 @@ fn handle_computation(options: &mut options::Options) {
             println!("Error: invalid option --convert-to-tm on non-ram file");
         }
     }
-
+    s.add_computer(options.file.clone(), c.clone());
+    s.set_computation_order_at(0, options.file.clone());
     if options.print_computer {
         if c.is_ram() {
             print_ram(c.ram_machine.unwrap());
@@ -346,14 +344,4 @@ fn handle_computation(options: &mut options::Options) {
     } else {
         process_results(s, options.clone());
     }
-}
-
-fn handle_ram_to_tm_conversion(
-    c: computer::Computer,
-    options: &mut options::Options,
-    s: &mut computer::Server,
-) -> Result<computer::Computer, String> {
-    options.file = "src/standard/ram over tm.tm".to_string();
-    options.input = options.input.clone() + &c.ram_machine.as_ref().unwrap().to_encoding().0;
-    file_handler::handle_file_reads(options.file.clone(), s)
 }
