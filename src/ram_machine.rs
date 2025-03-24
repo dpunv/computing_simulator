@@ -44,7 +44,7 @@ impl RamMachine {
         max_steps: i32,
         this_computer_object: computer::Computer,
         context: computer::Server,
-    ) -> Result<(String, usize, Vec<String>, i32, Vec<String>), String> {
+    ) -> Result<computer::SimulationResult, String> {
         let mut ir;
         let mut out: String = "".to_string();
         let mut pc: String = "0".to_string();
@@ -66,7 +66,8 @@ impl RamMachine {
             ir = memory[&pc].clone()[0..4].to_string();
             ar = memory[&pc].clone()[4..].to_string();
             pc = utils::int2bin(utils::bin2int(pc) + 1, 0);
-            computation.push("ram;".to_string() + &ir.clone() + ";" + &ar.clone() + ";" + &acc.clone());
+            computation
+                .push("ram;".to_string() + &ir.clone() + ";" + &ar.clone() + ";" + &acc.clone());
             match ir.as_str() {
                 "0000" => {
                     // R: Read [operands] bit from input
@@ -141,21 +142,27 @@ impl RamMachine {
                         .get_mapping(mapping_key.clone());
                     let subroutine = context.clone().get_computer(mapping).unwrap().clone();
                     match subroutine.clone().simulate(
-                            acc.clone(),
-                            max_steps - steps,
-                            context.clone(),
-                            0,
-                        ) {
-                            Ok((state, _, tape, steps, sub_computation)) => {
-                                computation.extend(sub_computation);
-                                if state == "accept" || state == "halt" {
+                        acc.clone(),
+                        max_steps - steps,
+                        context.clone(),
+                        0,
+                    ) {
+                        Ok((state, _, tape, steps, sub_computation)) => {
+                            computation.extend(sub_computation);
+                            if state == "accept" || state == "halt" {
                                 if subroutine.is_turing() {
                                     acc = tape.into_iter().filter(|symb| *symb != <Option<turing_machine::TuringMachine> as Clone>::clone(&subroutine.turing_machine).unwrap().blank_symbol).collect::<Vec<String>>().join("")
                                 } else {
                                     acc = tape.join("");
                                 }
                             } else {
-                                return Ok(("reject".to_string(), 0, vec![out], steps, computation));
+                                return Ok((
+                                    "reject".to_string(),
+                                    0,
+                                    vec![out],
+                                    steps,
+                                    computation,
+                                ));
                             }
                         }
                         Err(error) => return Err(error),

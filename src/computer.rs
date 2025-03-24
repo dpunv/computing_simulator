@@ -2,11 +2,11 @@
 // Project: Computing Simulator
 // author: dp
 
+use crate::file_handler;
+use crate::options;
 use crate::ram_machine;
 use crate::turing_machine;
 use crate::utils;
-use crate::file_handler;
-use crate::options;
 
 pub type EncodingResult = (
     String,
@@ -20,6 +20,8 @@ pub struct Computer {
     pub turing_machine: Option<turing_machine::TuringMachine>,
     pub mapping: std::collections::HashMap<String, String>,
 }
+
+pub type SimulationResult = (String, usize, Vec<String>, i32, Vec<String>);
 
 #[derive(Clone)]
 pub struct Server {
@@ -69,7 +71,7 @@ impl Computer {
         max_steps: i32,
         context: Server,
         head: usize,
-    ) -> Result<(String, usize, Vec<String>, i32, Vec<String>), String> {
+    ) -> Result<SimulationResult, String> {
         if self.is_ram() {
             self.ram_machine
                 .clone()
@@ -105,43 +107,114 @@ impl Computer {
         options.input = options.input.clone() + &self.ram_machine.as_ref().unwrap().to_encoding().0;
         let orig_c = self.clone();
         match file_handler::handle_file_reads(options.file.clone(), s) {
-            Ok(computer ) => {
+            Ok(computer) => {
                 let comp = computer;
                 *self = comp;
-            },
-            Err(error) => return Err(error)
+            }
+            Err(error) => return Err(error),
         }
         let mut layers_vec = Vec::new();
-        let mut this_layer = Vec::new();
-        this_layer.push(0);
+        let mut this_layer = vec![0];
         let mut internal_count = 0;
         let mut tm = self.turing_machine.take().unwrap();
         tm.add_transition(
             (131).to_string(),
-            vec!["_".to_string(), "_".to_string(), "_".to_string(), "_".to_string(), "_".to_string(), "_".to_string(), "_".to_string()],
+            vec![
+                "_".to_string(),
+                "_".to_string(),
+                "_".to_string(),
+                "_".to_string(),
+                "_".to_string(),
+                "_".to_string(),
+                "_".to_string(),
+            ],
             (internal_count + 131).to_string(),
-            vec!["_".to_string(), "_".to_string(), "_".to_string(), "_".to_string(), "_".to_string(), "_".to_string(), "_".to_string()],
-            vec![turing_machine::Direction::Stay, turing_machine::Direction::Stay, turing_machine::Direction::Stay, turing_machine::Direction::Right, turing_machine::Direction::Stay, turing_machine::Direction::Stay, turing_machine::Direction::Stay]
+            vec![
+                "_".to_string(),
+                "_".to_string(),
+                "_".to_string(),
+                "_".to_string(),
+                "_".to_string(),
+                "_".to_string(),
+                "_".to_string(),
+            ],
+            vec![
+                turing_machine::Direction::Stay,
+                turing_machine::Direction::Stay,
+                turing_machine::Direction::Stay,
+                turing_machine::Direction::Right,
+                turing_machine::Direction::Stay,
+                turing_machine::Direction::Stay,
+                turing_machine::Direction::Stay,
+            ],
         );
         for i in 0..(((orig_c.mapping.len() + 1) as f32).log2().ceil() as usize) {
-            internal_count += 2 ^i;
+            internal_count += 2 ^ i;
             let mut this_layer_new = Vec::new();
             for state in this_layer {
                 this_layer_new.push(state * 2 + 1);
                 tm.add_transition(
                     (state + 131).to_string(),
-                    vec!["_".to_string(), "_".to_string(), "_".to_string(), "0".to_string(), "_".to_string(), "_".to_string(), "_".to_string()],
+                    vec![
+                        "_".to_string(),
+                        "_".to_string(),
+                        "_".to_string(),
+                        "0".to_string(),
+                        "_".to_string(),
+                        "_".to_string(),
+                        "_".to_string(),
+                    ],
                     (state * 2 + 1 + 131).to_string(),
-                    vec!["_".to_string(), "_".to_string(), "_".to_string(), "_".to_string(), "_".to_string(), "_".to_string(), "_".to_string()],
-                    vec![turing_machine::Direction::Stay, turing_machine::Direction::Stay, turing_machine::Direction::Stay, turing_machine::Direction::Right, turing_machine::Direction::Stay, turing_machine::Direction::Stay, turing_machine::Direction::Stay]
+                    vec![
+                        "_".to_string(),
+                        "_".to_string(),
+                        "_".to_string(),
+                        "_".to_string(),
+                        "_".to_string(),
+                        "_".to_string(),
+                        "_".to_string(),
+                    ],
+                    vec![
+                        turing_machine::Direction::Stay,
+                        turing_machine::Direction::Stay,
+                        turing_machine::Direction::Stay,
+                        turing_machine::Direction::Right,
+                        turing_machine::Direction::Stay,
+                        turing_machine::Direction::Stay,
+                        turing_machine::Direction::Stay,
+                    ],
                 );
                 this_layer_new.push(state * 2 + 2);
                 tm.add_transition(
                     (state + 131).to_string(),
-                    vec!["_".to_string(), "_".to_string(), "_".to_string(), "1".to_string(), "_".to_string(), "_".to_string(), "_".to_string()],
+                    vec![
+                        "_".to_string(),
+                        "_".to_string(),
+                        "_".to_string(),
+                        "1".to_string(),
+                        "_".to_string(),
+                        "_".to_string(),
+                        "_".to_string(),
+                    ],
                     (state * 2 + 2 + 131).to_string(),
-                    vec!["_".to_string(), "_".to_string(), "_".to_string(), "_".to_string(), "_".to_string(), "_".to_string(), "_".to_string()],
-                    vec![turing_machine::Direction::Stay, turing_machine::Direction::Stay, turing_machine::Direction::Stay, turing_machine::Direction::Right, turing_machine::Direction::Stay, turing_machine::Direction::Stay, turing_machine::Direction::Stay]
+                    vec![
+                        "_".to_string(),
+                        "_".to_string(),
+                        "_".to_string(),
+                        "_".to_string(),
+                        "_".to_string(),
+                        "_".to_string(),
+                        "_".to_string(),
+                    ],
+                    vec![
+                        turing_machine::Direction::Stay,
+                        turing_machine::Direction::Stay,
+                        turing_machine::Direction::Stay,
+                        turing_machine::Direction::Right,
+                        turing_machine::Direction::Stay,
+                        turing_machine::Direction::Stay,
+                        turing_machine::Direction::Stay,
+                    ],
                 );
             }
             layers_vec.push(this_layer_new.clone());
@@ -149,14 +222,42 @@ impl Computer {
         }
         for state in this_layer {
             tm.add_transition(
-                (state + internal_count + 131 -1).to_string(),
-                vec!["_".to_string(), "_".to_string(), "_".to_string(), "_".to_string(), "_".to_string(), "_".to_string(), "_".to_string()],
+                (state + internal_count + 131 - 1).to_string(),
+                vec![
+                    "_".to_string(),
+                    "_".to_string(),
+                    "_".to_string(),
+                    "_".to_string(),
+                    "_".to_string(),
+                    "_".to_string(),
+                    "_".to_string(),
+                ],
                 129.to_string(),
-                vec!["_".to_string(), "_".to_string(), "_".to_string(), "_".to_string(), "_".to_string(), "_".to_string(), "_".to_string()],
-                vec![turing_machine::Direction::Right, turing_machine::Direction::Stay, turing_machine::Direction::Stay, turing_machine::Direction::Stay, turing_machine::Direction::Right, turing_machine::Direction::Stay, turing_machine::Direction::Stay]
+                vec![
+                    "_".to_string(),
+                    "_".to_string(),
+                    "_".to_string(),
+                    "_".to_string(),
+                    "_".to_string(),
+                    "_".to_string(),
+                    "_".to_string(),
+                ],
+                vec![
+                    turing_machine::Direction::Right,
+                    turing_machine::Direction::Stay,
+                    turing_machine::Direction::Stay,
+                    turing_machine::Direction::Stay,
+                    turing_machine::Direction::Right,
+                    turing_machine::Direction::Stay,
+                    turing_machine::Direction::Stay,
+                ],
             );
         }
-        let new_states: Vec<String> = layers_vec.concat().iter().map(|e| (e+130).to_string()).collect();
+        let new_states: Vec<String> = layers_vec
+            .concat()
+            .iter()
+            .map(|e| (e + 130).to_string())
+            .collect();
         tm.states = [tm.states.clone(), new_states].concat();
         self.set_turing(tm.clone());
         for (ind, (_, value)) in orig_c.mapping.clone().iter().enumerate() {
@@ -234,9 +335,23 @@ impl Server {
                 }
             }
         }
-        let last_computer = self.get_computer(self.computation_order[self.computation_order.len() - 1].clone()).unwrap();
-        if last_computer.is_turing(){
-            output = utils::input_string_to_vec(last_computer.turing_machine.as_ref().unwrap().tape_alphabet.clone(), output).into_iter().filter(|e| *e != last_computer.turing_machine.as_ref().unwrap().blank_symbol).collect::<Vec<String>>().join("");
+        let last_computer = self
+            .get_computer(self.computation_order[self.computation_order.len() - 1].clone())
+            .unwrap();
+        if last_computer.is_turing() {
+            output = utils::input_string_to_vec(
+                last_computer
+                    .turing_machine
+                    .as_ref()
+                    .unwrap()
+                    .tape_alphabet
+                    .clone(),
+                output,
+            )
+            .into_iter()
+            .filter(|e| *e != last_computer.turing_machine.as_ref().unwrap().blank_symbol)
+            .collect::<Vec<String>>()
+            .join("");
         }
         Ok((final_state, current_head, output, steps, tot_comp))
     }

@@ -93,7 +93,7 @@ fn process_results(server: computer::Server, opt: options::Options) {
             }
             if opt.verbose >= 2 {
                 println!("Computation: ");
-                for conf in computation{
+                for conf in computation {
                     println!("  {}", conf);
                 }
             }
