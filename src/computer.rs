@@ -69,7 +69,7 @@ impl Computer {
         max_steps: i32,
         context: Server,
         head: usize,
-    ) -> Result<(String, usize, Vec<String>, i32), String> {
+    ) -> Result<(String, usize, Vec<String>, i32, Vec<String>), String> {
         if self.is_ram() {
             self.ram_machine
                 .clone()
@@ -210,28 +210,34 @@ impl Server {
         &mut self,
         input: String,
         max_steps: i32,
-    ) -> Result<(String, usize, String, i32), String> {
+    ) -> Result<(String, usize, String, i32, Vec<String>), String> {
         let mut steps: i32 = 0;
         let mut output: String = input;
         let mut final_state = "".to_string();
         let mut current_head = 0;
+        let mut tot_comp = Vec::new();
         for name in self.computation_order.clone() {
             let computer = self.get_computer(name.clone()).unwrap();
             let result = computer
                 .clone()
                 .simulate(output, max_steps - steps, self.clone(), 0);
             match result {
-                Ok((state, head, tape, s)) => {
+                Ok((state, head, tape, s, computation)) => {
                     final_state = state;
                     current_head = head;
                     output = tape.join("");
                     steps += s;
+                    tot_comp.extend(computation);
                 }
                 Err(e) => {
                     return Err(e);
                 }
             }
         }
-        Ok((final_state, current_head, output, steps))
+        let last_computer = self.get_computer(self.computation_order[self.computation_order.len() - 1].clone()).unwrap();
+        if last_computer.is_turing(){
+            output = utils::input_string_to_vec(last_computer.turing_machine.as_ref().unwrap().tape_alphabet.clone(), output).into_iter().filter(|e| *e != last_computer.turing_machine.as_ref().unwrap().blank_symbol).collect::<Vec<String>>().join("");
+        }
+        Ok((final_state, current_head, output, steps, tot_comp))
     }
 }

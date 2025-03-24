@@ -80,7 +80,7 @@ pub fn print_status_tm(tm: &turing_machine::TuringMachine) {
 fn process_results(server: computer::Server, opt: options::Options) {
     let result = server.clone().execute(opt.input.clone(), opt.max_steps);
     match result {
-        Ok((state, _, tape, steps)) => {
+        Ok((state, _, tape, steps, computation)) => {
             if opt.verbose < 0 {
                 panic!("Invalid verbose level");
             }
@@ -90,6 +90,12 @@ fn process_results(server: computer::Server, opt: options::Options) {
             }
             if opt.verbose >= 1 {
                 println!("Steps: {}", steps);
+            }
+            if opt.verbose >= 2 {
+                println!("Computation: ");
+                for conf in computation{
+                    println!("  {}", conf);
+                }
             }
         }
         Err(error) => {

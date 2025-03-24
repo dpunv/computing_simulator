@@ -18,7 +18,6 @@ pub struct TuringMachine {
     pub transitions: Vec<Transition>,
     pub end_on_final_state: bool,
     pub tape_count: usize,
-    //pub last_execution: (String, Vec<Tape>, i32, Vec<Configuration>),
     pub next_state_id: usize,
 }
 
@@ -27,12 +26,6 @@ pub struct Tape {
     pub tape: Vec<String>,
     pub head: usize,
 }
-
-/* #[derive(Clone)]
-pub struct Configuration {
-    pub state: String,
-    pub tapes: Vec<Tape>,
-} */
 
 #[derive(Clone)]
 pub struct Transition {
@@ -120,7 +113,7 @@ impl PartialEq for Direction {
 struct TreeElement {
     state: String,
     tapes: Vec<Tape>,
-    previous: usize,
+    computation: Vec<String>
 }
 impl PartialEq for TreeElement {
     fn eq(&self, other: &Self) -> bool {
@@ -194,7 +187,7 @@ impl TuringMachine {
         this_computer_object: computer::Computer,
         context: computer::Server,
         prev_head: usize,
-    ) -> Result<(String, usize, Vec<String>, i32), String> {
+    ) -> Result<(String, usize, Vec<String>, i32, Vec<String>), String> {
         let transitions_map = self.make_transition_map();
         let mut tree = Vec::new();
         tree.push(Vec::new());
@@ -219,7 +212,7 @@ impl TuringMachine {
         tree[0].push(TreeElement {
             state: self.initial_state.clone(),
             tapes: tapes.clone(),
-            previous: 0,
+            computation: Vec::new()
         });
         let mut steps = 0;
         let mut halts = false;
@@ -241,6 +234,7 @@ impl TuringMachine {
                     found = true;
                     let possible_transitions = transitions_map.get(&key).unwrap().clone();
                     for transition in possible_transitions.iter() {
+                        let mut this_computation = element.computation.clone();
                         let mut new_tapes = Vec::new();
                         for tapenum in 0..self.tape_count {
                             let mut new_tape = element.tapes[tapenum].clone();
@@ -266,6 +260,7 @@ impl TuringMachine {
                             new_tapes.push(new_tape);
                         }
                         let new_state = transition.new_state.clone();
+                        this_computation.push("tm;".to_string() + &new_state.clone() + ";" + &new_tapes[0].tape.clone().join(""));
                         let subroutine_name: String =
                             this_computer_object.clone().get_mapping(new_state.clone());
                         if subroutine_name != *"" {
@@ -292,7 +287,8 @@ impl TuringMachine {
                                 context.clone(),
                                 new_tapes[0].head,
                             ) {
-                                Ok((_, head_result, tape_result, steps_result)) => {
+                                Ok((_, head_result, tape_result, steps_result, sub_computation)) => {
+                                    this_computation.extend(sub_computation);
                                     if subroutine.is_ram() {
                                         new_tapes[0].tape =
                                             [vec![self.blank_symbol.clone()], utils::input_string_to_vec(self.input_alphabet.clone(),tape_result[0].clone())].concat();
@@ -308,7 +304,7 @@ impl TuringMachine {
                         let el = TreeElement {
                             state: new_state,
                             tapes: new_tapes,
-                            previous: ind,
+                            computation: this_computation
                         };
                         if !new_level.contains(&el) {
                             new_level.push(el);
@@ -323,11 +319,9 @@ impl TuringMachine {
             tree.push(new_level);
         }
         tree.pop();
-        //let mut computation = Vec::new();
-        let mut index = (tree.len() - 1) as i32;
         let mut previous = 0;
         let mut changed = false;
-        for (ind, element) in tree[index as usize].clone().into_iter().enumerate() {
+        for (ind, element) in tree[tree.len() - 1].clone().into_iter().enumerate() {
             if element.state == self.accept_state {
                 previous = ind;
                 break;
@@ -339,29 +333,13 @@ impl TuringMachine {
             }
         }
         let last_element = tree[tree.len() - 1][previous].clone();
-        while index >= 0 {
-            let element = &tree[(index) as usize][previous];
-            previous = element.previous;
-            index -= 1;
-            /* let configuration = Configuration {
-                state: element.state.clone(),
-                tapes: element.tapes.clone(),
-            };
-            computation.push(configuration); */
-        }
-        //computation.reverse();
-        /* self.last_execution = (
-            last_element.state.clone(),
-            last_element.tapes.clone(),
-            steps,
-            computation,
-        ); */
         if self.accept_state == last_element.state.clone() {
             Ok((
                 "accept".to_string(),
                 last_element.tapes[0].head,
                 last_element.tapes[0].tape.clone(),
                 steps,
+                last_element.computation
             ))
         } else if self.reject_state == last_element.state.clone() {
             Ok((
@@ -369,6 +347,7 @@ impl TuringMachine {
                 last_element.tapes[0].head,
                 last_element.tapes[0].tape.clone(),
                 steps,
+                last_element.computation
             ))
         } else if self.final_states.contains(&last_element.state.clone()) {
             Ok((
@@ -376,6 +355,7 @@ impl TuringMachine {
                 last_element.tapes[0].head,
                 last_element.tapes[0].tape.clone(),
                 steps,
+                last_element.computation
             ))
         } else {
             Ok((
@@ -383,6 +363,7 @@ impl TuringMachine {
                 last_element.tapes[0].head,
                 last_element.tapes[0].tape.clone(),
                 steps,
+                last_element.computation
             ))
         }
     }
