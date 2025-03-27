@@ -3,9 +3,9 @@
 // author: dp
 
 use crate::computer;
+use crate::lambda;
 use crate::ram_machine;
 use crate::regex;
-use crate::lambda;
 use crate::regex::regex_to_fsa;
 use crate::turing_machine;
 use crate::turing_machine::FromString;
@@ -490,31 +490,37 @@ pub fn read_regex(
     }
 }
 
-fn read_lambda(lines: Vec<String>, computer: &mut computer::Computer) -> Result<computer::Computer, String> {
+fn read_lambda(
+    lines: Vec<String>,
+    computer: &mut computer::Computer,
+) -> Result<computer::Computer, String> {
     let mut readed: Vec<lambda::Lambda> = Vec::new();
     for line in lines {
-        if line.trim() != "".to_string(){
+        if line.trim() != "" {
             let splitted: Vec<&str> = line.split(": ").collect();
             let name = splitted[0].to_string();
             let lambda = splitted[1..].join(": ");
             match lambda::parse_lambda(lambda.as_str()) {
                 Ok(expr) => {
-                    readed.push(
-                        lambda::Lambda{
-                            expr,
-                            references: Vec::new(),
-                            name
-                        });
-                },
-                Err(error) => return Err(error)
+                    readed.push(lambda::Lambda {
+                        expr,
+                        references: Vec::new(),
+                        name,
+                    });
+                }
+                Err(error) => return Err(error),
             }
         }
     }
-    readed = readed.clone().iter().map(|l| lambda::Lambda{
-        expr: l.expr.clone(),
-        references: readed.clone(),
-        name: l.name.clone()
-    }).collect();
+    readed = readed
+        .clone()
+        .iter()
+        .map(|l| lambda::Lambda {
+            expr: l.expr.clone(),
+            references: readed.clone(),
+            name: l.name.clone(),
+        })
+        .collect();
     computer.set_lambda(readed[0].clone());
     Ok(computer.clone())
 }

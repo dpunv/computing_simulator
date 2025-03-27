@@ -5,12 +5,12 @@
 mod cli;
 mod computer;
 mod file_handler;
+mod lambda;
 mod options;
 mod ram_machine;
 mod regex;
 mod turing_machine;
 mod utils;
-mod lambda;
 
 fn main() {
     //lambda::main_lambda();

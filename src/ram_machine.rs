@@ -150,13 +150,17 @@ impl RamMachine {
                             computation.extend(sub_computation);
                             if state == "accept" || state == "halt" {
                                 match subroutine.element {
-                                    computer::ComputingElem::TM(m) => {
-                                        acc = tape.into_iter().filter(|symb| *symb != m.blank_symbol).collect::<Vec<String>>().join("")
-                                    },
-                                    computer::ComputingElem::RAM(_) => {
+                                    computer::ComputingElem::Tm(m) => {
+                                        acc = tape
+                                            .into_iter()
+                                            .filter(|symb| *symb != m.blank_symbol)
+                                            .collect::<Vec<String>>()
+                                            .join("")
+                                    }
+                                    computer::ComputingElem::Ram(_) => {
                                         acc = tape.join("");
-                                    },
-                                    computer::ComputingElem::LAMBDA(_) => {
+                                    }
+                                    computer::ComputingElem::Lambda(_) => {
                                         acc = "0".to_string();
                                     }
                                 }

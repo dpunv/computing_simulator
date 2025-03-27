@@ -3,11 +3,11 @@
 // author: dp
 
 use crate::file_handler;
+use crate::lambda;
 use crate::options;
 use crate::ram_machine;
 use crate::turing_machine;
 use crate::utils;
-use crate::lambda;
 
 pub type EncodingResult = (
     String,
@@ -17,9 +17,9 @@ pub type EncodingResult = (
 
 #[derive(Clone)]
 pub enum ComputingElem {
-    RAM(ram_machine::RamMachine),
-    TM(turing_machine::TuringMachine),
-    LAMBDA(lambda::Lambda)
+    Ram(ram_machine::RamMachine),
+    Tm(Box<turing_machine::TuringMachine>),
+    Lambda(lambda::Lambda),
 }
 
 #[derive(Clone)]
@@ -39,15 +39,9 @@ pub struct Server {
 impl Computer {
     pub fn is_ram(&self) -> bool {
         match self.element {
-            ComputingElem::RAM(_) => {
-                return true;
-            },
-            ComputingElem::TM(_) => {
-                return false;
-            },
-            ComputingElem::LAMBDA(_) => {
-                return false;
-            }
+            ComputingElem::Ram(_) => true,
+            ComputingElem::Tm(_) => false,
+            ComputingElem::Lambda(_) => false,
         }
     }
 
@@ -68,42 +62,40 @@ impl Computer {
 
     pub fn is_lambda(&self) -> bool {
         match self.element {
-            ComputingElem::RAM(_) => {
-                return false;
-            },
-            ComputingElem::TM(_) => {
-                return false;
-            },
-            ComputingElem::LAMBDA(_) => {
-                return true;
-            }
+            ComputingElem::Ram(_) => false,
+            ComputingElem::Tm(_) => false,
+            ComputingElem::Lambda(_) => true,
         }
     }
 
     pub fn new() -> Computer {
         Computer {
-            element: ComputingElem::TM(turing_machine::TuringMachine::new()),
+            element: ComputingElem::Tm(Box::new(turing_machine::TuringMachine::new())),
             mapping: std::collections::HashMap::new(),
         }
     }
     pub fn to_encoding(&self) -> Result<EncodingResult, String> {
         match self.element.clone() {
-            ComputingElem::TM(m) => Ok(m.to_encoding()),
-            ComputingElem::RAM(m) => Ok(m.to_encoding()),
-            ComputingElem::LAMBDA(l) => Ok((l.to_string(), std::collections::HashMap::new(), std::collections::HashMap::new()))
+            ComputingElem::Tm(m) => Ok(m.to_encoding()),
+            ComputingElem::Ram(m) => Ok(m.to_encoding()),
+            ComputingElem::Lambda(l) => Ok((
+                l.to_string(),
+                std::collections::HashMap::new(),
+                std::collections::HashMap::new(),
+            )),
         }
     }
 
     pub fn set_ram(&mut self, ram_machine: ram_machine::RamMachine) {
-        self.element = ComputingElem::RAM(ram_machine);
+        self.element = ComputingElem::Ram(ram_machine);
     }
 
     pub fn set_turing(&mut self, turing_machine: turing_machine::TuringMachine) {
-        self.element = ComputingElem::TM(turing_machine);
+        self.element = ComputingElem::Tm(Box::new(turing_machine));
     }
 
     pub fn set_lambda(&mut self, lambda: lambda::Lambda) {
-        self.element = ComputingElem::LAMBDA(lambda);
+        self.element = ComputingElem::Lambda(lambda);
     }
 
     pub fn simulate(
@@ -114,19 +106,12 @@ impl Computer {
         head: usize,
     ) -> Result<SimulationResult, String> {
         match self.element.clone() {
-            ComputingElem::RAM(m) => {
-                m.simulate(input.clone(), max_steps, self, context)
-            }
-            ComputingElem::TM(m) => {
-                let input_vec = utils::input_string_to_vec(
-                    m.tape_alphabet.clone(),
-                    input,
-                );
+            ComputingElem::Ram(m) => m.simulate(input.clone(), max_steps, self, context),
+            ComputingElem::Tm(m) => {
+                let input_vec = utils::input_string_to_vec(m.tape_alphabet.clone(), input);
                 m.simulate(input_vec, max_steps, self, context, head)
             }
-            ComputingElem::LAMBDA(l) => {
-                l.clone().simulate()
-            }
+            ComputingElem::Lambda(l) => l.clone().simulate(),
         }
     }
     pub fn add_mapping(&mut self, name: String, value: String) {
@@ -145,9 +130,9 @@ impl Computer {
         s: &mut Server,
     ) -> Result<Computer, String> {
         match self.element.clone() {
-            ComputingElem::LAMBDA(_) => return Err("cannot convert lambda to TM".to_string()),
-            ComputingElem::TM(_) => return Err("already TM".to_string()),
-            ComputingElem::RAM(m) => {
+            ComputingElem::Lambda(_) => Err("cannot convert lambda to TM".to_string()),
+            ComputingElem::Tm(_) => Err("already TM".to_string()),
+            ComputingElem::Ram(m) => {
                 options.file = "src/standard/ram over tm.tm".to_string();
                 options.input = options.input.clone() + &m.to_encoding().0;
                 let orig_c = self.clone();
@@ -162,9 +147,9 @@ impl Computer {
                 let mut this_layer = vec![0];
                 let mut internal_count = 0;
                 match self.element.clone() {
-                    ComputingElem::LAMBDA(_) => return Err("something went wrong".to_string()),
-                    ComputingElem::RAM(_) => return Err("something went wrong".to_string()),
-                    ComputingElem::TM(mut m) => {
+                    ComputingElem::Lambda(_) => return Err("something went wrong".to_string()),
+                    ComputingElem::Ram(_) => return Err("something went wrong".to_string()),
+                    ComputingElem::Tm(mut m) => {
                         m.add_transition(
                             (131).to_string(),
                             vec![
@@ -307,13 +292,16 @@ impl Computer {
                             .map(|e| (e + 130).to_string())
                             .collect();
                         m.states = [m.states.clone(), new_states].concat();
-                        self.set_turing(m.clone());
+                        self.set_turing(*m.clone());
                         for (ind, (_, value)) in orig_c.mapping.clone().iter().enumerate() {
-                            self.add_mapping((131 + internal_count + ind).to_string(), value.clone());
+                            self.add_mapping(
+                                (131 + internal_count + ind).to_string(),
+                                value.clone(),
+                            );
                         }
                     }
                 };
-                return Ok(self.clone());
+                Ok(self.clone())
             }
         }
     }
@@ -391,17 +379,14 @@ impl Server {
             .get_computer(self.computation_order[self.computation_order.len() - 1].clone())
             .unwrap();
         match last_computer.element.clone() {
-            ComputingElem::LAMBDA(_) => {},
-            ComputingElem::RAM(_) => {},
-            ComputingElem::TM(m) => {
-                output = utils::input_string_to_vec(
-                    m.tape_alphabet.clone(),
-                    output,
-                )
-                .into_iter()
-                .filter(|e| *e != m.blank_symbol)
-                .collect::<Vec<String>>()
-                .join("");
+            ComputingElem::Lambda(_) => {}
+            ComputingElem::Ram(_) => {}
+            ComputingElem::Tm(m) => {
+                output = utils::input_string_to_vec(m.tape_alphabet.clone(), output)
+                    .into_iter()
+                    .filter(|e| *e != m.blank_symbol)
+                    .collect::<Vec<String>>()
+                    .join("");
             }
         }
         Ok((final_state, current_head, output, steps, tot_comp))

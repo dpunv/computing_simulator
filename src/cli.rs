@@ -119,11 +119,12 @@ fn interactive_tui(server: &mut computer::Server, opt: options::Options) {
             match server
                 .get_computer(server.computes_at(0).clone())
                 .unwrap()
-                .element.clone()
+                .element
+                .clone()
             {
-                computer::ComputingElem::TM(m) => print_status_tm(&m),
-                computer::ComputingElem::RAM(m) => print_status_ram(&m),
-                computer::ComputingElem::LAMBDA(_) => {}
+                computer::ComputingElem::Tm(m) => print_status_tm(&m),
+                computer::ComputingElem::Ram(m) => print_status_ram(&m),
+                computer::ComputingElem::Lambda(_) => {}
             }
         } else if trimmed_input == "help" {
             print_help();
@@ -231,10 +232,9 @@ pub fn print_ram(ram: ram_machine::RamMachine) {
 
 pub fn print_lambda(l: lambda::Lambda) {
     for lambda in l.references {
-        println!("{}", lambda.to_string());
+        println!("{}", lambda);
     }
 }
-
 
 fn print_status_ram(ram: &ram_machine::RamMachine) {
     println!("Number of instructions: {}", ram.instructions.len());
@@ -284,11 +284,10 @@ fn handle_computation(options: &mut options::Options) {
             return;
         }
     }
-    match c.element.clone()
-    {
-        computer::ComputingElem::TM(m) => {
+    match c.element.clone() {
+        computer::ComputingElem::Tm(m) => {
             if options.convert_to_singletape {
-                c.element = computer::ComputingElem::TM(m.convert_multi_tape_to_single_tape_tm());
+                c.set_turing(m.convert_multi_tape_to_single_tape_tm());
             }
             if options.print_number {
                 println!("{}", m.number());
@@ -297,8 +296,8 @@ fn handle_computation(options: &mut options::Options) {
             if options.convert_to_tm {
                 println!("Error: invalid option --convert-to-tm on non-ram file");
             }
-        },
-        computer::ComputingElem::RAM(_) => {
+        }
+        computer::ComputingElem::Ram(_) => {
             if options.convert_to_tm {
                 match c.ram_to_tm(options, &mut s) {
                     Ok(comp) => c = comp,
@@ -314,8 +313,8 @@ fn handle_computation(options: &mut options::Options) {
             if options.print_number {
                 println!("Error: invalid option --print-number on non-tm file");
             }
-        },
-        computer::ComputingElem::LAMBDA(_) => {
+        }
+        computer::ComputingElem::Lambda(_) => {
             if options.convert_to_singletape || options.print_number || options.convert_to_tm {
                 println!("Error: invalid option on non-tm, non-ram file");
             }
@@ -325,9 +324,9 @@ fn handle_computation(options: &mut options::Options) {
     s.set_computation_order_at(0, options.file.clone());
     if options.print_computer {
         match c.element {
-            computer::ComputingElem::RAM(m) => print_ram(m),
-            computer::ComputingElem::TM(m) => print_tm(m),
-            computer::ComputingElem::LAMBDA(l) => print_lambda(l)
+            computer::ComputingElem::Ram(m) => print_ram(m),
+            computer::ComputingElem::Tm(m) => print_tm(*m),
+            computer::ComputingElem::Lambda(l) => print_lambda(l),
         }
         return;
     }
@@ -338,12 +337,11 @@ fn handle_computation(options: &mut options::Options) {
     }
 
     if options.status {
-        match c.element.clone()
-            {
-                computer::ComputingElem::TM(m) => print_status_tm(&m),
-                computer::ComputingElem::RAM(m) => print_status_ram(&m),
-                computer::ComputingElem::LAMBDA(_) => {}
-            }
+        match c.element.clone() {
+            computer::ComputingElem::Tm(m) => print_status_tm(&m),
+            computer::ComputingElem::Ram(m) => print_status_ram(&m),
+            computer::ComputingElem::Lambda(_) => {}
+        }
     } else if options.clone().input.is_empty() && !c.is_lambda() {
         interactive_tui(&mut s, options.clone());
     } else {
