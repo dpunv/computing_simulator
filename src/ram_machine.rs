@@ -3,7 +3,6 @@
 // author: dp
 
 use crate::computer;
-use crate::turing_machine;
 use crate::utils;
 
 #[derive(Clone)]
@@ -150,10 +149,16 @@ impl RamMachine {
                         Ok((state, _, tape, steps, sub_computation)) => {
                             computation.extend(sub_computation);
                             if state == "accept" || state == "halt" {
-                                if subroutine.is_turing() {
-                                    acc = tape.into_iter().filter(|symb| *symb != <Option<turing_machine::TuringMachine> as Clone>::clone(&subroutine.turing_machine).unwrap().blank_symbol).collect::<Vec<String>>().join("")
-                                } else {
-                                    acc = tape.join("");
+                                match subroutine.element {
+                                    computer::ComputingElem::TM(m) => {
+                                        acc = tape.into_iter().filter(|symb| *symb != m.blank_symbol).collect::<Vec<String>>().join("")
+                                    },
+                                    computer::ComputingElem::RAM(_) => {
+                                        acc = tape.join("");
+                                    },
+                                    computer::ComputingElem::LAMBDA(_) => {
+                                        acc = "0".to_string();
+                                    }
                                 }
                             } else {
                                 return Ok((

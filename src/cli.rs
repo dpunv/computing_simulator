@@ -2,6 +2,7 @@
 // Project: Computing Simulator
 // author: dp
 
+use crate::lambda;
 use crate::turing_machine;
 
 use crate::computer;
@@ -115,28 +116,14 @@ fn interactive_tui(server: &mut computer::Server, opt: options::Options) {
         let trimmed_input = input.trim().to_string();
         new_opt.input = input.clone();
         if trimmed_input == "status" {
-            if server
+            match server
                 .get_computer(server.computes_at(0).clone())
                 .unwrap()
-                .is_turing()
+                .element.clone()
             {
-                print_status_tm(
-                    server
-                        .get_computer(server.computes_at(0).clone())
-                        .unwrap()
-                        .turing_machine
-                        .as_ref()
-                        .unwrap(),
-                );
-            } else {
-                print_status_ram(
-                    server
-                        .get_computer(server.computes_at(0).clone())
-                        .unwrap()
-                        .ram_machine
-                        .as_ref()
-                        .unwrap(),
-                )
+                computer::ComputingElem::TM(m) => print_status_tm(&m),
+                computer::ComputingElem::RAM(m) => print_status_ram(&m),
+                computer::ComputingElem::LAMBDA(_) => {}
             }
         } else if trimmed_input == "help" {
             print_help();
@@ -242,6 +229,13 @@ pub fn print_ram(ram: ram_machine::RamMachine) {
     }
 }
 
+pub fn print_lambda(l: lambda::Lambda) {
+    for lambda in l.references {
+        println!("{}", lambda.to_string());
+    }
+}
+
+
 fn print_status_ram(ram: &ram_machine::RamMachine) {
     println!("Number of instructions: {}", ram.instructions.len());
 }
@@ -290,46 +284,50 @@ fn handle_computation(options: &mut options::Options) {
             return;
         }
     }
-    if c.is_ram() {
-        if options.convert_to_tm {
-            match c.ram_to_tm(options, &mut s) {
-                Ok(comp) => c = comp,
-                Err(error) => {
-                    println!("Error: {}", error);
-                    return;
+    match c.element.clone()
+    {
+        computer::ComputingElem::TM(m) => {
+            if options.convert_to_singletape {
+                c.element = computer::ComputingElem::TM(m.convert_multi_tape_to_single_tape_tm());
+            }
+            if options.print_number {
+                println!("{}", m.number());
+                return;
+            }
+            if options.convert_to_tm {
+                println!("Error: invalid option --convert-to-tm on non-ram file");
+            }
+        },
+        computer::ComputingElem::RAM(_) => {
+            if options.convert_to_tm {
+                match c.ram_to_tm(options, &mut s) {
+                    Ok(comp) => c = comp,
+                    Err(error) => {
+                        println!("Error: {}", error);
+                        return;
+                    }
                 }
             }
-        }
-        if options.convert_to_singletape {
-            println!("Error: invalid option --convert-to-singletape on non-tm file");
-        }
-        if options.print_number {
-            println!("Error: invalid option --print-number on non-tm file");
-        }
-    } else {
-        if options.convert_to_singletape {
-            c.turing_machine = std::option::Option::Some(
-                c.turing_machine
-                    .as_ref()
-                    .unwrap()
-                    .convert_multi_tape_to_single_tape_tm(),
-            );
-        }
-        if options.print_number {
-            println!("{}", c.turing_machine.as_ref().unwrap().number());
-            return;
-        }
-        if options.convert_to_tm {
-            println!("Error: invalid option --convert-to-tm on non-ram file");
+            if options.convert_to_singletape {
+                println!("Error: invalid option --convert-to-singletape on non-tm file");
+            }
+            if options.print_number {
+                println!("Error: invalid option --print-number on non-tm file");
+            }
+        },
+        computer::ComputingElem::LAMBDA(_) => {
+            if options.convert_to_singletape || options.print_number || options.convert_to_tm {
+                println!("Error: invalid option on non-tm, non-ram file");
+            }
         }
     }
     s.add_computer(options.file.clone(), c.clone());
     s.set_computation_order_at(0, options.file.clone());
     if options.print_computer {
-        if c.is_ram() {
-            print_ram(c.ram_machine.unwrap());
-        } else {
-            print_tm(c.turing_machine.unwrap());
+        match c.element {
+            computer::ComputingElem::RAM(m) => print_ram(m),
+            computer::ComputingElem::TM(m) => print_tm(m),
+            computer::ComputingElem::LAMBDA(l) => print_lambda(l)
         }
         return;
     }
@@ -340,12 +338,13 @@ fn handle_computation(options: &mut options::Options) {
     }
 
     if options.status {
-        if c.is_turing() {
-            print_status_tm(c.turing_machine.as_ref().unwrap());
-        } else {
-            print_status_ram(c.ram_machine.as_ref().unwrap())
-        }
-    } else if options.clone().input.is_empty() {
+        match c.element.clone()
+            {
+                computer::ComputingElem::TM(m) => print_status_tm(&m),
+                computer::ComputingElem::RAM(m) => print_status_ram(&m),
+                computer::ComputingElem::LAMBDA(_) => {}
+            }
+    } else if options.clone().input.is_empty() && !c.is_lambda() {
         interactive_tui(&mut s, options.clone());
     } else {
         process_results(s, options.clone());

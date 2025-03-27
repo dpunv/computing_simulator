@@ -1,0 +1,4 @@
+lambda
+SUCC(3): (SUCC 3)
+3: (\f x.(f (f (f x))))
+SUCC: (\n.(\f x.(f (n f x))))

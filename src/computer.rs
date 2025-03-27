@@ -7,6 +7,7 @@ use crate::options;
 use crate::ram_machine;
 use crate::turing_machine;
 use crate::utils;
+use crate::lambda;
 
 pub type EncodingResult = (
     String,
@@ -15,9 +16,15 @@ pub type EncodingResult = (
 );
 
 #[derive(Clone)]
+pub enum ComputingElem {
+    RAM(ram_machine::RamMachine),
+    TM(turing_machine::TuringMachine),
+    LAMBDA(lambda::Lambda)
+}
+
+#[derive(Clone)]
 pub struct Computer {
-    pub ram_machine: Option<ram_machine::RamMachine>,
-    pub turing_machine: Option<turing_machine::TuringMachine>,
+    pub element: ComputingElem,
     pub mapping: std::collections::HashMap<String, String>,
 }
 
@@ -31,38 +38,72 @@ pub struct Server {
 
 impl Computer {
     pub fn is_ram(&self) -> bool {
-        self.ram_machine.is_some()
+        match self.element {
+            ComputingElem::RAM(_) => {
+                return true;
+            },
+            ComputingElem::TM(_) => {
+                return false;
+            },
+            ComputingElem::LAMBDA(_) => {
+                return false;
+            }
+        }
     }
 
-    pub fn is_turing(&self) -> bool {
-        self.turing_machine.is_some()
+    /* pub fn is_turing(&self) -> bool {
+        match self.element {
+            ComputingElem::RAM(_) => {
+                return false;
+            },
+            ComputingElem::TM(_) => {
+                return true;
+            },
+            ComputingElem::LAMBDA(_) => {
+                return false;
+            }
+        }
+    }
+    */
+
+    pub fn is_lambda(&self) -> bool {
+        match self.element {
+            ComputingElem::RAM(_) => {
+                return false;
+            },
+            ComputingElem::TM(_) => {
+                return false;
+            },
+            ComputingElem::LAMBDA(_) => {
+                return true;
+            }
+        }
     }
 
     pub fn new() -> Computer {
         Computer {
-            ram_machine: None,
-            turing_machine: None,
+            element: ComputingElem::TM(turing_machine::TuringMachine::new()),
             mapping: std::collections::HashMap::new(),
         }
     }
     pub fn to_encoding(&self) -> Result<EncodingResult, String> {
-        if self.is_ram() {
-            return Ok(self.ram_machine.as_ref().unwrap().to_encoding());
-        } else if self.is_turing() {
-            return Ok(self.turing_machine.as_ref().unwrap().to_encoding());
-        } else {
-            return Err("empty computer".to_string());
+        match self.element.clone() {
+            ComputingElem::TM(m) => Ok(m.to_encoding()),
+            ComputingElem::RAM(m) => Ok(m.to_encoding()),
+            ComputingElem::LAMBDA(l) => Ok((l.to_string(), std::collections::HashMap::new(), std::collections::HashMap::new()))
         }
     }
 
     pub fn set_ram(&mut self, ram_machine: ram_machine::RamMachine) {
-        self.ram_machine = Some(ram_machine);
-        self.turing_machine = None;
+        self.element = ComputingElem::RAM(ram_machine);
     }
 
     pub fn set_turing(&mut self, turing_machine: turing_machine::TuringMachine) {
-        self.turing_machine = Some(turing_machine);
-        self.ram_machine = None;
+        self.element = ComputingElem::TM(turing_machine);
+    }
+
+    pub fn set_lambda(&mut self, lambda: lambda::Lambda) {
+        self.element = ComputingElem::LAMBDA(lambda);
     }
 
     pub fn simulate(
@@ -72,20 +113,20 @@ impl Computer {
         context: Server,
         head: usize,
     ) -> Result<SimulationResult, String> {
-        if self.is_ram() {
-            self.ram_machine
-                .clone()
-                .unwrap()
-                .simulate(input.clone(), max_steps, self, context)
-        } else {
-            let input_vec = utils::input_string_to_vec(
-                self.turing_machine.clone().unwrap().tape_alphabet.clone(),
-                input,
-            );
-            self.turing_machine
-                .clone()
-                .unwrap()
-                .simulate(input_vec, max_steps, self, context, head)
+        match self.element.clone() {
+            ComputingElem::RAM(m) => {
+                m.simulate(input.clone(), max_steps, self, context)
+            }
+            ComputingElem::TM(m) => {
+                let input_vec = utils::input_string_to_vec(
+                    m.tape_alphabet.clone(),
+                    input,
+                );
+                m.simulate(input_vec, max_steps, self, context, head)
+            }
+            ComputingElem::LAMBDA(l) => {
+                l.clone().simulate()
+            }
         }
     }
     pub fn add_mapping(&mut self, name: String, value: String) {
@@ -103,167 +144,178 @@ impl Computer {
         options: &mut options::Options,
         s: &mut Server,
     ) -> Result<Computer, String> {
-        options.file = "src/standard/ram over tm.tm".to_string();
-        options.input = options.input.clone() + &self.ram_machine.as_ref().unwrap().to_encoding().0;
-        let orig_c = self.clone();
-        match file_handler::handle_file_reads(options.file.clone(), s) {
-            Ok(computer) => {
-                let comp = computer;
-                *self = comp;
+        match self.element.clone() {
+            ComputingElem::LAMBDA(_) => return Err("cannot convert lambda to TM".to_string()),
+            ComputingElem::TM(_) => return Err("already TM".to_string()),
+            ComputingElem::RAM(m) => {
+                options.file = "src/standard/ram over tm.tm".to_string();
+                options.input = options.input.clone() + &m.to_encoding().0;
+                let orig_c = self.clone();
+                match file_handler::handle_file_reads(options.file.clone(), s) {
+                    Ok(computer) => {
+                        let comp = computer;
+                        *self = comp;
+                    }
+                    Err(error) => return Err(error),
+                }
+                let mut layers_vec = Vec::new();
+                let mut this_layer = vec![0];
+                let mut internal_count = 0;
+                match self.element.clone() {
+                    ComputingElem::LAMBDA(_) => return Err("something went wrong".to_string()),
+                    ComputingElem::RAM(_) => return Err("something went wrong".to_string()),
+                    ComputingElem::TM(mut m) => {
+                        m.add_transition(
+                            (131).to_string(),
+                            vec![
+                                "_".to_string(),
+                                "_".to_string(),
+                                "_".to_string(),
+                                "_".to_string(),
+                                "_".to_string(),
+                                "_".to_string(),
+                                "_".to_string(),
+                            ],
+                            (internal_count + 131).to_string(),
+                            vec![
+                                "_".to_string(),
+                                "_".to_string(),
+                                "_".to_string(),
+                                "_".to_string(),
+                                "_".to_string(),
+                                "_".to_string(),
+                                "_".to_string(),
+                            ],
+                            vec![
+                                turing_machine::Direction::Stay,
+                                turing_machine::Direction::Stay,
+                                turing_machine::Direction::Stay,
+                                turing_machine::Direction::Right,
+                                turing_machine::Direction::Stay,
+                                turing_machine::Direction::Stay,
+                                turing_machine::Direction::Stay,
+                            ],
+                        );
+                        for i in 0..(((orig_c.mapping.len() + 1) as f32).log2().ceil() as usize) {
+                            internal_count += 2 ^ i;
+                            let mut this_layer_new = Vec::new();
+                            for state in this_layer {
+                                this_layer_new.push(state * 2 + 1);
+                                m.add_transition(
+                                    (state + 131).to_string(),
+                                    vec![
+                                        "_".to_string(),
+                                        "_".to_string(),
+                                        "_".to_string(),
+                                        "0".to_string(),
+                                        "_".to_string(),
+                                        "_".to_string(),
+                                        "_".to_string(),
+                                    ],
+                                    (state * 2 + 1 + 131).to_string(),
+                                    vec![
+                                        "_".to_string(),
+                                        "_".to_string(),
+                                        "_".to_string(),
+                                        "_".to_string(),
+                                        "_".to_string(),
+                                        "_".to_string(),
+                                        "_".to_string(),
+                                    ],
+                                    vec![
+                                        turing_machine::Direction::Stay,
+                                        turing_machine::Direction::Stay,
+                                        turing_machine::Direction::Stay,
+                                        turing_machine::Direction::Right,
+                                        turing_machine::Direction::Stay,
+                                        turing_machine::Direction::Stay,
+                                        turing_machine::Direction::Stay,
+                                    ],
+                                );
+                                this_layer_new.push(state * 2 + 2);
+                                m.add_transition(
+                                    (state + 131).to_string(),
+                                    vec![
+                                        "_".to_string(),
+                                        "_".to_string(),
+                                        "_".to_string(),
+                                        "1".to_string(),
+                                        "_".to_string(),
+                                        "_".to_string(),
+                                        "_".to_string(),
+                                    ],
+                                    (state * 2 + 2 + 131).to_string(),
+                                    vec![
+                                        "_".to_string(),
+                                        "_".to_string(),
+                                        "_".to_string(),
+                                        "_".to_string(),
+                                        "_".to_string(),
+                                        "_".to_string(),
+                                        "_".to_string(),
+                                    ],
+                                    vec![
+                                        turing_machine::Direction::Stay,
+                                        turing_machine::Direction::Stay,
+                                        turing_machine::Direction::Stay,
+                                        turing_machine::Direction::Right,
+                                        turing_machine::Direction::Stay,
+                                        turing_machine::Direction::Stay,
+                                        turing_machine::Direction::Stay,
+                                    ],
+                                );
+                            }
+                            layers_vec.push(this_layer_new.clone());
+                            this_layer = this_layer_new;
+                        }
+                        for state in this_layer {
+                            m.add_transition(
+                                (state + internal_count + 131 - 1).to_string(),
+                                vec![
+                                    "_".to_string(),
+                                    "_".to_string(),
+                                    "_".to_string(),
+                                    "_".to_string(),
+                                    "_".to_string(),
+                                    "_".to_string(),
+                                    "_".to_string(),
+                                ],
+                                129.to_string(),
+                                vec![
+                                    "_".to_string(),
+                                    "_".to_string(),
+                                    "_".to_string(),
+                                    "_".to_string(),
+                                    "_".to_string(),
+                                    "_".to_string(),
+                                    "_".to_string(),
+                                ],
+                                vec![
+                                    turing_machine::Direction::Right,
+                                    turing_machine::Direction::Stay,
+                                    turing_machine::Direction::Stay,
+                                    turing_machine::Direction::Stay,
+                                    turing_machine::Direction::Right,
+                                    turing_machine::Direction::Stay,
+                                    turing_machine::Direction::Stay,
+                                ],
+                            );
+                        }
+                        let new_states: Vec<String> = layers_vec
+                            .concat()
+                            .iter()
+                            .map(|e| (e + 130).to_string())
+                            .collect();
+                        m.states = [m.states.clone(), new_states].concat();
+                        self.set_turing(m.clone());
+                        for (ind, (_, value)) in orig_c.mapping.clone().iter().enumerate() {
+                            self.add_mapping((131 + internal_count + ind).to_string(), value.clone());
+                        }
+                    }
+                };
+                return Ok(self.clone());
             }
-            Err(error) => return Err(error),
         }
-        let mut layers_vec = Vec::new();
-        let mut this_layer = vec![0];
-        let mut internal_count = 0;
-        let mut tm = self.turing_machine.take().unwrap();
-        tm.add_transition(
-            (131).to_string(),
-            vec![
-                "_".to_string(),
-                "_".to_string(),
-                "_".to_string(),
-                "_".to_string(),
-                "_".to_string(),
-                "_".to_string(),
-                "_".to_string(),
-            ],
-            (internal_count + 131).to_string(),
-            vec![
-                "_".to_string(),
-                "_".to_string(),
-                "_".to_string(),
-                "_".to_string(),
-                "_".to_string(),
-                "_".to_string(),
-                "_".to_string(),
-            ],
-            vec![
-                turing_machine::Direction::Stay,
-                turing_machine::Direction::Stay,
-                turing_machine::Direction::Stay,
-                turing_machine::Direction::Right,
-                turing_machine::Direction::Stay,
-                turing_machine::Direction::Stay,
-                turing_machine::Direction::Stay,
-            ],
-        );
-        for i in 0..(((orig_c.mapping.len() + 1) as f32).log2().ceil() as usize) {
-            internal_count += 2 ^ i;
-            let mut this_layer_new = Vec::new();
-            for state in this_layer {
-                this_layer_new.push(state * 2 + 1);
-                tm.add_transition(
-                    (state + 131).to_string(),
-                    vec![
-                        "_".to_string(),
-                        "_".to_string(),
-                        "_".to_string(),
-                        "0".to_string(),
-                        "_".to_string(),
-                        "_".to_string(),
-                        "_".to_string(),
-                    ],
-                    (state * 2 + 1 + 131).to_string(),
-                    vec![
-                        "_".to_string(),
-                        "_".to_string(),
-                        "_".to_string(),
-                        "_".to_string(),
-                        "_".to_string(),
-                        "_".to_string(),
-                        "_".to_string(),
-                    ],
-                    vec![
-                        turing_machine::Direction::Stay,
-                        turing_machine::Direction::Stay,
-                        turing_machine::Direction::Stay,
-                        turing_machine::Direction::Right,
-                        turing_machine::Direction::Stay,
-                        turing_machine::Direction::Stay,
-                        turing_machine::Direction::Stay,
-                    ],
-                );
-                this_layer_new.push(state * 2 + 2);
-                tm.add_transition(
-                    (state + 131).to_string(),
-                    vec![
-                        "_".to_string(),
-                        "_".to_string(),
-                        "_".to_string(),
-                        "1".to_string(),
-                        "_".to_string(),
-                        "_".to_string(),
-                        "_".to_string(),
-                    ],
-                    (state * 2 + 2 + 131).to_string(),
-                    vec![
-                        "_".to_string(),
-                        "_".to_string(),
-                        "_".to_string(),
-                        "_".to_string(),
-                        "_".to_string(),
-                        "_".to_string(),
-                        "_".to_string(),
-                    ],
-                    vec![
-                        turing_machine::Direction::Stay,
-                        turing_machine::Direction::Stay,
-                        turing_machine::Direction::Stay,
-                        turing_machine::Direction::Right,
-                        turing_machine::Direction::Stay,
-                        turing_machine::Direction::Stay,
-                        turing_machine::Direction::Stay,
-                    ],
-                );
-            }
-            layers_vec.push(this_layer_new.clone());
-            this_layer = this_layer_new;
-        }
-        for state in this_layer {
-            tm.add_transition(
-                (state + internal_count + 131 - 1).to_string(),
-                vec![
-                    "_".to_string(),
-                    "_".to_string(),
-                    "_".to_string(),
-                    "_".to_string(),
-                    "_".to_string(),
-                    "_".to_string(),
-                    "_".to_string(),
-                ],
-                129.to_string(),
-                vec![
-                    "_".to_string(),
-                    "_".to_string(),
-                    "_".to_string(),
-                    "_".to_string(),
-                    "_".to_string(),
-                    "_".to_string(),
-                    "_".to_string(),
-                ],
-                vec![
-                    turing_machine::Direction::Right,
-                    turing_machine::Direction::Stay,
-                    turing_machine::Direction::Stay,
-                    turing_machine::Direction::Stay,
-                    turing_machine::Direction::Right,
-                    turing_machine::Direction::Stay,
-                    turing_machine::Direction::Stay,
-                ],
-            );
-        }
-        let new_states: Vec<String> = layers_vec
-            .concat()
-            .iter()
-            .map(|e| (e + 130).to_string())
-            .collect();
-        tm.states = [tm.states.clone(), new_states].concat();
-        self.set_turing(tm.clone());
-        for (ind, (_, value)) in orig_c.mapping.clone().iter().enumerate() {
-            self.add_mapping((131 + internal_count + ind).to_string(), value.clone());
-        }
-        Ok(self.clone())
     }
 }
 
@@ -338,20 +390,19 @@ impl Server {
         let last_computer = self
             .get_computer(self.computation_order[self.computation_order.len() - 1].clone())
             .unwrap();
-        if last_computer.is_turing() {
-            output = utils::input_string_to_vec(
-                last_computer
-                    .turing_machine
-                    .as_ref()
-                    .unwrap()
-                    .tape_alphabet
-                    .clone(),
-                output,
-            )
-            .into_iter()
-            .filter(|e| *e != last_computer.turing_machine.as_ref().unwrap().blank_symbol)
-            .collect::<Vec<String>>()
-            .join("");
+        match last_computer.element.clone() {
+            ComputingElem::LAMBDA(_) => {},
+            ComputingElem::RAM(_) => {},
+            ComputingElem::TM(m) => {
+                output = utils::input_string_to_vec(
+                    m.tape_alphabet.clone(),
+                    output,
+                )
+                .into_iter()
+                .filter(|e| *e != m.blank_symbol)
+                .collect::<Vec<String>>()
+                .join("");
+            }
         }
         Ok((final_state, current_head, output, steps, tot_comp))
     }

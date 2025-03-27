@@ -10,7 +10,9 @@ mod ram_machine;
 mod regex;
 mod turing_machine;
 mod utils;
+mod lambda;
 
 fn main() {
+    //lambda::main_lambda();
     cli::main_cli();
 }
