@@ -46,13 +46,34 @@ impl PartialEq for Lambda {
     }
 }
 
+impl LambdaExpr {
+    pub fn to_tokens(self) -> Vec<String>{
+        match self {
+            LambdaExpr::Abs(vars, arg) => [vec!["(".to_string(), "/".to_string()], vars, vec![".".to_string()], arg.to_tokens(), vec![")".to_string()]].concat(),
+            LambdaExpr::Var(v) => vec![v],
+            LambdaExpr::App(vec) => [vec!["(".to_string()], vec.iter().map(|e| e.clone().to_tokens()).collect::<Vec<Vec<String>>>().concat(), vec![")".to_string()]].concat()
+        }
+    }
+}
+
 impl Lambda {
-    pub fn simulate(&mut self) -> Result<computer::SimulationResult, String> {
-        let mut computation = Vec::new();
+
+    pub fn substitute_names(&mut self) {
+        let mut self_clone = self.clone();
         for r in self.references.clone() {
             self.expr = substitute(&mut self.expr.clone(), r.expr.clone(), r.name.clone());
         }
-        //print_lambda_as_tree(self.clone());
+        while *self != self_clone {
+            self_clone = self.clone();
+            for r in self.references.clone() {
+                self.expr = substitute(&mut self.expr.clone(), r.expr.clone(), r.name.clone());
+            }
+        }
+    }
+    
+    pub fn simulate(&mut self) -> Result<computer::SimulationResult, String> {
+        let mut computation = Vec::new();
+        self.substitute_names();
         let mut result = self.clone();
         computation.push(result.to_string());
         let mut new_result = Lambda {
@@ -61,7 +82,6 @@ impl Lambda {
             name: self.name.clone(),
         };
         computation.push(new_result.to_string());
-        //println!("{}", new_result.clone().to_string());
         let mut steps = 1;
         while result != new_result.clone() {
             result = new_result.clone();
@@ -72,9 +92,12 @@ impl Lambda {
             };
             steps += 1;
             computation.push(new_result.to_string());
-            //println!("{}", new_result.clone().to_string());
         }
         Ok((new_result.to_string(), 0, Vec::new(), steps, computation))
+    }
+
+    pub fn to_tokens(self) -> Vec<String> {
+        self.expr.to_tokens()
     }
 }
 
@@ -108,9 +131,7 @@ impl std::fmt::Display for Lambda {
 }
 
 pub fn parse_lambda(input: &str) -> Result<LambdaExpr, String> {
-    //println!("input: {}", input);
     let input_chars = input.chars().peekable();
-    // every expression must have a starting and closing ()
     if input_chars.clone().next() != Some('(') || input_chars.clone().last() != Some(')') {
         Err("expected ()".to_string())
     } else if input_chars.clone().nth(1) == Some('\\') {
@@ -132,7 +153,6 @@ pub fn parse_lambda(input: &str) -> Result<LambdaExpr, String> {
         argument.pop();
         match parse_lambda(argument.as_str()) {
             Ok(expr) => {
-                //println!("arg = {}, vars = {}", argument, variables.join(" "));
                 Ok(LambdaExpr::Abs(variables, Box::new(expr)))
             }
             Err(error) => Err(error),
@@ -286,4 +306,5 @@ fn beta_reduction(expr: &LambdaExpr) -> LambdaExpr {
         }
     }
     print_expr(&l.expr, 0);
-} */
+}
+ */

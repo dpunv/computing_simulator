@@ -1,4 +1,10 @@
+// file: simple.lambda
+// Project: Computing Simulator
+// author: dp
 lambda
+ADD(4,3): (ADD 4 3)
 SUCC(3): (SUCC 3)
 3: (\f x.(f (f (f x))))
+4: (\f x.(f (f (f (f x)))))
 SUCC: (\n.(\f x.(f (n f x))))
+ADD: (\a b.(a SUCC b))

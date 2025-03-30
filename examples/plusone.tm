@@ -1,7 +1,3 @@
-// file: plusone.tm
-// Project: Computing Simulator
-// author: dp
-tm
 1
 
 

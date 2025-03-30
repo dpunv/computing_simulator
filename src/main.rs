@@ -13,6 +13,5 @@ mod turing_machine;
 mod utils;
 
 fn main() {
-    //lambda::main_lambda();
     cli::main_cli();
 }

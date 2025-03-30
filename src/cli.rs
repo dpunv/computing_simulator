@@ -299,7 +299,7 @@ fn handle_computation(options: &mut options::Options) {
         }
         computer::ComputingElem::Ram(_) => {
             if options.convert_to_tm {
-                match c.ram_to_tm(options, &mut s) {
+                match c.to_tm(options, &mut s) {
                     Ok(comp) => c = comp,
                     Err(error) => {
                         println!("Error: {}", error);
@@ -315,8 +315,16 @@ fn handle_computation(options: &mut options::Options) {
             }
         }
         computer::ComputingElem::Lambda(_) => {
-            if options.convert_to_singletape || options.print_number || options.convert_to_tm {
+            if options.convert_to_singletape || options.print_number {
                 println!("Error: invalid option on non-tm, non-ram file");
+            } else if options.convert_to_tm {
+                match c.to_tm(options, &mut s) {
+                    Ok(comp) => c = comp,
+                    Err(error) => {
+                        println!("Error: {}", error);
+                        return;
+                    }
+                }
             }
         }
     }
