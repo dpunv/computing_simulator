@@ -186,6 +186,28 @@ pub fn print_computation(
     }
 }
  */
+
+pub fn print_lambda_as_tree(l: lambda::Lambda) {
+    println!("NAME: {}", l.name);
+    fn print_expr(expr: &lambda::LambdaExpr, indent: usize) {
+        let padding = " ".repeat(indent);
+        match expr {
+            lambda::LambdaExpr::Var(v) => println!("{}Var({})", padding, v),
+            lambda::LambdaExpr::Abs(params, body) => {
+                println!("{}Function {}", padding, params.join(", "));
+                print_expr(body, indent + 4);
+            }
+            lambda::LambdaExpr::App(exprs) => {
+                println!("{}Application", padding);
+                for e in exprs.iter() {
+                    print_expr(e, indent + 4);
+                }
+            }
+        }
+    }
+    print_expr(&l.expr, 0);
+}
+
 pub fn print_tm(tm: turing_machine::TuringMachine) {
     println!("{}", tm.initial_state);
     println!("{}", tm.accept_state);
@@ -348,7 +370,7 @@ fn handle_computation(options: &mut options::Options) {
         match c.element.clone() {
             computer::ComputingElem::Tm(m) => print_status_tm(&m),
             computer::ComputingElem::Ram(m) => print_status_ram(&m),
-            computer::ComputingElem::Lambda(_) => {}
+            computer::ComputingElem::Lambda(l) => print_lambda_as_tree(l),
         }
     } else if options.clone().input.is_empty() && !c.is_lambda() {
         interactive_tui(&mut s, options.clone());

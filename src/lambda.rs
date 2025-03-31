@@ -364,24 +364,3 @@ fn beta_reduction(expr: &LambdaExpr) -> LambdaExpr {
         },
     }
 }
-
-/* pub fn print_lambda_as_tree(l: Lambda) {
-    println!("NAME: {}", l.name);
-    fn print_expr(expr: &LambdaExpr, indent: usize) {
-        let padding = " ".repeat(indent);
-        match expr {
-            LambdaExpr::Var(v) => println!("{}Var({})", padding, v),
-            LambdaExpr::Abs(params, body) => {
-                println!("{}Abs {:?}", padding, params);
-                print_expr(body, indent + 4);
-            },
-            LambdaExpr::App(exprs) => {
-                println!("{}App", padding);
-                for e in exprs.iter() {
-                    print_expr(e, indent + 4);
-                }
-            },
-        }
-    }
-    print_expr(&l.expr, 0);
-} */
