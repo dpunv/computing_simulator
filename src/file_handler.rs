@@ -506,6 +506,7 @@ fn read_lambda(
                         expr,
                         references: Vec::new(),
                         name,
+                        force_currying: false
                     });
                 }
                 Err(error) => return Err(error),
@@ -519,6 +520,7 @@ fn read_lambda(
             expr: l.expr.clone(),
             references: readed.clone(),
             name: l.name.clone(),
+            force_currying: false
         })
         .collect();
     computer.set_lambda(readed[0].clone());

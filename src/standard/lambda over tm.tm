@@ -51,6 +51,9 @@ _
 1f 1f ( ( S _ . S _ _ S _ _ S _ _ S _ _ S
 1g 1f ( ( R _ . S _ _ S _ _ S _ _ S _ _ S
 1f 1f ) ) R . _ L _ _ S _ _ S _ _ S _ _ S
+1f 1fa _ _ L _ _ S _ _ S _ _ S _ _ S _ _ S
+1fa 1fa D D L _ _ S _ _ S _ _ S _ _ S _ _ S
+1fa 1b $ ( R _ _ S _ _ S _ _ S _ _ S _ _ S
 1f 1h ) ) R _ _ S _ _ S _ _ S _ _ S _ _ S
 1h 1ha F F L _ _ S _ _ S _ _ S _ _ S _ _ S
 1h 1ha _ _ L _ _ S _ _ S _ _ S _ _ S _ _ S
@@ -151,10 +154,10 @@ _
 14c 14c _ _ S _ _ S C _ R _ _ S x x S _ C R
 14c 14c _ _ S . . S C _ R _ _ S x x S _ C R
 14c 14c _ _ S . _ L ) _ R _ _ S x x S _ ) R
-14c 14c _ _ S _ . S ( _ R _ _ S x x S _ ( R
+14c 14d _ _ S _ _ R ( _ S _ _ S x x S _ _ S
 14c 14d _ _ S . . R ( _ S _ _ S x x S _ _ S
 14d 14c _ _ S _ . S _ _ R _ _ S x x S _ ( R
-14c 14 _ _ S _ _ S ) _ R _ _ S x x S _ ) R
+14c 14 _ _ S _ _ L ) _ R _ _ S x x S _ ) R
 14b 14 _ _ S _ _ L . . R _ _ S x x S _ . R
 14 14 _ _ S _ _ S x2 _ R _ _ S x x S _ x2 R
 14 15 _ _ S _ _ S x x S _ _ R x x R _ _ S

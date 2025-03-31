@@ -38,6 +38,7 @@ pub struct Lambda {
     pub expr: LambdaExpr,
     pub references: Vec<Lambda>,
     pub name: String,
+    pub force_currying: bool,
 }
 
 impl PartialEq for Lambda {
@@ -52,6 +53,60 @@ impl LambdaExpr {
             LambdaExpr::Abs(vars, arg) => [vec!["(".to_string(), "/".to_string()], vars, vec![".".to_string()], arg.to_tokens(), vec![")".to_string()]].concat(),
             LambdaExpr::Var(v) => vec![v],
             LambdaExpr::App(vec) => [vec!["(".to_string()], vec.iter().map(|e| e.clone().to_tokens()).collect::<Vec<Vec<String>>>().concat(), vec![")".to_string()]].concat()
+        }
+    }
+    pub fn curry(self) -> LambdaExpr {
+        match self.clone() {
+            LambdaExpr::Var(_) => self,
+            LambdaExpr::App(lambdas) => {
+                let mut new_lambdas = Vec::new();
+                for lambda in lambdas {
+                    new_lambdas.push(lambda.curry());
+                }
+                return LambdaExpr::App(new_lambdas);
+            },
+            LambdaExpr::Abs(vars, param ) => {
+                match *param {
+                    LambdaExpr::Var(_) => self,
+                    LambdaExpr::App(_) => LambdaExpr::Abs(vars, Box::new((*param).curry())),
+                    LambdaExpr::Abs(vars2, param2) => LambdaExpr::Abs([vars, vars2].concat(), Box::new(param2.curry())).curry()
+                }
+            }
+        }
+    }
+
+    pub fn to_string(self, dict: Vec<Lambda>, force_currying: bool) -> String {
+        for dict_expr in dict.clone() {
+            if force_currying {
+                if dict_expr.expr.curry() == self.clone().curry() {
+                    return dict_expr.name;
+                }
+            } else {
+                if dict_expr.expr == self.clone() {
+                    return dict_expr.name;
+                }
+            }
+        }
+        //let padding = " ".repeat(indent);
+        match self {
+            LambdaExpr::Var(v) => v.to_string(),
+            LambdaExpr::Abs(params, body) => {
+                "(\\".to_string() + &params.join("") + "." + &(*body).to_string(dict.clone(), force_currying) + ")"
+            }
+            LambdaExpr::App(exprs) => {
+                let mut s = "(".to_string();
+                let mut first = true;
+                for e in exprs.iter() {
+                    if first {
+                        first = false;
+                    } else {
+                        s += " ";
+                    }
+                    s = s + &e.clone().to_string(dict.clone(), force_currying);
+                }
+                s += ")";
+                s.to_string()
+            }
         }
     }
 }
@@ -80,6 +135,7 @@ impl Lambda {
             expr: beta_reduction(&self.clone().expr),
             references: self.references.clone(),
             name: self.name.clone(),
+            force_currying: self.force_currying
         };
         computation.push(new_result.to_string());
         let mut steps = 1;
@@ -89,10 +145,13 @@ impl Lambda {
                 expr: beta_reduction(&new_result.clone().expr),
                 references: self.references.clone(),
                 name: self.name.clone(),
+                force_currying: self.force_currying
             };
             steps += 1;
+            //println!("{}", new_result.to_string());
             computation.push(new_result.to_string());
         }
+        new_result.force_currying = true;
         Ok((new_result.to_string(), 0, Vec::new(), steps, computation))
     }
 
@@ -103,30 +162,7 @@ impl Lambda {
 
 impl std::fmt::Display for Lambda {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        fn expr_to_string(expr: &LambdaExpr) -> String {
-            //let padding = " ".repeat(indent);
-            match expr {
-                LambdaExpr::Var(v) => v.to_string(),
-                LambdaExpr::Abs(params, body) => {
-                    "(\\".to_string() + &params.join("") + "." + &expr_to_string(body) + ")"
-                }
-                LambdaExpr::App(exprs) => {
-                    let mut s = "(".to_string();
-                    let mut first = true;
-                    for e in exprs.iter() {
-                        if first {
-                            first = false;
-                        } else {
-                            s += " ";
-                        }
-                        s = s + &expr_to_string(e);
-                    }
-                    s += ")";
-                    s.to_string()
-                }
-            }
-        }
-        write!(f, "{}", expr_to_string(&self.expr).as_str())
+        write!(f, "{}", &self.expr.clone().to_string(self.references.clone(), self.force_currying).as_str())
     }
 }
 
@@ -253,18 +289,38 @@ fn beta_reduction(expr: &LambdaExpr) -> LambdaExpr {
         }
         LambdaExpr::App(params) => match (*params).deref()[0].clone() {
             LambdaExpr::Var(_) => {
-                let mut par_new = Vec::new();
+                let mut pars_new = Vec::new();
+                let mut found = false;
                 for par in params.iter() {
-                    par_new.push(beta_reduction(par));
+                    if found {
+                        pars_new.push(par.clone());
+                    } else {
+                        let par_clone = par.clone();
+                        let par_new = beta_reduction(par);
+                        if par_clone != par_new {
+                            found = false;
+                        }
+                        pars_new.push(par_new);
+                    }
                 }
-                LambdaExpr::App(par_new)
+                LambdaExpr::App(pars_new)
             }
             LambdaExpr::App(_) => {
-                let mut par_new = Vec::new();
+                let mut pars_new = Vec::new();
+                let mut found = false;
                 for par in params.iter() {
-                    par_new.push(beta_reduction(par));
+                    if found {
+                        pars_new.push(par.clone());
+                    } else {
+                        let par_clone = par.clone();
+                        let par_new = beta_reduction(par);
+                        if par_clone != par_new {
+                            found = false;
+                        }
+                        pars_new.push(par_new);
+                    }
                 }
-                LambdaExpr::App(par_new)
+                LambdaExpr::App(pars_new)
             }
             LambdaExpr::Abs(vars, body) => {
                 let mut body_copy = *body.clone();
@@ -278,7 +334,7 @@ fn beta_reduction(expr: &LambdaExpr) -> LambdaExpr {
                     curr_i = ind;
                 }
                 if curr_i < vars.len() - 1 {
-                    LambdaExpr::Abs(vars[curr_i..].to_vec(), Box::new(body_copy))
+                    LambdaExpr::Abs(vars[(curr_i+1)..].to_vec(), Box::new(body_copy))
                 } else {
                     body_copy
                 }
@@ -306,5 +362,4 @@ fn beta_reduction(expr: &LambdaExpr) -> LambdaExpr {
         }
     }
     print_expr(&l.expr, 0);
-}
- */
+} */

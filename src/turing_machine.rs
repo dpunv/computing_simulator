@@ -192,7 +192,9 @@ impl TuringMachine {
         let mut tree = Vec::new();
         tree.push(Vec::new());
         let mut tape = Vec::new();
+        //println!("COME");
         if input.is_empty() || input[0] != self.blank_symbol {
+            //println!("CIAO");
             tape.push(self.blank_symbol.clone());
         }
         for symbol in input {
@@ -227,9 +229,11 @@ impl TuringMachine {
                 }
                 let mut key = state.clone();
                 for tapenum in 0..self.tape_count {
+                    // println!("tapes[{}] = {}      Head: {}", tapenum, element.tapes[tapenum].tape.join(""), element.tapes[tapenum].head);
                     key += &element.tapes[tapenum].tape[element.tapes[tapenum].head];
                 }
                 let mut found = false;
+                // println!("STEP: {}, key: {}", steps, key);
                 if transitions_map.contains_key(&key) {
                     found = true;
                     let possible_transitions = transitions_map.get(&key).unwrap().clone();
