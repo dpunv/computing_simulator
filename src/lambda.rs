@@ -48,11 +48,26 @@ impl PartialEq for Lambda {
 }
 
 impl LambdaExpr {
-    pub fn to_tokens(self) -> Vec<String>{
+    pub fn to_tokens(&self) -> Vec<String> {
         match self {
-            LambdaExpr::Abs(vars, arg) => [vec!["(".to_string(), "/".to_string()], vars, vec![".".to_string()], arg.to_tokens(), vec![")".to_string()]].concat(),
-            LambdaExpr::Var(v) => vec![v],
-            LambdaExpr::App(vec) => [vec!["(".to_string()], vec.iter().map(|e| e.clone().to_tokens()).collect::<Vec<Vec<String>>>().concat(), vec![")".to_string()]].concat()
+            LambdaExpr::Abs(vars, arg) => [
+                vec!["(".to_string(), "/".to_string()],
+                vars.clone(),
+                vec![".".to_string()],
+                arg.to_tokens(),
+                vec![")".to_string()],
+            ]
+            .concat(),
+            LambdaExpr::Var(v) => vec![v.to_string()],
+            LambdaExpr::App(vec) => [
+                vec!["(".to_string()],
+                vec.iter()
+                    .map(|e| e.clone().to_tokens())
+                    .collect::<Vec<Vec<String>>>()
+                    .concat(),
+                vec![")".to_string()],
+            ]
+            .concat(),
         }
     }
     pub fn curry(self) -> LambdaExpr {
@@ -63,35 +78,37 @@ impl LambdaExpr {
                 for lambda in lambdas {
                     new_lambdas.push(lambda.curry());
                 }
-                return LambdaExpr::App(new_lambdas);
-            },
-            LambdaExpr::Abs(vars, param ) => {
-                match *param {
-                    LambdaExpr::Var(_) => self,
-                    LambdaExpr::App(_) => LambdaExpr::Abs(vars, Box::new((*param).curry())),
-                    LambdaExpr::Abs(vars2, param2) => LambdaExpr::Abs([vars, vars2].concat(), Box::new(param2.curry())).curry()
-                }
+                LambdaExpr::App(new_lambdas)
             }
+            LambdaExpr::Abs(vars, param) => match *param {
+                LambdaExpr::Var(_) => self,
+                LambdaExpr::App(_) => LambdaExpr::Abs(vars, Box::new((*param).curry())),
+                LambdaExpr::Abs(vars2, param2) => {
+                    LambdaExpr::Abs([vars, vars2].concat(), Box::new(param2.curry())).curry()
+                }
+            },
         }
     }
 
-    pub fn to_string(self, dict: Vec<Lambda>, force_currying: bool) -> String {
+    pub fn to_string(&self, dict: Vec<Lambda>, force_currying: bool) -> String {
         for dict_expr in dict.clone() {
             if force_currying {
                 if dict_expr.expr.curry() == self.clone().curry() {
                     return dict_expr.name;
                 }
-            } else {
-                if dict_expr.expr == self.clone() {
-                    return dict_expr.name;
-                }
+            } else if dict_expr.expr == self.clone() {
+                return dict_expr.name;
             }
         }
         //let padding = " ".repeat(indent);
         match self {
             LambdaExpr::Var(v) => v.to_string(),
             LambdaExpr::Abs(params, body) => {
-                "(\\".to_string() + &params.join("") + "." + &(*body).to_string(dict.clone(), force_currying) + ")"
+                "(\\".to_string()
+                    + &params.join("")
+                    + "."
+                    + &(*body).to_string(dict.clone(), force_currying)
+                    + ")"
             }
             LambdaExpr::App(exprs) => {
                 let mut s = "(".to_string();
@@ -112,7 +129,6 @@ impl LambdaExpr {
 }
 
 impl Lambda {
-
     pub fn substitute_names(&mut self) {
         let mut self_clone = self.clone();
         for r in self.references.clone() {
@@ -125,7 +141,7 @@ impl Lambda {
             }
         }
     }
-    
+
     pub fn simulate(&mut self) -> Result<computer::SimulationResult, String> {
         let mut computation = Vec::new();
         self.substitute_names();
@@ -135,7 +151,7 @@ impl Lambda {
             expr: beta_reduction(&self.clone().expr),
             references: self.references.clone(),
             name: self.name.clone(),
-            force_currying: self.force_currying
+            force_currying: self.force_currying,
         };
         computation.push(new_result.to_string());
         let mut steps = 1;
@@ -145,7 +161,7 @@ impl Lambda {
                 expr: beta_reduction(&new_result.clone().expr),
                 references: self.references.clone(),
                 name: self.name.clone(),
-                force_currying: self.force_currying
+                force_currying: self.force_currying,
             };
             steps += 1;
             //println!("{}", new_result.to_string());
@@ -155,14 +171,22 @@ impl Lambda {
         Ok((new_result.to_string(), 0, Vec::new(), steps, computation))
     }
 
-    pub fn to_tokens(self) -> Vec<String> {
+    pub fn to_tokens(&self) -> Vec<String> {
         self.expr.to_tokens()
     }
 }
 
 impl std::fmt::Display for Lambda {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", &self.expr.clone().to_string(self.references.clone(), self.force_currying).as_str())
+        write!(
+            f,
+            "{}",
+            &self
+                .expr
+                .clone()
+                .to_string(self.references.clone(), self.force_currying)
+                .as_str()
+        )
     }
 }
 
@@ -188,9 +212,7 @@ pub fn parse_lambda(input: &str) -> Result<LambdaExpr, String> {
         let mut argument = splitted.skip(1).collect::<Vec<&str>>().join(".");
         argument.pop();
         match parse_lambda(argument.as_str()) {
-            Ok(expr) => {
-                Ok(LambdaExpr::Abs(variables, Box::new(expr)))
-            }
+            Ok(expr) => Ok(LambdaExpr::Abs(variables, Box::new(expr))),
             Err(error) => Err(error),
         }
     } else {
@@ -334,7 +356,7 @@ fn beta_reduction(expr: &LambdaExpr) -> LambdaExpr {
                     curr_i = ind;
                 }
                 if curr_i < vars.len() - 1 {
-                    LambdaExpr::Abs(vars[(curr_i+1)..].to_vec(), Box::new(body_copy))
+                    LambdaExpr::Abs(vars[(curr_i + 1)..].to_vec(), Box::new(body_copy))
                 } else {
                     body_copy
                 }

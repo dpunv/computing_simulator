@@ -135,8 +135,13 @@ impl Computer {
                 l.substitute_names();
                 let input_vec = l.to_tokens();
                 options.input = input_vec.join("");
-                let input_alphabet: std::collections::HashSet<String> = input_vec.into_iter().collect();
-                let variables: Vec<String> = input_alphabet.iter().filter(|e| *e != "(" && *e != ")" && *e != "." && *e != "/").map(|e| e.clone()).collect();
+                let input_alphabet: std::collections::HashSet<String> =
+                    input_vec.into_iter().collect();
+                let variables: Vec<String> = input_alphabet
+                    .iter()
+                    .filter(|e| *e != "(" && *e != ")" && *e != "." && *e != "/")
+                    .cloned()
+                    .collect();
                 match file_handler::handle_file_reads(options.file.clone(), s) {
                     Ok(computer) => {
                         let comp = computer;
@@ -158,22 +163,30 @@ impl Computer {
                             replacements: &[(String, String)],
                         ) -> turing_machine::Transition {
                             let mut new_t = t.clone();
-                            new_t.symbols = new_t.symbols.iter().map(|e| {
-                                for (from, to) in replacements {
-                                    if e == from {
-                                        return to.clone();
+                            new_t.symbols = new_t
+                                .symbols
+                                .iter()
+                                .map(|e| {
+                                    for (from, to) in replacements {
+                                        if e == from {
+                                            return to.clone();
+                                        }
                                     }
-                                }
-                                e.clone()
-                            }).collect();
-                            new_t.new_symbols = new_t.new_symbols.iter().map(|e| {
-                                for (from, to) in replacements {
-                                    if e == from {
-                                        return to.clone();
+                                    e.clone()
+                                })
+                                .collect();
+                            new_t.new_symbols = new_t
+                                .new_symbols
+                                .iter()
+                                .map(|e| {
+                                    for (from, to) in replacements {
+                                        if e == from {
+                                            return to.clone();
+                                        }
                                     }
-                                }
-                                e.clone()
-                            }).collect();
+                                    e.clone()
+                                })
+                                .collect();
                             new_t
                         }
 
@@ -208,10 +221,13 @@ impl Computer {
                             if t.symbols.contains(&"x2".to_string()) {
                                 let mut new_list = Vec::new();
                                 for replacements in replacements_list {
-                                    for symb2   in variables.iter() {
-                                        if !replacements.contains(&("x".to_string(), symb2.to_string())){
+                                    for symb2 in variables.iter() {
+                                        if !replacements
+                                            .contains(&("x".to_string(), symb2.to_string()))
+                                        {
                                             let mut new_replacements = replacements.clone();
-                                            new_replacements.push(("x2".to_string(), symb2.clone()));
+                                            new_replacements
+                                                .push(("x2".to_string(), symb2.clone()));
                                             new_list.push(new_replacements);
                                         }
                                     }
@@ -220,22 +236,25 @@ impl Computer {
                             }
 
                             // Handle other symbol substitutions
-                            fn check_d3(s: &String, vars: &Vec<String>) -> bool {
+                            fn check_d3(s: &String, vars: &[String]) -> bool {
                                 !vars.contains(s)
                             }
-
+                            type SymbolRulePredicate = (String, Box<dyn Fn(&String) -> bool>);
                             //type SymbolPredicate = fn(&String) -> bool;
-                            let symbol_rules: Vec<(String, Box<dyn Fn(&String) -> bool>)> = vec![
+                            let symbol_rules: Vec<SymbolRulePredicate> = vec![
                                 ("A".to_string(), Box::new(|s: &String| s != "(")),
                                 ("F".to_string(), Box::new(|s: &String| s != ")")),
                                 ("B".to_string(), Box::new(|s: &String| s != ".")),
                                 ("C".to_string(), Box::new(|s: &String| s != "(" && s != ")")),
                                 ("D".to_string(), Box::new(|_: &String| true)),
                                 ("D2".to_string(), Box::new(|_: &String| true)),
-                                ("D3".to_string(), Box::new({
-                                    let variables = variables.clone();
-                                    move |s| check_d3(s, &variables)
-                                })),
+                                (
+                                    "D3".to_string(),
+                                    Box::new({
+                                        let variables = variables.clone();
+                                        move |s| check_d3(s, &variables)
+                                    }),
+                                ),
                                 ("E".to_string(), Box::new(|s: &String| s != "/")),
                             ];
 
@@ -258,32 +277,36 @@ impl Computer {
                                 new_transitions.push(t.clone());
                             } else {
                                 for replacements in replacements_list {
-                                    new_transitions.push(create_substituted_transition(t, &replacements));
+                                    new_transitions
+                                        .push(create_substituted_transition(t, &replacements));
                                 }
                             }
                         }
 
-                        this.transitions = new_transitions.into_iter().map(|t| {
-                            this.add_transition(
-                                t.state.clone(),
-                                t.symbols.clone(),
-                                t.new_state.clone(),
-                                t.new_symbols.clone(),
-                                t.directions.clone(),
-                            );
-                            t
-                        }).collect();
+                        this.transitions = new_transitions
+                            .into_iter()
+                            .map(|t| {
+                                this.add_transition(
+                                    t.state.clone(),
+                                    t.symbols.clone(),
+                                    t.new_state.clone(),
+                                    t.new_symbols.clone(),
+                                    t.directions.clone(),
+                                );
+                                t
+                            })
+                            .collect();
 
                         this.input_alphabet = input_alphabet.clone().into_iter().collect();
                         this.tape_alphabet = input_alphabet.into_iter().collect();
                         this.tape_alphabet.push("_".to_string());
                         this.tape_alphabet.push("$".to_string());
                         self.element = ComputingElem::Tm(Box::new(*this));
-                    },
+                    }
                 }
 
-                return Ok(self.clone())
-            },
+                Ok(self.clone())
+            }
             ComputingElem::Tm(_) => Err("already TM".to_string()),
             ComputingElem::Ram(m) => {
                 options.file = "src/standard/ram over tm.tm".to_string();
