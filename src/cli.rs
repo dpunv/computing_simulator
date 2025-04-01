@@ -372,7 +372,7 @@ fn handle_computation(options: &mut options::Options) {
             computer::ComputingElem::Ram(m) => print_status_ram(&m),
             computer::ComputingElem::Lambda(l) => print_lambda_as_tree(l),
         }
-    } else if options.clone().input.is_empty() && !c.is_lambda() {
+    } else if options.clone().input.is_empty() {
         interactive_tui(&mut s, options.clone());
     } else {
         process_results(s, options.clone());
