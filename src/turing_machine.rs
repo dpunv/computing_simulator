@@ -191,10 +191,9 @@ impl TuringMachine {
         let transitions_map = self.make_transition_map();
         let mut tree = Vec::new();
         tree.push(Vec::new());
+        let det = self.is_deterministic();
         let mut tape = Vec::new();
-        //println!("COME");
         if input.is_empty() || input[0] != self.blank_symbol {
-            //println!("CIAO");
             tape.push(self.blank_symbol.clone());
         }
         for symbol in input {
@@ -337,20 +336,25 @@ impl TuringMachine {
                     break;
                 }
             }
+            if det && !halts{
+                tree.pop();
+            }
             tree.push(new_level);
         }
         tree.pop();
         let mut previous = 0;
         let mut changed = false;
-        for (ind, element) in tree[tree.len() - 1].clone().into_iter().enumerate() {
-            if element.state == self.accept_state {
-                previous = ind;
-                break;
-            } else if element.state == self.reject_state && !changed {
-                previous = ind;
-            } else if self.final_states.contains(&element.state) {
-                previous = ind;
-                changed = true;
+        if !det{
+            for (ind, element) in tree[tree.len() - 1].clone().into_iter().enumerate() {
+                if element.state == self.accept_state {
+                    previous = ind;
+                    break;
+                } else if element.state == self.reject_state && !changed {
+                    previous = ind;
+                } else if self.final_states.contains(&element.state) {
+                    previous = ind;
+                    changed = true;
+                }
             }
         }
         let last_element = tree[tree.len() - 1][previous].clone();
