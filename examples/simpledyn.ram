@@ -1,0 +1,9 @@
+ram
+INIT 25
+MOV
+INIT 2
+STD
+INIT 0
+LD
+W
+H

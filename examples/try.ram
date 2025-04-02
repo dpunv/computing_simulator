@@ -1,0 +1,15 @@
+ram
+INIT 50
+MOV
+INIT 25
+STD
+A 50
+A 50
+MOV
+STD
+INIT 3
+ST 51
+LD
+A 51
+W
+H

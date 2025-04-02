@@ -422,7 +422,7 @@ pub fn read_ram_program(
                     opcode: ram_machine::RamMachine::ram_instruction_lookup(
                         instruction[0].to_string(),
                     ),
-                    operand: "0000000000000000".to_string(),
+                    operand: "0".to_string(),
                 });
             } else if instruction.len() == 2 {
                 instr.push(ram_machine::Instruction {

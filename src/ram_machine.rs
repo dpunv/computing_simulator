@@ -32,6 +32,9 @@ impl RamMachine {
             "CJUMP" => "1010",
             "H" => "1011",
             "CALL" => "1100",
+            "MOV" => "1101",
+            "LD" => "1110",
+            "STD" => "1111",
             _ => "0000",
         };
         opcode.to_string()
@@ -44,11 +47,12 @@ impl RamMachine {
         this_computer_object: computer::Computer,
         context: computer::Server,
     ) -> Result<computer::SimulationResult, String> {
-        let mut ir;
+        let mut ir: String;
         let mut out: String = "".to_string();
         let mut pc: String = "0".to_string();
         let mut acc: String = "0".to_string();
         let mut ar: String;
+        let mut mov: String = "0".to_string();
         let mut input_head = 0;
         let mut memory: std::collections::HashMap<String, String> =
             std::collections::HashMap::new();
@@ -176,6 +180,18 @@ impl RamMachine {
                         }
                         Err(error) => return Err(error),
                     }
+                },
+                "1101" => {
+                    // MOV: copy the value of acc to the mov register
+                    mov = acc.clone();
+                },
+                "1110" => {
+                    // LD: load the memory at address in MOV
+                    acc = memory[&mov].clone();
+                },
+                "1111" => {
+                    // STD: store the memory at address in MOV
+                    memory.insert(mov.clone(), acc.clone());
                 }
                 _ => {
                     // default: Halt
