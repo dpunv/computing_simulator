@@ -336,7 +336,7 @@ impl TuringMachine {
                     break;
                 }
             }
-            if det && !halts{
+            if det && !halts {
                 tree.pop();
             }
             tree.push(new_level);
@@ -344,7 +344,7 @@ impl TuringMachine {
         tree.pop();
         let mut previous = 0;
         let mut changed = false;
-        if !det{
+        if !det {
             for (ind, element) in tree[tree.len() - 1].clone().into_iter().enumerate() {
                 if element.state == self.accept_state {
                     previous = ind;

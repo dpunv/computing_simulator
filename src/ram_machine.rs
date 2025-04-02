@@ -180,15 +180,15 @@ impl RamMachine {
                         }
                         Err(error) => return Err(error),
                     }
-                },
+                }
                 "1101" => {
                     // MOV: copy the value of acc to the mov register
                     mov = acc.clone();
-                },
+                }
                 "1110" => {
                     // LD: load the memory at address in MOV
                     acc = memory[&mov].clone();
-                },
+                }
                 "1111" => {
                     // STD: store the memory at address in MOV
                     memory.insert(mov.clone(), acc.clone());

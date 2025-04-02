@@ -348,7 +348,9 @@ fn beta_reduction(expr: &LambdaExpr) -> LambdaExpr {
                     if ind < vars.len() {
                         body_copy = substitute(&mut body_copy, val.clone(), vars[ind].clone())
                     } else {
-                        return LambdaExpr::App([vec![body_copy], params[(ind+1)..].to_vec()].concat());
+                        return LambdaExpr::App(
+                            [vec![body_copy], params[(ind + 1)..].to_vec()].concat(),
+                        );
                     }
                     curr_i = ind;
                 }

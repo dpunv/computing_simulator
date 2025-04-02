@@ -111,19 +111,17 @@ impl Computer {
                 let input_vec = utils::input_string_to_vec(m.tape_alphabet.clone(), input);
                 m.simulate(input_vec, max_steps, self, context, head)
             }
-            ComputingElem::Lambda(l) => {
-                match lambda::parse_lambda(&input) {
-                    Ok(l_expr_new) => {
-                        let mut l_new = lambda::Lambda {
-                            expr: l_expr_new,
-                            references: l.references.clone(),
-                            name: "".to_string(),
-                            force_currying: false,
-                        };
-                        l_new.simulate()
-                    },
-                    Err(error) => Err(error)
+            ComputingElem::Lambda(l) => match lambda::parse_lambda(&input) {
+                Ok(l_expr_new) => {
+                    let mut l_new = lambda::Lambda {
+                        expr: l_expr_new,
+                        references: l.references.clone(),
+                        name: "".to_string(),
+                        force_currying: false,
+                    };
+                    l_new.simulate()
                 }
+                Err(error) => Err(error),
             },
         }
     }
@@ -172,7 +170,9 @@ impl Computer {
                         }
                         match self.element.clone() {
                             ComputingElem::Ram(_) => return Err("something went wrong".to_string()),
-                            ComputingElem::Lambda(_) => return Err("something went wrong".to_string()),
+                            ComputingElem::Lambda(_) => {
+                                return Err("something went wrong".to_string())
+                            }
                             ComputingElem::Tm(m) => {
                                 let mut this = m.clone();
                                 let old_transitions = m.transitions.clone();
@@ -221,7 +221,8 @@ impl Computer {
                                         for replacements in replacements_list {
                                             for symb in variables.iter() {
                                                 let mut new_replacements = replacements.clone();
-                                                new_replacements.push(("x".to_string(), symb.clone()));
+                                                new_replacements
+                                                    .push(("x".to_string(), symb.clone()));
                                                 new_list.push(new_replacements);
                                             }
                                         }
@@ -232,7 +233,8 @@ impl Computer {
                                         for replacements in replacements_list {
                                             for symb2 in variables.iter() {
                                                 let mut new_replacements = replacements.clone();
-                                                new_replacements.push(("x1".to_string(), symb2.clone()));
+                                                new_replacements
+                                                    .push(("x1".to_string(), symb2.clone()));
                                                 new_list.push(new_replacements);
                                             }
                                         }
@@ -260,13 +262,17 @@ impl Computer {
                                     fn check_d3(s: &String, vars: &[String]) -> bool {
                                         !vars.contains(s)
                                     }
-                                    type SymbolRulePredicate = (String, Box<dyn Fn(&String) -> bool>);
+                                    type SymbolRulePredicate =
+                                        (String, Box<dyn Fn(&String) -> bool>);
                                     //type SymbolPredicate = fn(&String) -> bool;
                                     let symbol_rules: Vec<SymbolRulePredicate> = vec![
                                         ("A".to_string(), Box::new(|s: &String| s != "(")),
                                         ("F".to_string(), Box::new(|s: &String| s != ")")),
                                         ("B".to_string(), Box::new(|s: &String| s != ".")),
-                                        ("C".to_string(), Box::new(|s: &String| s != "(" && s != ")")),
+                                        (
+                                            "C".to_string(),
+                                            Box::new(|s: &String| s != "(" && s != ")"),
+                                        ),
                                         ("D".to_string(), Box::new(|_: &String| true)),
                                         ("D2".to_string(), Box::new(|_: &String| true)),
                                         (
@@ -283,9 +289,12 @@ impl Computer {
                                         if t.symbols.contains(&symbol) {
                                             let mut new_list = Vec::new();
                                             for replacements in replacements_list {
-                                                for symb in input_alphabet.iter().filter(|s| condition(s)) {
+                                                for symb in
+                                                    input_alphabet.iter().filter(|s| condition(s))
+                                                {
                                                     let mut new_replacements = replacements.clone();
-                                                    new_replacements.push((symbol.clone(), symb.clone()));
+                                                    new_replacements
+                                                        .push((symbol.clone(), symb.clone()));
                                                     new_list.push(new_replacements);
                                                 }
                                             }
@@ -294,12 +303,16 @@ impl Computer {
                                     }
 
                                     // Create transitions for all combinations of replacements
-                                    if !replacements_list.is_empty() && replacements_list[0].is_empty() {
+                                    if !replacements_list.is_empty()
+                                        && replacements_list[0].is_empty()
+                                    {
                                         new_transitions.push(t.clone());
                                     } else {
                                         for replacements in replacements_list {
-                                            new_transitions
-                                                .push(create_substituted_transition(t, &replacements));
+                                            new_transitions.push(create_substituted_transition(
+                                                t,
+                                                &replacements,
+                                            ));
                                         }
                                     }
                                 }
@@ -327,8 +340,8 @@ impl Computer {
                         }
 
                         Ok(self.clone())
-                    },
-                    Err(error) => Err(error)
+                    }
+                    Err(error) => Err(error),
                 }
             }
             ComputingElem::Tm(_) => Err("already TM".to_string()),
