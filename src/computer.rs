@@ -552,8 +552,8 @@ impl Computer {
                         (state.clone(), utils::int2bin(index as i32, symbol_size))
                     })
                     .collect();
-                // states_map.iter().for_each(|(k, v)| println!("STATE {} -> {}", k, v));
-                // symbols_map.iter().for_each(|(k, v)| println!("SYMBOL {} -> {}", k, v));
+                states_map.iter().for_each(|(k, v)| println!("STATE {} -> {}", k, v));
+                symbols_map.iter().for_each(|(k, v)| println!("SYMBOL {} -> {}", k, v));
                 options.input = "1".to_string()
                     + &symbols_map.get(&m.blank_symbol).unwrap().to_owned()
                     + "1"
@@ -636,7 +636,7 @@ impl Computer {
                         ram.labels_map.insert(
                             "HALT_STATE".to_string(),
                             states_map
-                                .get(&m.final_states[0])
+                                .get(&m.halt_state)
                                 .unwrap_or(&utils::int2bin(2_i32.pow(state_size as u32), 0))
                                 .to_owned(),
                         );

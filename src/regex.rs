@@ -188,7 +188,7 @@ pub fn regex_to_fsa(regex: &Regex) -> Result<turing_machine::TuringMachine, Stri
         vec![" ".to_string()],
         vec![turing_machine::Direction::Stay],
     );
-    fsa.final_states.push(final_state.clone());
+    fsa.halt_state = final_state.clone();
     fsa.accept_state = final_state;
 
     Ok(fsa)

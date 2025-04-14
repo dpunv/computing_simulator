@@ -88,10 +88,7 @@ pub fn read_turing_machine(
 
     tm.reject_state = lines[2].to_string();
 
-    let final_states: Vec<&str> = lines[3].split(" ").collect();
-    for final_state in final_states {
-        tm.final_states.push(final_state.to_string());
-    }
+    tm.halt_state = lines[3].to_string();
 
     tm.blank_symbol = lines[4].to_string();
 
@@ -172,7 +169,7 @@ pub fn read_finite_state_machine(
     while tm.states.contains(&final_state) {
         final_state += "_"
     }
-    tm.final_states = vec![final_state.clone()];
+    tm.halt_state = final_state.clone();
     tm.states.push(final_state.clone());
     tm.states.push(initial_state);
     for fs in final_states {
@@ -253,7 +250,7 @@ pub fn read_pushdown_automaton(
     while tm.states.contains(&final_state) {
         final_state += "_"
     }
-    tm.final_states = vec![final_state.clone()];
+    tm.halt_state = final_state.clone();
     tm.states.push(final_state.clone());
 
     for fs in final_states {

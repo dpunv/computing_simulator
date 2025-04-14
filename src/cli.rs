@@ -215,7 +215,7 @@ pub fn print_tm(tm: turing_machine::TuringMachine) {
     println!("{}", tm.initial_state);
     println!("{}", tm.accept_state);
     println!("{}", tm.reject_state);
-    println!("{} ", tm.final_states.join(" "));
+    println!("{}", tm.halt_state);
     println!("{}", tm.blank_symbol);
     println!("{}", tm.states.join(" "));
     println!("{}", tm.input_alphabet.join(" "));

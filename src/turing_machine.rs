@@ -10,7 +10,7 @@ pub struct TuringMachine {
     pub initial_state: String,
     pub accept_state: String,
     pub reject_state: String,
-    pub final_states: Vec<String>,
+    pub halt_state: String,
     pub blank_symbol: String,
     pub states: Vec<String>,
     pub input_alphabet: Vec<String>,
@@ -140,7 +140,7 @@ impl TuringMachine {
             initial_state: "".to_string(),
             accept_state: "".to_string(),
             reject_state: "".to_string(),
-            final_states: Vec::new(),
+            halt_state: "".to_string(),
             blank_symbol: "".to_string(),
             states: Vec::new(),
             input_alphabet: Vec::new(),
@@ -156,6 +156,14 @@ impl TuringMachine {
         self.states.push(state.clone());
         self.next_state_id += 1;
         state
+    }
+
+    pub fn is_final(&self, state: &String) -> bool {
+        *state == self.accept_state || *state == self.reject_state || *state == self.halt_state
+    }
+
+    pub fn final_states(&self) -> Vec<String> {
+        vec![self.accept_state.clone(), self.reject_state.clone(), self.halt_state.clone()]
     }
 
     pub fn add_transition(
@@ -220,7 +228,7 @@ impl TuringMachine {
             let mut new_level = Vec::new();
             for (ind, element) in tree[tree.len() - 1].iter().enumerate() {
                 let state = element.state.clone();
-                if self.final_states.contains(&state)
+                if self.is_final(&state)
                     && (self.is_deterministic() || state == self.accept_state)
                 {
                     halts = true;
@@ -351,7 +359,7 @@ impl TuringMachine {
                     break;
                 } else if element.state == self.reject_state && !changed {
                     previous = ind;
-                } else if self.final_states.contains(&element.state) {
+                } else if self.is_final(&element.state) {
                     previous = ind;
                     changed = true;
                 }
@@ -374,7 +382,7 @@ impl TuringMachine {
                 steps,
                 last_element.computation,
             ))
-        } else if self.final_states.contains(&last_element.state.clone()) {
+        } else if self.is_final(&last_element.state.clone()) {
             Ok((
                 "halt".to_string(),
                 last_element.tapes[0].head,
@@ -403,7 +411,7 @@ impl TuringMachine {
         let mut state_encoding: std::collections::HashMap<String, String> =
             std::collections::HashMap::new();
         for (index, state) in self.states.iter().enumerate() {
-            if self.final_states.contains(state)
+            if self.is_final(state)
                 && state != &self.accept_state
                 && state != &self.reject_state
             {
@@ -595,11 +603,8 @@ impl TuringMachine {
             }
         }
 
-        for final_state in &self.final_states {
-            if !self.states.contains(final_state) {
-                is_final_states_valid = false;
-                break;
-            }
+        if !self.states.contains(&self.accept_state) || !self.states.contains(&self.reject_state) || !self.states.contains(&self.halt_state) {
+            is_final_states_valid = false;
         }
 
         if !self.states.contains(&self.initial_state) {
@@ -641,7 +646,7 @@ impl TuringMachine {
             initial_state: self.initial_state.clone(),
             accept_state: self.accept_state.clone(),
             reject_state: self.reject_state.clone(),
-            final_states: self.final_states.clone(),
+            halt_state: self.halt_state.clone(),
             blank_symbol: self.blank_symbol.clone(),
             states: Vec::new(),
             input_alphabet: self.input_alphabet.clone(),
@@ -760,7 +765,7 @@ impl TuringMachine {
         let mut map_states: std::collections::HashMap<String, Vec<String>> =
             std::collections::HashMap::new();
         let mut states_vec = states_to_process.clone();
-        for state in self.final_states.clone() {
+        for state in self.final_states() {
             if states_to_process.contains(&state) {
                 states_to_process.retain(|x| x != &state);
             }
@@ -1177,8 +1182,7 @@ impl TuringMachine {
                 vec![Direction::Stay],
             );
         }
-        let mut real_final_states = Vec::new();
-        for state in self.clone().final_states {
+        fn state_to_final(state: String, states_vec: &mut Vec<String>, new_tm: &mut TuringMachine, new_compound_symbols: &mut Vec<String>, tape_sep_symbol: String, old_tm: &TuringMachine) -> String {
             let state_final_1 = state.clone() + "<OTHER_TP>";
             let state_final_2 = state.clone() + "<END>";
             if !states_vec.contains(&state_final_1) {
@@ -1187,7 +1191,6 @@ impl TuringMachine {
             if !states_vec.contains(&state_final_2) {
                 states_vec.push(state_final_2.clone());
             }
-            real_final_states.push(state_final_2.clone());
             for symbol in new_compound_symbols.clone() {
                 new_tm.add_transition(
                     state.clone(),
@@ -1207,38 +1210,39 @@ impl TuringMachine {
                     state_final_1.clone(),
                     vec![symbol.clone()],
                     state_final_1.clone(),
-                    vec![self.blank_symbol.clone()],
+                    vec![old_tm.blank_symbol.clone()],
                     vec![Direction::Right],
                 );
             }
             new_tm.add_transition(
                 state.clone(),
-                vec![self.blank_symbol.clone()],
+                vec![old_tm.blank_symbol.clone()],
                 state_final_1.clone(),
-                vec![self.blank_symbol.clone()],
+                vec![old_tm.blank_symbol.clone()],
                 vec![Direction::Stay],
             );
             new_tm.add_transition(
                 state.clone(),
                 vec![tape_sep_symbol.clone()],
                 state_final_1.clone(),
-                vec![self.blank_symbol.clone()],
+                vec![old_tm.blank_symbol.clone()],
                 vec![Direction::Right],
             );
             new_tm.add_transition(
                 state_final_1.clone(),
                 vec![tape_sep_symbol.clone()],
                 state_final_1.clone(),
-                vec![self.blank_symbol.clone()],
+                vec![old_tm.blank_symbol.clone()],
                 vec![Direction::Right],
             );
             new_tm.add_transition(
                 state_final_1.clone(),
-                vec![self.blank_symbol.clone()],
+                vec![old_tm.blank_symbol.clone()],
                 state_final_2.clone(),
-                vec![self.blank_symbol.clone()],
+                vec![old_tm.blank_symbol.clone()],
                 vec![Direction::Right],
             );
+            return state_final_2
         }
         if !states_vec.contains(&self.initial_state) {
             states_vec.push(self.initial_state.clone());
@@ -1250,7 +1254,15 @@ impl TuringMachine {
         }
         new_tm.states = states_vec.clone();
         new_tm.tape_alphabet = new_tape_alphabet.clone();
-        new_tm.final_states = real_final_states.clone();
+        if self.accept_state != "" {
+            new_tm.accept_state = state_to_final(self.accept_state.clone(), &mut states_vec, &mut new_tm, &mut new_compound_symbols, tape_sep_symbol.clone(), self)
+        }
+        if self.reject_state != "" {
+            new_tm.reject_state = state_to_final(self.reject_state.clone(), &mut states_vec, &mut new_tm, &mut new_compound_symbols, tape_sep_symbol.clone(), self)
+        }
+        if self.halt_state != "" {
+            new_tm.halt_state = state_to_final(self.halt_state.clone(), &mut states_vec, &mut new_tm, &mut new_compound_symbols, tape_sep_symbol.clone(), self)
+        }
         new_tm
     }
 
@@ -1302,12 +1314,10 @@ impl TuringMachine {
             }
             if state.starts_with("y") {
                 tm.accept_state = state.to_string();
-                tm.final_states.push(state.to_string());
             } else if state.starts_with("n") {
                 tm.reject_state = state.to_string();
-                tm.final_states.push(state.to_string());
             } else if state.starts_with("h") {
-                tm.final_states.push(state.to_string());
+                tm.halt_state = state.to_string();
             } else if state.starts_with("i") {
                 tm.initial_state = state.to_string();
             }
@@ -1316,12 +1326,10 @@ impl TuringMachine {
             }
             if state.starts_with("y") {
                 tm.accept_state = state.to_string();
-                tm.final_states.push(state.to_string());
             } else if state.starts_with("n") {
                 tm.reject_state = state.to_string();
-                tm.final_states.push(state.to_string());
             } else if state.starts_with("h") {
-                tm.final_states.push(state.to_string());
+                tm.halt_state = state.to_string();
             }
             for symbol in symbols {
                 if !tm.tape_alphabet.contains(&symbol) {
@@ -1357,11 +1365,7 @@ impl TuringMachine {
             initial_state: orig_state_encoding[&tm.initial_state].clone(),
             accept_state: "".to_string(),
             reject_state: "".to_string(),
-            final_states: tm
-                .final_states
-                .iter()
-                .map(|state| orig_state_encoding[state].clone())
-                .collect(),
+            halt_state: orig_state_encoding[&tm.halt_state].clone(),
             states: tm
                 .states
                 .iter()
