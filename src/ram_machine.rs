@@ -8,7 +8,7 @@ use crate::utils;
 #[derive(Clone)]
 pub struct RamMachine {
     pub instructions: Vec<Instruction>,
-    pub labels_map: std::collections::HashMap<String, String>
+    pub labels_map: std::collections::HashMap<String, String>,
 }
 
 #[derive(Clone)]
@@ -20,11 +20,14 @@ pub struct Instruction {
 
 impl RamMachine {
     pub fn is_instruction(instruction: &str) -> bool {
-        let instructions: Vec<&str> = vec!["R", "MIR", "MIL", "W", "L", "A", "S", "INIT", "ST", "JUMP", "CJUMP", "H", "CALL", "MOV", "LD", "STD"];
-        if instructions.contains(&instruction){
+        let instructions: Vec<&str> = vec![
+            "R", "MIR", "MIL", "W", "L", "A", "S", "INIT", "ST", "JUMP", "CJUMP", "H", "CALL",
+            "MOV", "LD", "STD",
+        ];
+        if instructions.contains(&instruction) {
             return true;
         }
-        return false;
+        false
     }
     pub fn ram_instruction_lookup(instruction: String) -> String {
         let opcode = match instruction.as_str() {
@@ -67,8 +70,8 @@ impl RamMachine {
         let mut memory: std::collections::HashMap<String, String> =
             std::collections::HashMap::new();
         for (index, instr) in self.instructions.clone().into_iter().enumerate() {
-            if instr.opcode != "" {
-                if instr.label == "" {
+            if !instr.opcode.is_empty() {
+                if instr.label.is_empty() {
                     memory.insert(
                         utils::int2bin(index as i32, 0),
                         instr.opcode.clone() + &instr.operand.clone(),
@@ -80,10 +83,7 @@ impl RamMachine {
                     );
                 }
             } else {
-                memory.insert(
-                    utils::int2bin(index as i32, 0),
-                    "0".to_string(),
-                );
+                memory.insert(utils::int2bin(index as i32, 0), "0".to_string());
             }
         }
         let mut computation = Vec::new();
@@ -92,25 +92,29 @@ impl RamMachine {
             steps += 1;
             ir = memory[&pc].clone()[0..4].to_string();
             ar = memory[&pc].clone()[4..].to_string();
-            pc = utils::int2bin(match utils::bin2int(pc) {
-                Ok(i) => i,
-                Err(error) => return Err(error),
-            } + 1, 0);
+            pc = utils::int2bin(
+                match utils::bin2int(pc) {
+                    Ok(i) => i,
+                    Err(error) => return Err(error),
+                } + 1,
+                0,
+            );
             computation
                 .push("ram;".to_string() + &ir.clone() + ";" + &ar.clone() + ";" + &acc.clone());
             match ir.as_str() {
                 "0000" => {
                     // R: Read [operands] bit from input
-                    let end = input_head + (match utils::bin2int(ar) {
-                        Ok(i) => i,
-                        Err(error) => return Err(error),
-                    } as usize);
+                    let end = input_head
+                        + (match utils::bin2int(ar) {
+                            Ok(i) => i,
+                            Err(error) => return Err(error),
+                        } as usize);
                     if input.len() < end {
                         acc = format!(
                             "{:0>width$b}",
-                            match utils::bin2int(input[input_head..input.len()].to_string()){
+                            match utils::bin2int(input[input_head..input.len()].to_string()) {
                                 Ok(i) => i,
-                                Err(error) => return Err(error),        
+                                Err(error) => return Err(error),
                             },
                             width = end - input_head
                         )
@@ -155,10 +159,10 @@ impl RamMachine {
                     acc = utils::int2bin(
                         match utils::bin2int(acc) {
                             Ok(i) => i,
-                            Err(error) => return Err(error),    
+                            Err(error) => return Err(error),
                         } + match utils::bin2int(memory[&ar].clone()) {
                             Ok(i) => i,
-                            Err(error) => return Err(error),    
+                            Err(error) => return Err(error),
                         },
                         0,
                     );
@@ -166,12 +170,12 @@ impl RamMachine {
                 "0110" => {
                     // S: Subtract AR from ACC
                     acc = utils::int2bin(
-                        match utils::bin2int(acc){
+                        match utils::bin2int(acc) {
                             Ok(i) => i,
-                            Err(error) => return Err(error),    
+                            Err(error) => return Err(error),
                         } - (match utils::bin2int(memory[&ar].clone()) {
                             Ok(i) => i,
-                            Err(error) => return Err(error),    
+                            Err(error) => return Err(error),
                         }),
                         0,
                     );
@@ -203,7 +207,8 @@ impl RamMachine {
                     let mapping_key = (match utils::bin2int(ar.clone()) {
                         Ok(i) => i,
                         Err(error) => return Err(error),
-                    }).to_string();
+                    })
+                    .to_string();
                     let mapping = this_computer_object
                         .clone()
                         .get_mapping(mapping_key.clone());
@@ -289,10 +294,13 @@ impl RamMachine {
                     + &utils::int2bin(counter as i32, (counter_number_bits) as usize)
                     + ","
                     + &instr.opcode
-                    + &(utils::int2bin(match utils::bin2int(instr.operand) {
-                        Ok(i) => i,
-                        Err(error) => return Err(error),
-                    }, 0))
+                    + &(utils::int2bin(
+                        match utils::bin2int(instr.operand) {
+                            Ok(i) => i,
+                            Err(error) => return Err(error),
+                        },
+                        0,
+                    ))
                     + "#";
             }
         }

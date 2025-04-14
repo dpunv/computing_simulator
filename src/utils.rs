@@ -25,8 +25,8 @@ pub fn int2bin(n: i32, bitnum: usize) -> String {
 
 pub fn bin2int(s: String) -> Result<i32, String> {
     match i32::from_str_radix(s.as_str(), 2) {
-        Ok(int) => return Ok(int),
-        Err(error) => return Err(error.to_string()),
+        Ok(int) => Ok(int),
+        Err(error) => Err(error.to_string()),
     }
 }
 
@@ -50,7 +50,7 @@ pub fn int2str(n: i32, alphabet: Vec<String>) -> Result<String, String> {
             Ok(u_) => {
                 p += 1;
                 u = u_
-            },
+            }
             Err(error) => return Err(error),
         }
         if p == n {
@@ -86,9 +86,9 @@ pub fn bin2alphabet(s: String, alphabet: Vec<String>) -> Result<String, String> 
 
 pub fn is_numeric(s: String) -> bool {
     for ch in s.chars() {
-        if ! ch.is_digit(10) {
+        if !ch.is_ascii_digit() {
             return false;
         }
     }
-    return true;
+    true
 }

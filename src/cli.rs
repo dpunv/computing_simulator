@@ -15,8 +15,12 @@ fn print_help() {
     println!("Usage: turing_machine [OPTIONS] [FILE] [INPUT]");
     println!();
     println!("Options:");
-    println!("  --convert-to-tm: convert a RAM Machine or a lambda expression into a Turing Machine");
-    println!("  --convert-to-ram: convert a Turing Machine or a lambda expression into a RAM Machine");
+    println!(
+        "  --convert-to-tm: convert a RAM Machine or a lambda expression into a Turing Machine"
+    );
+    println!(
+        "  --convert-to-ram: convert a Turing Machine or a lambda expression into a RAM Machine"
+    );
     println!("  --from-encoding: read the Turing Machine from an encoding file");
     println!("  --help: print the help message");
     println!("  --version: print the version of the Turing Machine Simulator");
@@ -281,7 +285,8 @@ pub fn main_cli() {
 
     if options.print_nth_tm != -1 {
         let tm_encoding =
-            match turing_machine::TuringMachine::nth_turing_machine((options.print_nth_tm) as u128) {
+            match turing_machine::TuringMachine::nth_turing_machine((options.print_nth_tm) as u128)
+            {
                 Ok(res) => res,
                 Err(error) => return println!("error: {}", error),
             };
@@ -314,11 +319,13 @@ fn handle_computation(options: &mut options::Options) {
                 c.set_turing(m.convert_multi_tape_to_single_tape_tm());
             }
             if options.print_number {
-                println!("{}", match m.number(){
-                    Ok(res) => res.to_string(),
-                    Err(error) => error,
-
-                });
+                println!(
+                    "{}",
+                    match m.number() {
+                        Ok(res) => res.to_string(),
+                        Err(error) => error,
+                    }
+                );
                 return;
             }
             if options.convert_to_ram {

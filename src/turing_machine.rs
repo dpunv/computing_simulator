@@ -220,7 +220,9 @@ impl TuringMachine {
             let mut new_level = Vec::new();
             for (ind, element) in tree[tree.len() - 1].iter().enumerate() {
                 let state = element.state.clone();
-                if self.final_states.contains(&state) && (self.is_deterministic() || state == self.accept_state) {
+                if self.final_states.contains(&state)
+                    && (self.is_deterministic() || state == self.accept_state)
+                {
                     halts = true;
                     break;
                 }
@@ -334,7 +336,7 @@ impl TuringMachine {
                     break;
                 }
             }
-            if det && !halts && steps<max_steps {
+            if det && !halts && steps < max_steps {
                 tree.pop();
             }
             tree.push(new_level);
@@ -513,7 +515,7 @@ impl TuringMachine {
             i += 1;
             tm_string = match utils::int2str(i, alphabet.clone()) {
                 Ok(str) => str,
-                Err(error) => return Err(error)
+                Err(error) => return Err(error),
             };
             if TuringMachine::check_tm_encoding(tm_string.clone()) {
                 p += 1;
@@ -1433,7 +1435,7 @@ impl TuringMachine {
             i += 1;
             tm_string = match utils::int2str(i, alphabet.clone()) {
                 Ok(str) => str,
-                Err(error) => return Err(error)
+                Err(error) => return Err(error),
             };
             if TuringMachine::check_tm_encoding(tm_string.clone()) {
                 p += 1;

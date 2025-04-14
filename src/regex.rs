@@ -194,7 +194,10 @@ pub fn regex_to_fsa(regex: &Regex) -> Result<turing_machine::TuringMachine, Stri
     Ok(fsa)
 }
 
-fn build_fsa(fsa: &mut turing_machine::TuringMachine, regex: &Regex) -> Result<(String, String), String> {
+fn build_fsa(
+    fsa: &mut turing_machine::TuringMachine,
+    regex: &Regex,
+) -> Result<(String, String), String> {
     match regex.operation {
         Operation::Symbol => {
             let start = fsa.add_state();

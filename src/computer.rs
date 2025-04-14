@@ -79,7 +79,7 @@ impl Computer {
             ComputingElem::Tm(m) => Ok(m.to_encoding()),
             ComputingElem::Ram(m) => match m.to_encoding() {
                 Ok(enc) => Ok(enc),
-                Err(error) => return Err(error),
+                Err(error) => Err(error),
             },
             ComputingElem::Lambda(l) => Ok((
                 l.to_string(),
@@ -350,11 +350,12 @@ impl Computer {
             ComputingElem::Tm(_) => Err("already TM".to_string()),
             ComputingElem::Ram(m) => {
                 options.file = "src/standard/ram over tm.tm".to_string();
-                options.input = options.input.clone() + &(match m.to_encoding() {
-                    Ok(enc) => enc,
-                    Err(error) => return Err(error),
-
-                }).0;
+                options.input = options.input.clone()
+                    + &(match m.to_encoding() {
+                        Ok(enc) => enc,
+                        Err(error) => return Err(error),
+                    })
+                    .0;
                 let orig_c = self.clone();
                 match file_handler::handle_file_reads(options.file.clone(), s) {
                     Ok(computer) => {
@@ -526,47 +527,69 @@ impl Computer {
         }
     }
 
-    pub fn to_ram(self: &mut Computer, options: &mut options::Options, s: &mut Server) -> Result<Computer, String> {
+    pub fn to_ram(
+        self: &mut Computer,
+        options: &mut options::Options,
+        s: &mut Server,
+    ) -> Result<Computer, String> {
         match self.element.clone() {
             ComputingElem::Ram(_) => Err("already a ram".to_string()),
             ComputingElem::Tm(m) => {
                 options.file = "src/standard/tm over ram.ram".to_string();
                 let state_size = (m.states.len() as f32).log2().ceil() as usize;
                 let symbol_size = (m.tape_alphabet.len() as f32).log2().ceil() as usize;
-                let states_map: std::collections::HashMap<String, String> = m.states.iter().enumerate()
+                let states_map: std::collections::HashMap<String, String> = m
+                    .states
+                    .iter()
+                    .enumerate()
                     .map(|(index, state)| (state.clone(), utils::int2bin(index as i32, state_size)))
                     .collect();
-                let symbols_map: std::collections::HashMap<String, String> = m.tape_alphabet.iter().enumerate()
-                    .map(|(index, state)| (state.clone(), utils::int2bin(index as i32, symbol_size)))
+                let symbols_map: std::collections::HashMap<String, String> = m
+                    .tape_alphabet
+                    .iter()
+                    .enumerate()
+                    .map(|(index, state)| {
+                        (state.clone(), utils::int2bin(index as i32, symbol_size))
+                    })
                     .collect();
                 // states_map.iter().for_each(|(k, v)| println!("STATE {} -> {}", k, v));
                 // symbols_map.iter().for_each(|(k, v)| println!("SYMBOL {} -> {}", k, v));
-                options.input = "1".to_string() + &symbols_map.get(&m.blank_symbol).unwrap().to_owned() + "1"
+                options.input = "1".to_string()
+                    + &symbols_map.get(&m.blank_symbol).unwrap().to_owned()
+                    + "1"
                     + &utils::input_string_to_vec(m.tape_alphabet.clone(), options.input.clone())
-                    .iter()
-                    .filter_map(|s| symbols_map.get(s).cloned())
-                    .collect::<Vec<String>>()
-                    .join("1") + "0" +
-                    &m.transitions.iter()
-                    .map(|t| -> Result<String, String> {
-                        let state = states_map.get(&t.state)
-                            .ok_or_else(|| format!("State '{}' not found in mapping", t.state))?;
-                        let symbol = symbols_map.get(&t.symbols[0])
-                            .ok_or_else(|| format!("Symbol '{}' not found in mapping", t.symbols[0]))?;
-                        let new_state = states_map.get(&t.new_state)
-                            .ok_or_else(|| format!("State '{}' not found in mapping", t.new_state))?;
-                        let new_symbol = symbols_map.get(&t.new_symbols[0])
-                            .ok_or_else(|| format!("Symbol '{}' not found in mapping", t.new_symbols[0]))?;
-                        let direction = match t.directions[0] {
-                            turing_machine::Direction::Left => "01",
-                            turing_machine::Direction::Right => "10",
-                            turing_machine::Direction::Stay => "00",
-                        };
-                        
-                        Ok(state.to_owned() + symbol + new_state + new_symbol + direction)
-                    })
-                    .collect::<Result<Vec<String>, String>>()?
-                    .join("1") + "0";
+                        .iter()
+                        .filter_map(|s| symbols_map.get(s).cloned())
+                        .collect::<Vec<String>>()
+                        .join("1")
+                    + "0"
+                    + &m.transitions
+                        .iter()
+                        .map(|t| -> Result<String, String> {
+                            let state = states_map.get(&t.state).ok_or_else(|| {
+                                format!("State '{}' not found in mapping", t.state)
+                            })?;
+                            let symbol = symbols_map.get(&t.symbols[0]).ok_or_else(|| {
+                                format!("Symbol '{}' not found in mapping", t.symbols[0])
+                            })?;
+                            let new_state = states_map.get(&t.new_state).ok_or_else(|| {
+                                format!("State '{}' not found in mapping", t.new_state)
+                            })?;
+                            let new_symbol =
+                                symbols_map.get(&t.new_symbols[0]).ok_or_else(|| {
+                                    format!("Symbol '{}' not found in mapping", t.new_symbols[0])
+                                })?;
+                            let direction = match t.directions[0] {
+                                turing_machine::Direction::Left => "01",
+                                turing_machine::Direction::Right => "10",
+                                turing_machine::Direction::Stay => "00",
+                            };
+
+                            Ok(state.to_owned() + symbol + new_state + new_symbol + direction)
+                        })
+                        .collect::<Result<Vec<String>, String>>()?
+                        .join("1")
+                    + "0";
                 match file_handler::handle_file_reads(options.file.clone(), s) {
                     Ok(computer) => {
                         let comp = computer;
@@ -576,46 +599,73 @@ impl Computer {
                 }
                 match self.element.clone() {
                     ComputingElem::Ram(mut ram) => {
-                        ram.labels_map.insert("STATE_SIZE".to_string(), utils::int2bin(state_size as i32, 0));
-                        ram.labels_map.insert("SYMBOL_SIZE".to_string(), utils::int2bin(symbol_size as i32, 0));
+                        ram.labels_map.insert(
+                            "STATE_SIZE".to_string(),
+                            utils::int2bin(state_size as i32, 0),
+                        );
+                        ram.labels_map.insert(
+                            "SYMBOL_SIZE".to_string(),
+                            utils::int2bin(symbol_size as i32, 0),
+                        );
                         ram.labels_map.insert(
                             "INIT_STATE".to_string(),
-                            states_map.get(&m.initial_state)
-                                .ok_or_else(|| format!("Initial state '{}' not found in state mapping", m.initial_state))?.to_owned(),
+                            states_map
+                                .get(&m.initial_state)
+                                .ok_or_else(|| {
+                                    format!(
+                                        "Initial state '{}' not found in state mapping",
+                                        m.initial_state
+                                    )
+                                })?
+                                .to_owned(),
                         );
                         ram.labels_map.insert(
                             "ACCEPT_STATE".to_string(),
-                            states_map.get(&m.accept_state).unwrap_or(&utils::int2bin(2_i32.pow(state_size as u32), 0)).to_owned(),
+                            states_map
+                                .get(&m.accept_state)
+                                .unwrap_or(&utils::int2bin(2_i32.pow(state_size as u32), 0))
+                                .to_owned(),
                         );
                         ram.labels_map.insert(
                             "REJECT_STATE".to_string(),
-                            states_map.get(&m.reject_state).unwrap_or(&utils::int2bin(2_i32.pow(state_size as u32), 0)).to_owned(),
+                            states_map
+                                .get(&m.reject_state)
+                                .unwrap_or(&utils::int2bin(2_i32.pow(state_size as u32), 0))
+                                .to_owned(),
                         );
                         ram.labels_map.insert(
                             "HALT_STATE".to_string(),
-                            states_map.get(&m.final_states[0]).unwrap_or(&utils::int2bin(2_i32.pow(state_size as u32), 0)).to_owned(),
+                            states_map
+                                .get(&m.final_states[0])
+                                .unwrap_or(&utils::int2bin(2_i32.pow(state_size as u32), 0))
+                                .to_owned(),
                         );
                         ram.labels_map.insert(
                             "BLANK_CHAR".to_string(),
-                            symbols_map.get(&m.blank_symbol)
-                                .ok_or_else(|| format!("Blank symbol '{}' not found in symbol mapping", m.blank_symbol))?.to_owned(),
+                            symbols_map
+                                .get(&m.blank_symbol)
+                                .ok_or_else(|| {
+                                    format!(
+                                        "Blank symbol '{}' not found in symbol mapping",
+                                        m.blank_symbol
+                                    )
+                                })?
+                                .to_owned(),
                         );
                         self.element = ComputingElem::Ram(ram.clone());
-                        return Ok(self.clone());
-                    },
-                    ComputingElem::Tm(_) => return Err("something went wrong".to_string()),
-                    ComputingElem::Lambda(_) => return Err("something went wrong".to_string()),
+                        Ok(self.clone())
+                    }
+                    ComputingElem::Tm(_) => Err("something went wrong".to_string()),
+                    ComputingElem::Lambda(_) => Err("something went wrong".to_string()),
                 }
-            },
-            ComputingElem::Lambda(_) => {
-                match self.to_tm(options, s) {
-                    Ok(c) => {
-                        let comp = c;
-                        *self = comp;
-                        self.to_ram(options, s)
-                    },
-                    Err(error) => Err(error),
+            }
+            ComputingElem::Lambda(_) => match self.to_tm(options, s) {
+                Ok(c) => {
+                    let comp = c;
+                    *self = comp;
+                    self.to_ram(options, s)
                 }
+                Err(error) => Err(error),
             },
         }
     }
