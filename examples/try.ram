@@ -1,3 +1,6 @@
+// file: try.ram
+// Project: Computing Simulator
+// author: dp
 ram
 INIT 50
 MOV

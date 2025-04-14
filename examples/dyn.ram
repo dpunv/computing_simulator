@@ -1,3 +1,6 @@
+// file: dyn.ram
+// Project: Computing Simulator
+// author: dp
 ram
 INIT 64
 ST 48

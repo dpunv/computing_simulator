@@ -123,7 +123,6 @@ pub fn read_turing_machine(
         let mut symbols = Vec::new();
         let mut new_symbols = Vec::new();
         let mut directions = Vec::new();
-        //println!("{}", transition.join(" / "));
         for i in 0..tape_count {
             symbols.push(transition[2 + i * 3].to_string());
             new_symbols.push(transition[3 + i * 3].to_string());
@@ -150,16 +149,25 @@ pub fn read_finite_state_machine(
     let mut tm = turing_machine::TuringMachine::new();
     tm.blank_symbol = " ".to_string();
 
-    tm.initial_state = lines[0].to_string();
-
-    let final_states: Vec<&str> = lines[1].split(" ").collect();
-    for final_state in final_states {
-        tm.final_states.push(final_state.to_string());
+    let mut initial_state = lines[0].to_string() + "_init";
+    while tm.states.contains(&initial_state) {
+        initial_state = initial_state + "_"
     }
-
-    let states: Vec<&str> = lines[2].split(" ").collect();
-    for state in states {
-        tm.states.push(state.to_string());
+    tm.initial_state = initial_state.clone();
+    tm.add_transition(initial_state.clone(), vec![tm.blank_symbol.clone()], lines[0].to_string(), vec![tm.blank_symbol.clone()], vec![turing_machine::Direction::Right]);
+    
+    tm.states = lines[2].split(" ").map(|e| e.to_string()).collect::<Vec<String>>();
+    
+    let final_states: Vec<&str> = lines[1].split(" ").collect();
+    let mut final_state = "final".to_string();
+    while tm.states.contains(&final_state) {
+        final_state = final_state + "_"
+    }
+    tm.final_states = vec![final_state.clone()];
+    tm.states.push(final_state.clone());
+    tm.states.push(initial_state);
+    for fs in final_states {
+        tm.add_transition(fs.to_string(), vec![tm.blank_symbol.clone()], final_state.clone(), vec![tm.blank_symbol.clone()], vec![turing_machine::Direction::Stay]);
     }
 
     let input_alphabet: Vec<&str> = lines[3].split(" ").collect();
@@ -194,13 +202,6 @@ pub fn read_finite_state_machine(
             return Err(format!("Error: Transition format not valid: {}", line));
         }
     }
-    tm.add_transition(
-        tm.initial_state.clone(),
-        vec![tm.blank_symbol.clone()],
-        tm.initial_state.clone(),
-        vec![tm.blank_symbol.clone()],
-        vec![turing_machine::Direction::Right],
-    );
     computer.set_turing(tm);
     Ok(computer.clone())
 }
@@ -211,18 +212,31 @@ pub fn read_pushdown_automaton(
 ) -> Result<computer::Computer, String> {
     let mut tm = turing_machine::TuringMachine::new();
     tm.tape_count = 2;
+    tm.blank_symbol = lines[5].to_string();
 
-    tm.initial_state = lines[0].to_string();
+    let mut initial_state = lines[0].to_string() + "_init";
+    while tm.states.contains(&initial_state) {
+        initial_state = initial_state + "_"
+    }
+    tm.initial_state = initial_state.clone();
+    tm.add_transition(initial_state.clone(), vec![tm.blank_symbol.clone(), tm.blank_symbol.clone()], lines[0].to_string(), vec![tm.blank_symbol.clone(), tm.blank_symbol.clone()], vec![turing_machine::Direction::Right, turing_machine::Direction::Stay]);
+
+    tm.states = lines[2].split(" ").map(|e| e.to_string()).collect();
+    tm.states.push(initial_state);
 
     let final_states: Vec<&str> = lines[1].split(" ").collect();
-    for final_state in final_states {
-        tm.final_states.push(final_state.to_string());
+    let mut final_state = "final".to_string();
+    while tm.states.contains(&final_state) {
+        final_state = final_state + "_"
+    }
+    tm.final_states = vec![final_state.clone()];
+    tm.states.push(final_state.clone());
+
+    for fs in final_states {
+        tm.add_transition(fs.to_string(), vec![tm.blank_symbol.clone(), tm.blank_symbol.clone()], final_state.clone(), vec![tm.blank_symbol.clone(), tm.blank_symbol.clone()], vec![turing_machine::Direction::Stay, turing_machine::Direction::Stay]);
     }
 
-    let states: Vec<&str> = lines[2].split(" ").collect();
-    for state in states {
-        tm.states.push(state.to_string());
-    }
+    tm.states.push(final_state);
 
     let input_alphabet: Vec<&str> = lines[3].split(" ").collect();
     for symbol in input_alphabet {
@@ -237,18 +251,6 @@ pub fn read_pushdown_automaton(
         }
     }
 
-    tm.blank_symbol = lines[5].to_string();
-
-    tm.add_transition(
-        tm.initial_state.clone(),
-        vec![tm.blank_symbol.clone(), tm.blank_symbol.clone()],
-        tm.initial_state.clone(),
-        vec![tm.blank_symbol.clone(), tm.blank_symbol.clone()],
-        vec![
-            turing_machine::Direction::Right,
-            turing_machine::Direction::Stay,
-        ],
-    );
     for line in lines.iter().skip(6) {
         let transition_data: Vec<&str> = line.split(" ").collect();
         if transition_data.len() < 5 {
@@ -412,35 +414,87 @@ pub fn read_ram_program(
     computer: &mut computer::Computer,
 ) -> Result<computer::Computer, String> {
     let mut instr = Vec::new();
-    for line in lines.iter() {
-        if line.starts_with("//") {
-            continue;
-        } else {
-            let instruction: Vec<&str> = line.split(" ").collect();
-            if instruction.len() == 1 {
+    let mut labels_map: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+    for (index, line) in lines.iter().enumerate() {
+        let instruction: Vec<&str> = line.split(" ").collect();
+        if instruction.len() == 1 {
+            if !ram_machine::RamMachine::is_instruction(instruction[0]) {
+                instr.push(ram_machine::Instruction {
+                    opcode: "".to_string(),
+                    operand: "0".to_string(),
+                    label: instruction[0].to_string(),
+                });
+                labels_map.insert(instruction[0].to_string(), utils::int2bin(index as i32, 0));
+            } else {
                 instr.push(ram_machine::Instruction {
                     opcode: ram_machine::RamMachine::ram_instruction_lookup(
                         instruction[0].to_string(),
                     ),
                     operand: "0".to_string(),
+                    label: "".to_string(),
                 });
-            } else if instruction.len() == 2 {
+            }
+        } else if instruction.len() == 2 {
+            if ram_machine::RamMachine::is_instruction(instruction[0]) {
+                if utils::is_numeric(instruction[1].to_string()) {
+                    instr.push(ram_machine::Instruction {
+                        opcode: ram_machine::RamMachine::ram_instruction_lookup(
+                            instruction[0].to_string(),
+                        ),
+                        operand: utils::int2bin(
+                            instruction[1].parse().map_err(|_| format!("Error parsing operand '{}'", instruction[1]))?,
+                            0,
+                        ),
+                        label: "".to_string()
+                    });
+                } else {
+                    instr.push(ram_machine::Instruction {
+                        opcode: ram_machine::RamMachine::ram_instruction_lookup(
+                            instruction[0].to_string(),
+                        ),
+                        operand: "".to_string(),
+                        label: instruction[1].to_string()
+                    });
+                }
+            } else {
                 instr.push(ram_machine::Instruction {
                     opcode: ram_machine::RamMachine::ram_instruction_lookup(
-                        instruction[0].to_string(),
+                        instruction[1].to_string(),
+                    ),
+                    operand: "".to_string(),
+                    label: "".to_string()
+                });
+                labels_map.insert(instruction[0].to_string(), utils::int2bin(index as i32, 0));
+            }
+        } else if instruction.len() == 3 {
+            if utils::is_numeric(instruction[2].to_string()) {
+                instr.push(ram_machine::Instruction {
+                    opcode: ram_machine::RamMachine::ram_instruction_lookup(
+                        instruction[1].to_string(),
                     ),
                     operand: utils::int2bin(
-                        instruction[1].parse().expect("Error parsing operand"),
+                        instruction[2].parse().map_err(|_| format!("Error parsing operand '{}'", instruction[2]))?,
                         0,
                     ),
+                    label: "".to_string()
                 });
             } else {
-                return Err("Error parsing instruction".to_string());
+                instr.push(ram_machine::Instruction {
+                    opcode: ram_machine::RamMachine::ram_instruction_lookup(
+                        instruction[1].to_string(),
+                    ),
+                    operand: "".to_string(),
+                    label: instruction[2].to_string()
+                });
             }
+            labels_map.insert(instruction[0].to_string(), utils::int2bin(index as i32, 0));
+        } else {
+            return Err("Error parsing instruction".to_string());
         }
     }
     computer.set_ram(ram_machine::RamMachine {
         instructions: instr,
+        labels_map
     });
     Ok(computer.clone())
 }
@@ -459,10 +513,14 @@ pub fn read_ram_program_from_encoding(
         let splitted = elem.split(",").collect::<Vec<&str>>();
         if !splitted.is_empty() {
             instr.insert(
-                utils::bin2int(splitted[0].to_string()) as usize,
+                (match utils::bin2int(splitted[0].to_string()) {
+                    Ok(i) => i,
+                    Err(error) => return Err(error),
+                }) as usize,
                 ram_machine::Instruction {
                     opcode: splitted[1][0..4].to_string(),
                     operand: splitted[1][4..].to_string(),
+                    label: "".to_string()
                 },
             );
         }
@@ -470,6 +528,7 @@ pub fn read_ram_program_from_encoding(
 
     computer.set_ram(ram_machine::RamMachine {
         instructions: instr,
+        labels_map: std::collections::HashMap::new()
     });
     Ok(computer.clone())
 }

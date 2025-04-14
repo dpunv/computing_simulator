@@ -5,6 +5,7 @@
 #[derive(Clone)]
 pub struct Options {
     pub convert_to_tm: bool,
+    pub convert_to_ram: bool,
     pub convert_to_singletape: bool,
     pub print_computer: bool,
     pub print_number: bool,
@@ -21,6 +22,7 @@ pub struct Options {
 
 pub fn get_options() -> Options {
     let mut convert_to_tm = false;
+    let mut convert_to_ram = false;
     let mut convert_to_singletape = false;
     let mut print_computer = false;
     let mut print_nth_tm: i128 = -1;
@@ -58,6 +60,7 @@ pub fn get_options() -> Options {
         } else {
             match arg.as_str() {
                 "--convert-to-tm" => convert_to_tm = true,
+                "--convert-to-ram" => convert_to_ram = true,
                 "--convert-to-singletape" => convert_to_singletape = true,
                 "--print-computer" => print_computer = true,
                 "--print-number" => print_number = true,
@@ -78,6 +81,7 @@ pub fn get_options() -> Options {
         print_number,
         print_nth_tm,
         convert_to_tm,
+        convert_to_ram,
         convert_to_singletape,
         help,
         version,

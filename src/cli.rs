@@ -15,8 +15,8 @@ fn print_help() {
     println!("Usage: turing_machine [OPTIONS] [FILE] [INPUT]");
     println!();
     println!("Options:");
-    println!("  --type: turing machine (tm), finite state machine (fsm), pushdown automaton (pda), random access machine (ram)");
-    println!("  --convert-to-tm: convert a RAM machine into a Turing Machine");
+    println!("  --convert-to-tm: convert a RAM Machine or a lambda expression into a Turing Machine");
+    println!("  --convert-to-ram: convert a Turing Machine or a lambda expression into a RAM Machine");
     println!("  --from-encoding: read the Turing Machine from an encoding file");
     println!("  --help: print the help message");
     println!("  --version: print the version of the Turing Machine Simulator");
@@ -30,7 +30,6 @@ fn print_help() {
     );
     println!("  --input: provide the input string for the Turing Machine");
     println!("  --file: provide the file containing the description of the Turing Machine");
-    println!("  --regex: read the regular expression from the file (works only with FSM type)");
     println!("  --status: print informations about the Turing Machine");
     println!("  --print-encoding: print the encoding of the Turing Machine");
     println!();
@@ -282,7 +281,10 @@ pub fn main_cli() {
 
     if options.print_nth_tm != -1 {
         let tm_encoding =
-            turing_machine::TuringMachine::nth_turing_machine((options.print_nth_tm) as u128);
+            match turing_machine::TuringMachine::nth_turing_machine((options.print_nth_tm) as u128) {
+                Ok(res) => res,
+                Err(error) => return println!("error: {}", error),
+            };
         println!("{}", tm_encoding);
         return;
     }
@@ -312,11 +314,24 @@ fn handle_computation(options: &mut options::Options) {
                 c.set_turing(m.convert_multi_tape_to_single_tape_tm());
             }
             if options.print_number {
-                println!("{}", m.number());
+                println!("{}", match m.number(){
+                    Ok(res) => res.to_string(),
+                    Err(error) => error,
+
+                });
                 return;
             }
+            if options.convert_to_ram {
+                match c.to_ram(options, &mut s) {
+                    Ok(comp) => c = comp,
+                    Err(error) => {
+                        println!("Error: {}", error);
+                        return;
+                    }
+                }
+            }
             if options.convert_to_tm {
-                println!("Error: invalid option --convert-to-tm on non-ram file");
+                println!("Error: invalid option --convert-to-tm on tm file");
             }
         }
         computer::ComputingElem::Ram(_) => {
@@ -328,6 +343,9 @@ fn handle_computation(options: &mut options::Options) {
                         return;
                     }
                 }
+            }
+            if options.convert_to_tm {
+                println!("Error: invalid option --convert-to-ran on ram file");
             }
             if options.convert_to_singletape {
                 println!("Error: invalid option --convert-to-singletape on non-tm file");
@@ -341,6 +359,14 @@ fn handle_computation(options: &mut options::Options) {
                 println!("Error: invalid option on non-tm, non-ram file");
             } else if options.convert_to_tm {
                 match c.to_tm(options, &mut s) {
+                    Ok(comp) => c = comp,
+                    Err(error) => {
+                        println!("Error: {}", error);
+                        return;
+                    }
+                }
+            } else if options.convert_to_ram {
+                match c.to_ram(options, &mut s) {
                     Ok(comp) => c = comp,
                     Err(error) => {
                         println!("Error: {}", error);

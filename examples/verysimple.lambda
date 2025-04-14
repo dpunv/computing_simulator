@@ -1,2 +1,5 @@
+// file: verysimple.lambda
+// Project: Computing Simulator
+// author: dp
 lambda
 LAMBDA: ((\w.(w z)) (\a.(a)) x)

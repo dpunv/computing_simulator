@@ -1,3 +1,6 @@
+// file: simpledyn.ram
+// Project: Computing Simulator
+// author: dp
 ram
 INIT 25
 MOV

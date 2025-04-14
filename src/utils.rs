@@ -23,8 +23,11 @@ pub fn int2bin(n: i32, bitnum: usize) -> String {
     }
 }
 
-pub fn bin2int(s: String) -> i32 {
-    i32::from_str_radix(s.as_str(), 2).unwrap()
+pub fn bin2int(s: String) -> Result<i32, String> {
+    match i32::from_str_radix(s.as_str(), 2) {
+        Ok(int) => return Ok(int),
+        Err(error) => return Err(error.to_string()),
+    }
 }
 
 /* pub fn invert_hashmap<K, V>(hashmap: &std::collections::HashMap<K, V>) -> std::collections::HashMap<V, K>
@@ -35,7 +38,7 @@ where
     hashmap.iter().map(|(k, v)| (v.clone(), k.clone())).collect()
 } */
 
-pub fn int2str(n: i32, alphabet: Vec<String>) -> String {
+pub fn int2str(n: i32, alphabet: Vec<String>) -> Result<String, String> {
     let mut i = 1;
     let mut p = 0;
     let mut u;
@@ -43,31 +46,36 @@ pub fn int2str(n: i32, alphabet: Vec<String>) -> String {
         let x = int2bin(i + 1, 0);
         let m = x.len();
         let y = x[2..m].to_string();
-        u = bin2alphabet(y, alphabet.clone());
-        if u != *" ERROR " {
-            p += 1;
+        match bin2alphabet(y, alphabet.clone()) {
+            Ok(u_) => {
+                p += 1;
+                u = u_
+            },
+            Err(error) => return Err(error),
         }
         if p == n {
             break;
         }
         i += 1;
     }
-    u
+    Ok(u)
 }
 
-pub fn bin2alphabet(s: String, alphabet: Vec<String>) -> String {
+pub fn bin2alphabet(s: String, alphabet: Vec<String>) -> Result<String, String> {
     // number of bit needed to encode the alphabet
     let bitnum: usize = (alphabet.len() as f64).log2().ceil() as usize;
     if s.len() % bitnum != 0 || s.is_empty() {
-        return " ERROR ".to_string();
+        return Err(" ERROR ".to_string());
     }
     let mut result = String::new();
     for i in 0..(s.len() / bitnum) {
         let symbol = &s[i * bitnum..((i + 1) * bitnum - 1)];
-        let index = bin2int(symbol.to_string());
-        result.push_str(&alphabet[index as usize]);
+        match bin2int(symbol.to_string()) {
+            Ok(res) => result.push_str(&alphabet[res as usize]),
+            Err(error) => return Err(error),
+        }
     }
-    result
+    Ok(result)
 }
 
 /* pub fn int2pair(n: i32) -> (i32, i32) {
@@ -75,3 +83,12 @@ pub fn bin2alphabet(s: String, alphabet: Vec<String>) -> String {
     let d = ((((8 * n + 1) as f32).sqrt() + (1 as f32)) / (2 as f32)).floor() as i32;
     (n - (d * (d+1)/2), d + (d * (d+1) / 2) - n)
 } */
+
+pub fn is_numeric(s: String) -> bool {
+    for ch in s.chars() {
+        if ! ch.is_digit(10) {
+            return false;
+        }
+    }
+    return true;
+}

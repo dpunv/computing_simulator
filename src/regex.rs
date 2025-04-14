@@ -151,7 +151,7 @@ pub fn regex_to_fsa(regex: &Regex) -> Result<turing_machine::TuringMachine, Stri
     let mut fsa = turing_machine::TuringMachine::new();
     fsa.blank_symbol = " ".to_string();
 
-    let (start, end) = build_fsa(&mut fsa, regex);
+    let (start, end) = build_fsa(&mut fsa, regex)?;
 
     //fsa.end_on_final_state = true;
     fsa.tape_alphabet = fsa.input_alphabet.clone();
@@ -194,7 +194,7 @@ pub fn regex_to_fsa(regex: &Regex) -> Result<turing_machine::TuringMachine, Stri
     Ok(fsa)
 }
 
-fn build_fsa(fsa: &mut turing_machine::TuringMachine, regex: &Regex) -> (String, String) {
+fn build_fsa(fsa: &mut turing_machine::TuringMachine, regex: &Regex) -> Result<(String, String), String> {
     match regex.operation {
         Operation::Symbol => {
             let start = fsa.add_state();
@@ -209,18 +209,18 @@ fn build_fsa(fsa: &mut turing_machine::TuringMachine, regex: &Regex) -> (String,
             if !fsa.input_alphabet.contains(&regex.symbol) {
                 fsa.input_alphabet.push(regex.symbol.clone());
             }
-            (start, end)
+            Ok((start, end))
         }
 
         Operation::Concat => {
-            let left = regex.left.as_ref().expect("Concat must have left operand");
+            let left = regex.left.as_ref().ok_or("Concat must have left operand")?;
             let right = regex
                 .right
                 .as_ref()
-                .expect("Concat must have right operand");
+                .ok_or("Concat must have right operand")?;
 
-            let (start_left, end_left) = build_fsa(fsa, left);
-            let (start_right, end_right) = build_fsa(fsa, right);
+            let (start_left, end_left) = build_fsa(fsa, left)?;
+            let (start_right, end_right) = build_fsa(fsa, right)?;
 
             fsa.add_transition(
                 end_left,
@@ -230,18 +230,18 @@ fn build_fsa(fsa: &mut turing_machine::TuringMachine, regex: &Regex) -> (String,
                 vec![turing_machine::Direction::Stay],
             );
 
-            (start_left, end_right)
+            Ok((start_left, end_right))
         }
 
         Operation::Or => {
-            let left = regex.left.as_ref().expect("Or must have left operand");
-            let right = regex.right.as_ref().expect("Or must have right operand");
+            let left = regex.left.as_ref().ok_or("Or must have left operand")?;
+            let right = regex.right.as_ref().ok_or("Or must have right operand")?;
 
             let start = fsa.add_state();
             let end = fsa.add_state();
 
-            let (start_left, end_left) = build_fsa(fsa, left);
-            let (start_right, end_right) = build_fsa(fsa, right);
+            let (start_left, end_left) = build_fsa(fsa, left)?;
+            let (start_right, end_right) = build_fsa(fsa, right)?;
 
             fsa.add_transition(
                 start.clone(),
@@ -273,19 +273,19 @@ fn build_fsa(fsa: &mut turing_machine::TuringMachine, regex: &Regex) -> (String,
                 vec![turing_machine::Direction::Stay],
             );
 
-            (start, end)
+            Ok((start, end))
         }
 
         Operation::KleeneStar => {
             let operand = regex
                 .left
                 .as_ref()
-                .expect("KleeneStar must have an operand");
+                .ok_or("KleeneStar must have an operand")?;
 
             let start = fsa.add_state();
             let end = fsa.add_state();
 
-            let (start_operand, end_operand) = build_fsa(fsa, operand);
+            let (start_operand, end_operand) = build_fsa(fsa, operand)?;
 
             fsa.add_transition(
                 start.clone(),
@@ -319,19 +319,19 @@ fn build_fsa(fsa: &mut turing_machine::TuringMachine, regex: &Regex) -> (String,
                 vec![turing_machine::Direction::Stay],
             );
 
-            (start, end)
+            Ok((start, end))
         }
 
         Operation::KleneePlus => {
             let operand = regex
                 .left
                 .as_ref()
-                .expect("KleenePlus must have an operand");
+                .ok_or("KleenePlus must have an operand")?;
 
             let start = fsa.add_state();
             let end = fsa.add_state();
 
-            let (start_operand, end_operand) = build_fsa(fsa, operand);
+            let (start_operand, end_operand) = build_fsa(fsa, operand)?;
 
             fsa.add_transition(
                 start.clone(),
@@ -357,16 +357,16 @@ fn build_fsa(fsa: &mut turing_machine::TuringMachine, regex: &Regex) -> (String,
                 vec![turing_machine::Direction::Stay],
             );
 
-            (start, end)
+            Ok((start, end))
         }
 
         Operation::Optional => {
-            let operand = regex.left.as_ref().expect("Optional must have an operand");
+            let operand = regex.left.as_ref().ok_or("Optional must have an operand")?;
 
             let start = fsa.add_state();
             let end = fsa.add_state();
 
-            let (start_operand, end_operand) = build_fsa(fsa, operand);
+            let (start_operand, end_operand) = build_fsa(fsa, operand)?;
 
             fsa.add_transition(
                 start.clone(),
@@ -392,7 +392,7 @@ fn build_fsa(fsa: &mut turing_machine::TuringMachine, regex: &Regex) -> (String,
                 vec![turing_machine::Direction::Stay],
             );
 
-            (start, end)
+            Ok((start, end))
         }
     }
 }

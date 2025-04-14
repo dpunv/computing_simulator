@@ -344,6 +344,13 @@ _
 35 68 _ _ R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
 // 3.5.2 go to the correct memory position
 68 69 # # R _ _ S _ _ S _ _ R _ _ S _ _ S _ _ S _ _ S
+69 69a _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S 0 0 S
+69 69a _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S 1 1 S
+69a 69a _ 0 R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S 0 0 R
+69a 69a _ 1 R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S 1 1 R
+69a 69b _ , R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
+69b 69c _ 0 R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
+69c 70 _ # L _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
 68 69 0 0 R _ _ S _ _ S 0 0 R _ _ S _ _ S _ _ S _ _ S
 68 69 1 1 R _ _ S _ _ S 1 1 R _ _ S _ _ S _ _ S _ _ S
 68 71 0 0 R _ _ S _ _ S 1 1 S _ _ S _ _ S _ _ S _ _ S
@@ -844,6 +851,13 @@ _
 134a 134 _ _ R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S 1 1 L
 // 3.15.2 go to the correct memory position
 134 135 # # R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S _ _ R
+135 135a _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S 0 0 S
+135 135a _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S 1 1 S
+135a 135a _ 0 R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S 0 0 R
+135a 135a _ 1 R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S 1 1 R
+135a 135b _ , R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
+135b 135c _ 0 R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
+135c 136 _ # L _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S
 134 135 0 0 R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S 0 0 R
 134 135 1 1 R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S 1 1 R
 134 137 0 0 R _ _ S _ _ S _ _ S _ _ S _ _ S _ _ S 1 1 S

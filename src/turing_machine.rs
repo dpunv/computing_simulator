@@ -16,7 +16,6 @@ pub struct TuringMachine {
     pub input_alphabet: Vec<String>,
     pub tape_alphabet: Vec<String>,
     pub transitions: Vec<Transition>,
-    pub end_on_final_state: bool,
     pub tape_count: usize,
     pub next_state_id: usize,
 }
@@ -147,7 +146,6 @@ impl TuringMachine {
             input_alphabet: Vec::new(),
             tape_alphabet: Vec::new(),
             transitions: Vec::new(),
-            end_on_final_state: false,
             tape_count: 1,
             //last_execution: ("".to_string(), Vec::new(), 0, Vec::new()),
             next_state_id: 0,
@@ -222,7 +220,7 @@ impl TuringMachine {
             let mut new_level = Vec::new();
             for (ind, element) in tree[tree.len() - 1].iter().enumerate() {
                 let state = element.state.clone();
-                if self.final_states.contains(&state) && self.end_on_final_state {
+                if self.final_states.contains(&state) && (self.is_deterministic() || state == self.accept_state) {
                     halts = true;
                     break;
                 }
@@ -336,7 +334,7 @@ impl TuringMachine {
                     break;
                 }
             }
-            if det && !halts {
+            if det && !halts && steps<max_steps {
                 tree.pop();
             }
             tree.push(new_level);
@@ -489,7 +487,7 @@ impl TuringMachine {
         (transitions_encoding, tape_encoding, state_encoding)
     }
 
-    pub fn number(&self) -> i32 {
+    pub fn number(&self) -> Result<i32, String> {
         let alphabet = vec![
             "0".to_string(),
             "1".to_string(),
@@ -513,12 +511,15 @@ impl TuringMachine {
         let encoding = self.to_encoding().0;
         while tm_string != encoding {
             i += 1;
-            tm_string = utils::int2str(i, alphabet.clone());
+            tm_string = match utils::int2str(i, alphabet.clone()) {
+                Ok(str) => str,
+                Err(error) => return Err(error)
+            };
             if TuringMachine::check_tm_encoding(tm_string.clone()) {
                 p += 1;
             }
         }
-        p
+        Ok(p)
     }
 
     /* pub fn input_alphabet(&self) -> Vec<String> {
@@ -644,7 +645,6 @@ impl TuringMachine {
             input_alphabet: self.input_alphabet.clone(),
             tape_alphabet: Vec::new(),
             transitions: Vec::new(),
-            end_on_final_state: self.end_on_final_state,
             tape_count: 1,
             //last_execution: ("".to_string(), Vec::new(), 0, Vec::new()),
             next_state_id: 0,
@@ -1395,7 +1395,6 @@ impl TuringMachine {
                 .iter()
                 .map(|symbol| orig_alphabet_encoding[symbol].clone())
                 .collect(),
-            end_on_final_state: tm.end_on_final_state,
             tape_count: tm.tape_count,
             //last_execution: ("".to_string(), Vec::new(), 0, Vec::new()),
             next_state_id: 0,
@@ -1409,7 +1408,7 @@ impl TuringMachine {
         orig_tm
     }
 
-    pub fn nth_turing_machine(nth: u128) -> String {
+    pub fn nth_turing_machine(nth: u128) -> Result<String, String> {
         let alphabet = vec![
             "0".to_string(),
             "1".to_string(),
@@ -1432,12 +1431,15 @@ impl TuringMachine {
         let mut tm_string = "".to_string();
         while p != nth {
             i += 1;
-            tm_string = utils::int2str(i, alphabet.clone());
+            tm_string = match utils::int2str(i, alphabet.clone()) {
+                Ok(str) => str,
+                Err(error) => return Err(error)
+            };
             if TuringMachine::check_tm_encoding(tm_string.clone()) {
                 p += 1;
             }
         }
-        tm_string
+        Ok(tm_string)
     }
 
     pub fn check_tm_encoding(encoding: String) -> bool {

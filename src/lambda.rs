@@ -161,7 +161,6 @@ impl Lambda {
                 force_currying: self.force_currying,
             };
             steps += 1;
-            //println!("{}", new_result.to_string());
             computation.push(new_result.to_string());
         }
         new_result.force_currying = true;
