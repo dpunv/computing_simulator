@@ -15,10 +15,7 @@ pub fn handle_file_reads(
     file_name: String,
     context: &mut computer::Server,
 ) -> Result<computer::Computer, String> {
-    let file = match std::fs::read_to_string(file_name.clone()) {
-        Ok(f) => f,
-        Err(_) => return Err("Error reading the file".to_string()),
-    };
+    let file =  std::fs::read_to_string(file_name.clone()).map_err(|_| "Error reading the file".to_string())?;
 
     let mut lines: Vec<String> = file
         .lines()
@@ -52,14 +49,10 @@ pub fn handle_file_reads(
         if f == file_name {
             c.add_mapping(name, f);
         } else if !context.contains(f.clone()) {
-            match handle_file_reads(f.clone(), context) {
-                Ok(comp) => {
-                    context.add_computer(f.clone(), comp);
-                    c.add_mapping(name, f);
-                }
-                Err(error) => return Err(error),
-            }
-        } else if c.get_mapping(name.clone()) == "" {
+            let new_comp = handle_file_reads(f.clone(), context)?;
+            context.add_computer(f.clone(), new_comp);
+            c.add_mapping(name, f);
+        } else if c.get_mapping(name.clone())? == "" {
             c.add_mapping(name.clone(), f.clone());
         }
     }
@@ -106,10 +99,7 @@ pub fn read_turing_machine(
     for symbol in tape_alphabet {
         tm.tape_alphabet.push(symbol.to_string());
     }
-    let tape_count: usize = match lines[8].parse() {
-        Ok(count) => count,
-        Err(_) => return Err("Error parsing tape count".to_string()),
-    };
+    let tape_count: usize = lines[8].parse().map_err(|_| "Error parsing tape count".to_string())?;
     tm.tape_count = tape_count;
 
     for line in lines.iter().skip(9) {
@@ -407,7 +397,7 @@ pub fn read_tm_from_encoding(
 ) -> Result<computer::Computer, String> {
     let encoding = lines[0].to_string();
     if lines.len() < 2 {
-        computer.set_turing(turing_machine::TuringMachine::encoding_to_tm(encoding));
+        computer.set_turing(turing_machine::TuringMachine::encoding_to_tm(encoding)?);
         Ok(computer.clone())
     } else {
         let mut tape_encoding: std::collections::HashMap<String, String> =
@@ -423,7 +413,7 @@ pub fn read_tm_from_encoding(
                 states = true;
                 continue;
             }
-            let (key, value) = line.split_once(" ").unwrap();
+            let (key, value) = line.split_once(" ").ok_or_else(|| "cannot split".to_string())?;
             if states {
                 state_encoding.insert(key.to_string(), value.to_string());
             } else {
@@ -434,7 +424,7 @@ pub fn read_tm_from_encoding(
             encoding,
             tape_encoding,
             state_encoding,
-        ));
+        )?);
         Ok(computer.clone())
     }
 }
@@ -540,18 +530,15 @@ pub fn read_ram_program_from_encoding(
 ) -> Result<computer::Computer, String> {
     let line = lines[0]
         .strip_prefix("#")
-        .unwrap()
+        .ok_or_else(|| "cannot strip prefix #".to_string())?
         .strip_suffix("#")
-        .unwrap();
+        .ok_or_else(|| "cannot strip suffix #".to_string())?;
     let mut instr = Vec::new();
     for elem in line.split("#") {
         let splitted = elem.split(",").collect::<Vec<&str>>();
         if !splitted.is_empty() {
             instr.insert(
-                (match utils::bin2int(splitted[0].to_string()) {
-                    Ok(i) => i,
-                    Err(error) => return Err(error),
-                }) as usize,
+                (utils::bin2int(splitted[0].to_string())?) as usize,
                 ram_machine::Instruction {
                     opcode: splitted[1][0..4].to_string(),
                     operand: splitted[1][4..].to_string(),
@@ -572,16 +559,8 @@ pub fn read_regex(
     lines: Vec<String>,
     computer: &mut computer::Computer,
 ) -> Result<computer::Computer, String> {
-    match regex::build_regex_tree(&lines[0]) {
-        Ok(regex) => match regex_to_fsa(&regex) {
-            Ok(tm) => {
-                computer.set_turing(tm);
-                Ok(computer.clone())
-            }
-            Err(error) => Err(error),
-        },
-        Err(error) => Err(error),
-    }
+    computer.set_turing(regex_to_fsa(&regex::build_regex_tree(&lines[0])?)?);
+    Ok(computer.clone())
 }
 
 fn read_lambda(
@@ -594,17 +573,12 @@ fn read_lambda(
             let splitted: Vec<&str> = line.split(": ").collect();
             let name = splitted[0].to_string();
             let lambda = splitted[1..].join(": ");
-            match lambda::parse_lambda(lambda.as_str()) {
-                Ok(expr) => {
-                    readed.push(lambda::Lambda {
-                        expr,
-                        references: Vec::new(),
-                        name,
-                        force_currying: false,
-                    });
-                }
-                Err(error) => return Err(error),
-            }
+            readed.push(lambda::Lambda {
+                expr: lambda::parse_lambda(lambda.as_str())?,
+                references: Vec::new(),
+                name,
+                force_currying: false,
+            });
         }
     }
     readed = readed

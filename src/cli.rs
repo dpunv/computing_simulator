@@ -112,25 +112,29 @@ fn interactive_tui(server: &mut computer::Server, opt: options::Options) {
     let mut input = String::new();
     loop {
         print!("> ");
-        std::io::stdout().flush().unwrap();
+        match std::io::stdout().flush() {
+            Ok(_) => {},
+            Err(error) => println!("Error: {}", error),
+        }
         input.clear();
-        std::io::stdin().read_line(&mut input).unwrap();
+        match std::io::stdin().read_line(&mut input).map_err(|e| e.to_string()) {
+            Ok(_) => {},
+            Err(error) => println!("Error: {}", error),
+        };
         let mut new_opt = opt.clone();
         let trimmed_input = input.trim().to_string();
         new_opt.input = input.clone();
         if trimmed_input == "status" {
             match server
                 .get_computer(server.computes_at(0).clone())
-                .unwrap()
-                .element
-                .clone()
-            {
-                computer::ComputingElem::Tm(m) => print_status_tm(&m),
-                computer::ComputingElem::Ram(m) => print_status_ram(&m),
-                computer::ComputingElem::Lambda(_) => {}
+                .map(|c| c.element.clone()) {
+                Some(element) => match element {
+                    computer::ComputingElem::Tm(m) => print_status_tm(&m),
+                    computer::ComputingElem::Ram(m) => print_status_ram(&m),
+                    computer::ComputingElem::Lambda(_) => {}
+                },
+                None => println!("Error: Could not get computer status"),
             }
-        } else if trimmed_input == "help" {
-            print_help();
         } else if trimmed_input == "version" {
             print_version();
         } else if trimmed_input == "exit" {
@@ -316,7 +320,12 @@ fn handle_computation(options: &mut options::Options) {
     match c.element.clone() {
         computer::ComputingElem::Tm(m) => {
             if options.convert_to_singletape {
-                c.set_turing(m.convert_multi_tape_to_single_tape_tm());
+                match m.convert_multi_tape_to_single_tape_tm() {
+                    Ok(m_st) => {
+                        c.set_turing(m_st);
+                    },
+                    Err(error) => println!("error: {}", error)
+                }
             }
             if options.print_number {
                 println!(

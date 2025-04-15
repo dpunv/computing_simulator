@@ -24,10 +24,7 @@ pub fn int2bin(n: i32, bitnum: usize) -> String {
 }
 
 pub fn bin2int(s: String) -> Result<i32, String> {
-    match i32::from_str_radix(s.as_str(), 2) {
-        Ok(int) => Ok(int),
-        Err(error) => Err(error.to_string()),
-    }
+    i32::from_str_radix(s.as_str(), 2).map_err(|e| e.to_string())
 }
 
 /* pub fn invert_hashmap<K, V>(hashmap: &std::collections::HashMap<K, V>) -> std::collections::HashMap<V, K>
@@ -46,13 +43,8 @@ pub fn int2str(n: i32, alphabet: Vec<String>) -> Result<String, String> {
         let x = int2bin(i + 1, 0);
         let m = x.len();
         let y = x[2..m].to_string();
-        match bin2alphabet(y, alphabet.clone()) {
-            Ok(u_) => {
-                p += 1;
-                u = u_
-            }
-            Err(error) => return Err(error),
-        }
+        p += 1;
+        u = bin2alphabet(y, alphabet.clone())?;
         if p == n {
             break;
         }
@@ -69,11 +61,8 @@ pub fn bin2alphabet(s: String, alphabet: Vec<String>) -> Result<String, String> 
     }
     let mut result = String::new();
     for i in 0..(s.len() / bitnum) {
-        let symbol = &s[i * bitnum..((i + 1) * bitnum - 1)];
-        match bin2int(symbol.to_string()) {
-            Ok(res) => result.push_str(&alphabet[res as usize]),
-            Err(error) => return Err(error),
-        }
+        let symbol = &s.get(i * bitnum..((i + 1) * bitnum - 1)).ok_or(format!("char not founds in range: {} - {}", i * bitnum, ((i + 1) * bitnum - 1)))?;
+        result.push_str(&alphabet[bin2int(symbol.to_string())? as usize]);
     }
     Ok(result)
 }

@@ -207,10 +207,7 @@ pub fn parse_lambda(input: &str) -> Result<LambdaExpr, String> {
             .collect::<Vec<String>>();
         let mut argument = splitted.skip(1).collect::<Vec<&str>>().join(".");
         argument.pop();
-        match parse_lambda(argument.as_str()) {
-            Ok(expr) => Ok(LambdaExpr::Abs(variables, Box::new(expr))),
-            Err(error) => Err(error),
-        }
+        Ok(LambdaExpr::Abs(variables, Box::new(parse_lambda(argument.as_str())?)))
     } else {
         let mut par_count = 0;
         let mut expr_vec = Vec::new();
@@ -226,13 +223,8 @@ pub fn parse_lambda(input: &str) -> Result<LambdaExpr, String> {
                 }
                 current = current + &char.to_string();
                 if par_count == 0 {
-                    match parse_lambda(current.as_str()) {
-                        Ok(expr) => {
-                            expr_vec.push(expr);
-                            current = "".to_string();
-                        }
-                        Err(error) => return Err(error),
-                    }
+                    expr_vec.push(parse_lambda(current.as_str())?);
+                    current = "".to_string();
                 }
             } else if par_count == 0 {
                 if char == ' ' {

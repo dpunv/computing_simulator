@@ -243,7 +243,7 @@ impl TuringMachine {
                 // println!("STEP: {}, key: {}", steps, key);
                 if transitions_map.contains_key(&key) {
                     found = true;
-                    let possible_transitions = transitions_map.get(&key).unwrap().clone();
+                    let possible_transitions = transitions_map.get(&key).unwrap_or(&Vec::new()).clone();
                     for transition in possible_transitions.iter() {
                         let mut this_computation = element.computation.clone();
                         let mut new_tapes = Vec::new();
@@ -278,13 +278,13 @@ impl TuringMachine {
                                 + &new_tapes[0].tape.clone().join(""),
                         );
                         let subroutine_name: String =
-                            this_computer_object.clone().get_mapping(new_state.clone());
+                            this_computer_object.clone().get_mapping(new_state.clone())?;
                         if subroutine_name != *"" {
                             let remaining_steps = max_steps - steps;
                             let subroutine = context
                                 .clone()
-                                .get_computer(subroutine_name)
-                                .unwrap()
+                                .get_computer(subroutine_name.clone())
+                                .ok_or_else(|| format!("cannot get computer with name '{}'", subroutine_name))?
                                 .clone();
                             let new_tape_input = if subroutine.is_ram() {
                                 new_tapes[0]
@@ -297,37 +297,33 @@ impl TuringMachine {
                             } else {
                                 new_tapes[0].tape.clone().join("")
                             };
-                            match subroutine.clone().simulate(
+                            let (
+                                _,
+                                head_result,
+                                tape_result,
+                                steps_result,
+                                sub_computation,
+                            ) = subroutine.clone().simulate(
                                 new_tape_input,
                                 remaining_steps,
                                 context.clone(),
                                 new_tapes[0].head,
-                            ) {
-                                Ok((
-                                    _,
-                                    head_result,
-                                    tape_result,
-                                    steps_result,
-                                    sub_computation,
-                                )) => {
-                                    this_computation.extend(sub_computation);
-                                    if subroutine.is_ram() {
-                                        new_tapes[0].tape = [
-                                            vec![self.blank_symbol.clone()],
-                                            utils::input_string_to_vec(
-                                                self.input_alphabet.clone(),
-                                                tape_result[0].clone(),
-                                            ),
-                                        ]
-                                        .concat();
-                                    } else {
-                                        new_tapes[0].tape = tape_result;
-                                    }
-                                    new_tapes[0].head = head_result;
-                                    steps += steps_result;
-                                }
-                                Err(error) => return Err(error),
+                            )?;
+                            this_computation.extend(sub_computation);
+                            if subroutine.is_ram() {
+                                new_tapes[0].tape = [
+                                    vec![self.blank_symbol.clone()],
+                                    utils::input_string_to_vec(
+                                        self.input_alphabet.clone(),
+                                        tape_result[0].clone(),
+                                    ),
+                                ]
+                                .concat();
+                            } else {
+                                new_tapes[0].tape = tape_result;
                             }
+                            new_tapes[0].head = head_result;
+                            steps += steps_result;
                         }
                         let el = TreeElement {
                             state: new_state,
@@ -401,7 +397,7 @@ impl TuringMachine {
         }
     }
 
-    pub fn to_encoding(&self) -> computer::EncodingResult {
+    pub fn to_encoding(&self) -> Result<computer::EncodingResult, String> {
         let mut state_bits: usize = 0;
         let mut states = self.states.len();
         while states > 0 {
@@ -470,16 +466,16 @@ impl TuringMachine {
         let mut transitions_encoding = String::new();
         for transition in &self.transitions {
             let mut transition_encoding = "(".to_string();
-            transition_encoding.push_str(&state_encoding[&transition.state]);
+            transition_encoding.push_str(&state_encoding.get(&transition.state).ok_or(format!("key not found: {}", transition.state))?);
             transition_encoding.push(';');
             for symbol in &transition.symbols {
-                transition_encoding.push_str(&tape_encoding[symbol]);
+                transition_encoding.push_str(&tape_encoding.get(symbol).ok_or(format!("key not found: {}", symbol))?);
                 transition_encoding.push(';');
             }
-            transition_encoding.push_str(&state_encoding[&transition.new_state]);
+            transition_encoding.push_str(&state_encoding.get(&transition.new_state).ok_or(format!("key not found: {}", transition.new_state))?);
             transition_encoding.push(';');
             for symbol in &transition.new_symbols {
-                transition_encoding.push_str(&tape_encoding[symbol]);
+                transition_encoding.push_str(&tape_encoding.get(symbol).ok_or(format!("key not found: {}", symbol))?);
                 transition_encoding.push(';');
             }
             for direction in &transition.directions {
@@ -494,7 +490,7 @@ impl TuringMachine {
             transition_encoding.push(')');
             transitions_encoding.push_str(&transition_encoding);
         }
-        (transitions_encoding, tape_encoding, state_encoding)
+        Ok((transitions_encoding, tape_encoding, state_encoding))
     }
 
     pub fn number(&self) -> Result<i32, String> {
@@ -518,14 +514,11 @@ impl TuringMachine {
         let mut p = 0;
         let mut i = 0;
         let mut tm_string = "".to_string();
-        let encoding = self.to_encoding().0;
+        let encoding = self.to_encoding()?.0;
         while tm_string != encoding {
             i += 1;
-            tm_string = match utils::int2str(i, alphabet.clone()) {
-                Ok(str) => str,
-                Err(error) => return Err(error),
-            };
-            if TuringMachine::check_tm_encoding(tm_string.clone()) {
+            tm_string = utils::int2str(i, alphabet.clone())?;
+            if TuringMachine::check_tm_encoding(tm_string.clone())? {
                 p += 1;
             }
         }
@@ -547,7 +540,7 @@ impl TuringMachine {
             if transition_map.contains_key(&key) {
                 transition_map
                     .get_mut(&key)
-                    .unwrap()
+                    .unwrap_or(&mut Vec::new())
                     .push(transition.clone());
             } else {
                 transition_map.insert(key.clone(), vec![transition.clone()]);
@@ -641,7 +634,7 @@ impl TuringMachine {
         true
     }
 
-    pub fn convert_multi_tape_to_single_tape_tm(&self) -> TuringMachine {
+    pub fn convert_multi_tape_to_single_tape_tm(&self) -> Result<TuringMachine, String> {
         let mut new_tm = TuringMachine {
             initial_state: self.initial_state.clone(),
             accept_state: self.accept_state.clone(),
@@ -776,7 +769,7 @@ impl TuringMachine {
             for tapenum in 0..self.tape_count {
                 let mut this_state_vec = Vec::new();
                 for symbol in &new_compound_symbols {
-                    for actual_state in map_states[&(state.clone() + &tapenum.to_string())].clone()
+                    for actual_state in map_states.get(&(state.clone() + &tapenum.to_string())).ok_or(format!("key not found: {}", (state.clone() + &tapenum.to_string())))?.clone()
                     {
                         let state_tape =
                             actual_state.clone() + "<R_TP" + &tapenum.to_string() + ">";
@@ -870,7 +863,7 @@ impl TuringMachine {
             }
             let old_transition_map = self.make_transition_map();
             let mut states_done = Vec::new();
-            for actual_state in map_states[&(state.clone() + &self.tape_count.to_string())].clone()
+            for actual_state in map_states.get(&(state.clone() + &self.tape_count.to_string())).ok_or(format!("key not found: {}", (state.clone() + &self.tape_count.to_string())))?.clone()
             {
                 let splitted0: Vec<&str> = actual_state.split("<R_TP").collect();
                 let key = state
@@ -892,7 +885,7 @@ impl TuringMachine {
                         .join("");
                 if old_transition_map.contains_key(&key) && !states_done.contains(&key) {
                     states_done.push(key.clone());
-                    let transitions = old_transition_map[&key].clone();
+                    let transitions = old_transition_map.get(&key).ok_or(format!("key not found: {}", key))?.clone();
                     for (ind, t) in transitions.iter().enumerate() {
                         for tapenum in 0..self.tape_count {
                             let state_init_tape = actual_state.clone()
@@ -1252,7 +1245,6 @@ impl TuringMachine {
                 states_vec.push(state.clone());
             }
         }
-        new_tm.states = states_vec.clone();
         new_tm.tape_alphabet = new_tape_alphabet.clone();
         if self.accept_state != "" {
             new_tm.accept_state = state_to_final(self.accept_state.clone(), &mut states_vec, &mut new_tm, &mut new_compound_symbols, tape_sep_symbol.clone(), self)
@@ -1263,23 +1255,24 @@ impl TuringMachine {
         if self.halt_state != "" {
             new_tm.halt_state = state_to_final(self.halt_state.clone(), &mut states_vec, &mut new_tm, &mut new_compound_symbols, tape_sep_symbol.clone(), self)
         }
-        new_tm
+        new_tm.states = states_vec.clone();
+        Ok(new_tm)
     }
 
-    pub fn encoding_to_tm(encoding: String) -> TuringMachine {
+    pub fn encoding_to_tm(encoding: String) -> Result<TuringMachine, String> {
         let mut tm = TuringMachine::new();
         let mut transitions: Vec<&str> = encoding.split(")").collect();
         transitions.pop();
         for transition in transitions {
             let transition = transition.trim();
-            let transition = transition.strip_prefix("(").unwrap();
+            let transition = transition.strip_prefix("(").ok_or("Invalid transition: missing opening parenthesis")?;
             let mut transition = transition.split(";");
-            let state = transition.next().unwrap().to_string();
+            let state = transition.next().ok_or("Invalid transition: missing state")?.to_string();
             let mut new_state = String::new();
             let mut symbols = Vec::new();
             let mut found_all = false;
             while !found_all {
-                let symbol = transition.next().unwrap().to_string();
+                let symbol = transition.next().ok_or("Invalid transition: missing symbol")?.to_string();
                 if symbol.starts_with("a") || symbol.starts_with("t") || symbol.starts_with("b") {
                     symbols.push(symbol);
                 } else {
@@ -1290,11 +1283,11 @@ impl TuringMachine {
             tm.tape_count = symbols.len();
             let mut new_symbols = Vec::new();
             for _ in 0..tm.tape_count {
-                new_symbols.push(transition.next().unwrap().to_string());
+                new_symbols.push(transition.next().ok_or("Invalid transition: missing new symbol")?.to_string());
             }
             let mut directions = Vec::new();
             for _ in 0..tm.tape_count {
-                let direction = transition.next().unwrap();
+                let direction = transition.next().ok_or("Invalid transition: missing direction")?;
                 match direction {
                     "L" => directions.push(Direction::Left),
                     "R" => directions.push(Direction::Right),
@@ -1324,12 +1317,12 @@ impl TuringMachine {
             if !tm.states.contains(&new_state.to_string()) {
                 tm.states.push(new_state.to_string());
             }
-            if state.starts_with("y") {
-                tm.accept_state = state.to_string();
-            } else if state.starts_with("n") {
-                tm.reject_state = state.to_string();
-            } else if state.starts_with("h") {
-                tm.halt_state = state.to_string();
+            if new_state.starts_with("y") {
+                tm.accept_state = new_state.to_string();
+            } else if new_state.starts_with("n") {
+                tm.reject_state = new_state.to_string();
+            } else if new_state.starts_with("h") {
+                tm.halt_state = new_state.to_string();
             }
             for symbol in symbols {
                 if !tm.tape_alphabet.contains(&symbol) {
@@ -1352,66 +1345,87 @@ impl TuringMachine {
                 }
             }
         }
-        tm
+        Ok(tm)
     }
 
     pub fn encoding_to_orig(
         encoding: String,
         orig_alphabet_encoding: std::collections::HashMap<String, String>,
         orig_state_encoding: std::collections::HashMap<String, String>,
-    ) -> TuringMachine {
-        let tm = TuringMachine::encoding_to_tm(encoding);
+    ) -> Result<TuringMachine, String> {
+        let tm = TuringMachine::encoding_to_tm(encoding)?;
         let mut orig_tm: TuringMachine = TuringMachine {
-            initial_state: orig_state_encoding[&tm.initial_state].clone(),
+            initial_state: orig_state_encoding.get(&tm.initial_state).ok_or(format!("key not found: {}", tm.initial_state))?.clone(),
             accept_state: "".to_string(),
             reject_state: "".to_string(),
-            halt_state: orig_state_encoding[&tm.halt_state].clone(),
+            halt_state: if tm.halt_state == "" {
+                            orig_state_encoding.get(&tm.halt_state).ok_or(format!("key not found: {}", tm.halt_state))?.clone()
+                        } else {
+                            "".to_string()
+                        },
             states: tm
                 .states
                 .iter()
-                .map(|state| orig_state_encoding[state].clone())
+                .map(|state| orig_state_encoding.get(state).ok_or(format!("key not found: {}", state)))
+                .collect::<Result<Vec<_>, String>>()?
+                .into_iter()
+                .cloned()
                 .collect(),
             input_alphabet: tm
                 .input_alphabet
                 .iter()
-                .map(|symbol| orig_alphabet_encoding[symbol].clone())
+                .map(|symbol| orig_alphabet_encoding.get(symbol).ok_or(format!("key not found: {}", symbol)))
+                .collect::<Result<Vec<_>, String>>()?
+                .into_iter()
+                .cloned()
                 .collect(),
             transitions: tm
                 .transitions
                 .iter()
-                .map(|transition| Transition {
-                    state: orig_state_encoding[&transition.state].clone(),
-                    symbols: transition
-                        .symbols
-                        .iter()
-                        .map(|symbol| orig_alphabet_encoding[symbol].clone())
-                        .collect(),
-                    new_state: orig_state_encoding[&transition.new_state].clone(),
-                    new_symbols: transition
-                        .new_symbols
-                        .iter()
-                        .map(|symbol| orig_alphabet_encoding[symbol].clone())
-                        .collect(),
-                    directions: transition.directions.clone(),
+                .map(|transition| -> Result<Transition, String> {
+                    Ok(Transition {
+                        state: orig_state_encoding.get(&transition.state).ok_or(format!("key not found: {}", transition.state))?.clone(),
+                        symbols: transition
+                            .symbols
+                            .iter()
+                            .map(|symbol| orig_alphabet_encoding.get(symbol).ok_or(format!("key not found: {}", symbol)).clone())
+                            .collect::<Result<Vec<_>, String>>()?
+                            .into_iter()
+                            .cloned()
+                            .collect(),
+                        new_state: orig_state_encoding.get(&transition.new_state).ok_or(format!("key not found: {}", transition.new_state))?.clone(),
+                        new_symbols: transition
+                            .new_symbols
+                            .iter()
+                            .map(|symbol| orig_alphabet_encoding.get(symbol).ok_or(format!("key not found: {}", symbol)).clone())
+                            .collect::<Result<Vec<_>, String>>()?
+                            .into_iter()
+                            .cloned()
+                            .collect(),
+                        directions: transition.directions.clone(),
+                    })
                 })
-                .collect(),
-            blank_symbol: orig_alphabet_encoding[&tm.blank_symbol].clone(),
+                .collect::<Result<Vec<_>, String>>()?,
+            blank_symbol: orig_alphabet_encoding.get(&tm.blank_symbol).ok_or(format!("key not found: {}", tm.blank_symbol))?.clone(),
             tape_alphabet: tm
                 .tape_alphabet
                 .iter()
-                .map(|symbol| orig_alphabet_encoding[symbol].clone())
+                .map(|symbol| orig_alphabet_encoding.get(symbol).ok_or(format!("key not found: {}", symbol)))
+                .collect::<Result<Vec<_>, String>>()?
+                .into_iter()
+                .cloned()
                 .collect(),
             tape_count: tm.tape_count,
             //last_execution: ("".to_string(), Vec::new(), 0, Vec::new()),
             next_state_id: 0,
         };
         if !tm.accept_state.is_empty() {
-            orig_tm.accept_state = orig_state_encoding[&tm.accept_state].clone();
+            orig_tm.accept_state = orig_state_encoding.get(&tm.accept_state).ok_or(format!("key not found: {}", tm.accept_state))?.clone();
         }
         if !tm.reject_state.is_empty() {
-            orig_tm.reject_state = orig_state_encoding[&tm.reject_state].clone();
+            orig_tm.reject_state = orig_state_encoding.get(&tm.reject_state).ok_or(format!("key not found: {}", tm.reject_state))?.clone();
         }
-        orig_tm
+        Ok(orig_tm)
     }
 
     pub fn nth_turing_machine(nth: u128) -> Result<String, String> {
@@ -1437,84 +1451,81 @@ impl TuringMachine {
         let mut tm_string = "".to_string();
         while p != nth {
             i += 1;
-            tm_string = match utils::int2str(i, alphabet.clone()) {
-                Ok(str) => str,
-                Err(error) => return Err(error),
-            };
-            if TuringMachine::check_tm_encoding(tm_string.clone()) {
+            tm_string = utils::int2str(i, alphabet.clone())?;
+            if TuringMachine::check_tm_encoding(tm_string.clone())? {
                 p += 1;
             }
         }
         Ok(tm_string)
     }
 
-    pub fn check_tm_encoding(encoding: String) -> bool {
+    pub fn check_tm_encoding(encoding: String) -> Result<bool, String> {
         if encoding.len() < 15 {
-            return false;
+            return Ok(false);
         }
         let mut transitions: Vec<&str> = encoding.split(")").collect();
-        if transitions.last().unwrap().trim() != "" {
-            return false;
+        if transitions.last().unwrap_or(&"").trim() != "" {
+            return Ok(false);
         }
         transitions.pop();
         for transition in transitions {
             let transition = transition.trim();
-            let transition = transition.strip_prefix("(").unwrap();
+            let transition = transition.strip_prefix("(").ok_or("unable to strip prefix '(' from a transition".to_string())?;
             let mut transition = transition.split(";");
-            let state = transition.next().unwrap().to_string();
+            let state = transition.next().ok_or("there is no state in one transition".to_string())?.to_string();
             if !(state.starts_with("y")
                 || state.starts_with("n")
                 || state.starts_with("h")
                 || state.starts_with("i")
                 || state.starts_with("q"))
             {
-                return false;
+                return Ok(false);
             }
             for char in state.chars().skip(1) {
                 if !(char == '0' || char == '1') {
-                    return false;
+                    return Ok(false);
                 }
             }
-            let symbol = transition.next().unwrap().to_string();
+            let symbol = transition.next().ok_or("Invalid transition: missing symbol")?.to_string();
             if !(symbol.starts_with("a") || symbol.starts_with("b") || symbol.starts_with("t")) {
-                return false;
+                return Ok(false);
             }
             for char in symbol.chars().skip(1) {
                 if !(char == '0' || char == '1') {
-                    return false;
+                    return Ok(false);
                 }
             }
-            let new_state = transition.next().unwrap().to_string();
+            let new_state = transition.next().ok_or("Invalid transition: missing new state")?.to_string();
             if !(new_state.starts_with("y")
                 || new_state.starts_with("n")
                 || new_state.starts_with("h")
                 || new_state.starts_with("i")
                 || new_state.starts_with("q"))
             {
-                return false;
+                return Ok(false);
             }
             for char in new_state.chars().skip(1) {
                 if !(char == '0' || char == '1') {
-                    return false;
+                    return Ok(false);
                 }
             }
-            let new_symbol = transition.next().unwrap().to_string();
+            let new_symbol = transition.next().ok_or("Invalid transition: missing new symbol")?.to_string();
             if !(new_symbol.starts_with("a")
                 || new_symbol.starts_with("b")
                 || new_symbol.starts_with("t"))
             {
-                return false;
+                return Ok(false);
             }
             for char in new_symbol.chars().skip(1) {
                 if !(char == '0' || char == '1') {
-                    return false;
+                    return Ok(false);
                 }
             }
-            let direction = transition.next().unwrap().to_string();
+            let direction = transition.next().ok_or("Invalid transition: missing direction")?.to_string();
             if !(direction == "L" || direction == "R" || direction == "S") {
-                return false;
+                return Ok(false);
             }
         }
-        true
+        Ok(true)
     }
 }

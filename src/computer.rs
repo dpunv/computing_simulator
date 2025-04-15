@@ -76,11 +76,8 @@ impl Computer {
     }
     pub fn to_encoding(&self) -> Result<EncodingResult, String> {
         match self.element.clone() {
-            ComputingElem::Tm(m) => Ok(m.to_encoding()),
-            ComputingElem::Ram(m) => match m.to_encoding() {
-                Ok(enc) => Ok(enc),
-                Err(error) => Err(error),
-            },
+            ComputingElem::Tm(m) => m.to_encoding(),
+            ComputingElem::Ram(m) => m.to_encoding(),
             ComputingElem::Lambda(l) => Ok((
                 l.to_string(),
                 std::collections::HashMap::new(),
@@ -114,28 +111,25 @@ impl Computer {
                 let input_vec = utils::input_string_to_vec(m.tape_alphabet.clone(), input);
                 m.simulate(input_vec, max_steps, self, context, head)
             }
-            ComputingElem::Lambda(l) => match lambda::parse_lambda(&input) {
-                Ok(l_expr_new) => {
-                    let mut l_new = lambda::Lambda {
-                        expr: l_expr_new,
-                        references: l.references.clone(),
-                        name: "".to_string(),
-                        force_currying: false,
-                    };
-                    l_new.simulate()
-                }
-                Err(error) => Err(error),
+            ComputingElem::Lambda(l) => {
+                let mut l_new = lambda::Lambda {
+                    expr: lambda::parse_lambda(&input)?,
+                    references: l.references.clone(),
+                    name: "".to_string(),
+                    force_currying: false,
+                };
+                l_new.simulate()
             },
         }
     }
     pub fn add_mapping(&mut self, name: String, value: String) {
         self.mapping.insert(name, value);
     }
-    pub fn get_mapping(&self, name: String) -> String {
+    pub fn get_mapping(&self, name: String) -> Result<String, String> {
         if self.mapping.contains_key(&name) {
-            self.mapping[&name].clone()
+            self.mapping.get(&name).ok_or(format!("key not found: {}", name)).cloned()
         } else {
-            "".to_string()
+            Ok("".to_string())
         }
     }
     pub fn to_tm(
@@ -146,224 +140,202 @@ impl Computer {
         match self.element.clone() {
             ComputingElem::Lambda(l) => {
                 options.file = "src/standard/lambda over tm.tm".to_string();
-                match lambda::parse_lambda(&options.input) {
-                    Ok(l_expr_new) => {
-                        let mut l_new = lambda::Lambda {
-                            expr: l_expr_new,
-                            references: l.references.clone(),
-                            name: "".to_string(),
-                            force_currying: false,
-                        };
-                        l_new.substitute_names();
-                        let input_vec = l_new.to_tokens();
-                        options.input = input_vec.join("");
-                        let input_alphabet: std::collections::HashSet<String> =
-                            input_vec.into_iter().collect();
-                        let variables: Vec<String> = input_alphabet
-                            .iter()
-                            .filter(|e| *e != "(" && *e != ")" && *e != "." && *e != "/")
-                            .cloned()
+                let mut l_new = lambda::Lambda {
+                    expr: lambda::parse_lambda(&options.input)?,
+                    references: l.references.clone(),
+                    name: "".to_string(),
+                    force_currying: false,
+                };
+                l_new.substitute_names();
+                let input_vec = l_new.to_tokens();
+                options.input = input_vec.join("");
+                let input_alphabet: std::collections::HashSet<String> =
+                    input_vec.into_iter().collect();
+                let variables: Vec<String> = input_alphabet
+                    .iter()
+                    .filter(|e| *e != "(" && *e != ")" && *e != "." && *e != "/")
+                    .cloned()
+                    .collect();
+                *self = file_handler::handle_file_reads(options.file.clone(), s)?;
+                match self.element.clone() {
+                    ComputingElem::Ram(_) => return Err("something went wrong".to_string()),
+                    ComputingElem::Lambda(_) => return Err("something went wrong".to_string()),
+                    ComputingElem::Tm(m) => {
+                        let mut this = m.clone();
+                        let old_transitions = m.transitions.clone();
+                        let mut new_transitions = Vec::new();
+
+                        // Helper function to create new transitions with symbol substitutions
+                        fn create_substituted_transition(
+                            t: &turing_machine::Transition,
+                            replacements: &[(String, String)],
+                        ) -> turing_machine::Transition {
+                            let mut new_t = t.clone();
+                            new_t.symbols = new_t
+                                .symbols
+                                .iter()
+                                .map(|e| {
+                                    for (from, to) in replacements {
+                                        if e == from {
+                                            return to.clone();
+                                        }
+                                    }
+                                    e.clone()
+                                })
+                                .collect();
+                            new_t.new_symbols = new_t
+                                .new_symbols
+                                .iter()
+                                .map(|e| {
+                                    for (from, to) in replacements {
+                                        if e == from {
+                                            return to.clone();
+                                        }
+                                    }
+                                    e.clone()
+                                })
+                                .collect();
+                            new_t
+                        }
+
+                        // Process each transition
+                        for t in old_transitions.iter() {
+                            let mut replacements_list = vec![vec![]];
+
+                            // Handle 'x'
+                            if t.symbols.contains(&"x".to_string()) {
+                                let mut new_list = Vec::new();
+                                for replacements in replacements_list {
+                                    for symb in variables.iter() {
+                                        let mut new_replacements = replacements.clone();
+                                        new_replacements
+                                            .push(("x".to_string(), symb.clone()));
+                                        new_list.push(new_replacements);
+                                    }
+                                }
+                                replacements_list = new_list;
+                            }
+                            if t.symbols.contains(&"x1".to_string()) {
+                                let mut new_list = Vec::new();
+                                for replacements in replacements_list {
+                                    for symb2 in variables.iter() {
+                                        let mut new_replacements = replacements.clone();
+                                        new_replacements
+                                            .push(("x1".to_string(), symb2.clone()));
+                                        new_list.push(new_replacements);
+                                    }
+                                }
+                                replacements_list = new_list;
+                            }
+
+                            if t.symbols.contains(&"x2".to_string()) {
+                                let mut new_list = Vec::new();
+                                for replacements in replacements_list {
+                                    for symb2 in variables.iter() {
+                                        if !replacements
+                                            .contains(&("x".to_string(), symb2.to_string()))
+                                        {
+                                            let mut new_replacements = replacements.clone();
+                                            new_replacements
+                                                .push(("x2".to_string(), symb2.clone()));
+                                            new_list.push(new_replacements);
+                                        }
+                                    }
+                                }
+                                replacements_list = new_list;
+                            }
+
+                            // Handle other symbol substitutions
+                            fn check_d3(s: &String, vars: &[String]) -> bool {
+                                !vars.contains(s)
+                            }
+                            type SymbolRulePredicate =
+                                (String, Box<dyn Fn(&String) -> bool>);
+                            //type SymbolPredicate = fn(&String) -> bool;
+                            let symbol_rules: Vec<SymbolRulePredicate> = vec![
+                                ("A".to_string(), Box::new(|s: &String| s != "(")),
+                                ("F".to_string(), Box::new(|s: &String| s != ")")),
+                                ("B".to_string(), Box::new(|s: &String| s != ".")),
+                                (
+                                    "C".to_string(),
+                                    Box::new(|s: &String| s != "(" && s != ")"),
+                                ),
+                                ("D".to_string(), Box::new(|_: &String| true)),
+                                ("D2".to_string(), Box::new(|_: &String| true)),
+                                (
+                                    "D3".to_string(),
+                                    Box::new({
+                                        let variables = variables.clone();
+                                        move |s| check_d3(s, &variables)
+                                    }),
+                                ),
+                                ("E".to_string(), Box::new(|s: &String| s != "/")),
+                            ];
+
+                            for (symbol, condition) in symbol_rules {
+                                if t.symbols.contains(&symbol) {
+                                    let mut new_list = Vec::new();
+                                    for replacements in replacements_list {
+                                        for symb in
+                                            input_alphabet.iter().filter(|s| condition(s))
+                                        {
+                                            let mut new_replacements = replacements.clone();
+                                            new_replacements
+                                                .push((symbol.clone(), symb.clone()));
+                                            new_list.push(new_replacements);
+                                        }
+                                    }
+                                    replacements_list = new_list;
+                                }
+                            }
+
+                            // Create transitions for all combinations of replacements
+                            if !replacements_list.is_empty()
+                                && replacements_list[0].is_empty()
+                            {
+                                new_transitions.push(t.clone());
+                            } else {
+                                for replacements in replacements_list {
+                                    new_transitions.push(create_substituted_transition(
+                                        t,
+                                        &replacements,
+                                    ));
+                                }
+                            }
+                        }
+
+                        this.transitions = new_transitions
+                            .into_iter()
+                            .map(|t| {
+                                this.add_transition(
+                                    t.state.clone(),
+                                    t.symbols.clone(),
+                                    t.new_state.clone(),
+                                    t.new_symbols.clone(),
+                                    t.directions.clone(),
+                                );
+                                t
+                            })
                             .collect();
-                        match file_handler::handle_file_reads(options.file.clone(), s) {
-                            Ok(computer) => {
-                                let comp = computer;
-                                *self = comp;
-                            }
-                            Err(error) => return Err(error),
-                        }
-                        match self.element.clone() {
-                            ComputingElem::Ram(_) => return Err("something went wrong".to_string()),
-                            ComputingElem::Lambda(_) => {
-                                return Err("something went wrong".to_string())
-                            }
-                            ComputingElem::Tm(m) => {
-                                let mut this = m.clone();
-                                let old_transitions = m.transitions.clone();
-                                let mut new_transitions = Vec::new();
 
-                                // Helper function to create new transitions with symbol substitutions
-                                fn create_substituted_transition(
-                                    t: &turing_machine::Transition,
-                                    replacements: &[(String, String)],
-                                ) -> turing_machine::Transition {
-                                    let mut new_t = t.clone();
-                                    new_t.symbols = new_t
-                                        .symbols
-                                        .iter()
-                                        .map(|e| {
-                                            for (from, to) in replacements {
-                                                if e == from {
-                                                    return to.clone();
-                                                }
-                                            }
-                                            e.clone()
-                                        })
-                                        .collect();
-                                    new_t.new_symbols = new_t
-                                        .new_symbols
-                                        .iter()
-                                        .map(|e| {
-                                            for (from, to) in replacements {
-                                                if e == from {
-                                                    return to.clone();
-                                                }
-                                            }
-                                            e.clone()
-                                        })
-                                        .collect();
-                                    new_t
-                                }
-
-                                // Process each transition
-                                for t in old_transitions.iter() {
-                                    let mut replacements_list = vec![vec![]];
-
-                                    // Handle 'x'
-                                    if t.symbols.contains(&"x".to_string()) {
-                                        let mut new_list = Vec::new();
-                                        for replacements in replacements_list {
-                                            for symb in variables.iter() {
-                                                let mut new_replacements = replacements.clone();
-                                                new_replacements
-                                                    .push(("x".to_string(), symb.clone()));
-                                                new_list.push(new_replacements);
-                                            }
-                                        }
-                                        replacements_list = new_list;
-                                    }
-                                    if t.symbols.contains(&"x1".to_string()) {
-                                        let mut new_list = Vec::new();
-                                        for replacements in replacements_list {
-                                            for symb2 in variables.iter() {
-                                                let mut new_replacements = replacements.clone();
-                                                new_replacements
-                                                    .push(("x1".to_string(), symb2.clone()));
-                                                new_list.push(new_replacements);
-                                            }
-                                        }
-                                        replacements_list = new_list;
-                                    }
-
-                                    if t.symbols.contains(&"x2".to_string()) {
-                                        let mut new_list = Vec::new();
-                                        for replacements in replacements_list {
-                                            for symb2 in variables.iter() {
-                                                if !replacements
-                                                    .contains(&("x".to_string(), symb2.to_string()))
-                                                {
-                                                    let mut new_replacements = replacements.clone();
-                                                    new_replacements
-                                                        .push(("x2".to_string(), symb2.clone()));
-                                                    new_list.push(new_replacements);
-                                                }
-                                            }
-                                        }
-                                        replacements_list = new_list;
-                                    }
-
-                                    // Handle other symbol substitutions
-                                    fn check_d3(s: &String, vars: &[String]) -> bool {
-                                        !vars.contains(s)
-                                    }
-                                    type SymbolRulePredicate =
-                                        (String, Box<dyn Fn(&String) -> bool>);
-                                    //type SymbolPredicate = fn(&String) -> bool;
-                                    let symbol_rules: Vec<SymbolRulePredicate> = vec![
-                                        ("A".to_string(), Box::new(|s: &String| s != "(")),
-                                        ("F".to_string(), Box::new(|s: &String| s != ")")),
-                                        ("B".to_string(), Box::new(|s: &String| s != ".")),
-                                        (
-                                            "C".to_string(),
-                                            Box::new(|s: &String| s != "(" && s != ")"),
-                                        ),
-                                        ("D".to_string(), Box::new(|_: &String| true)),
-                                        ("D2".to_string(), Box::new(|_: &String| true)),
-                                        (
-                                            "D3".to_string(),
-                                            Box::new({
-                                                let variables = variables.clone();
-                                                move |s| check_d3(s, &variables)
-                                            }),
-                                        ),
-                                        ("E".to_string(), Box::new(|s: &String| s != "/")),
-                                    ];
-
-                                    for (symbol, condition) in symbol_rules {
-                                        if t.symbols.contains(&symbol) {
-                                            let mut new_list = Vec::new();
-                                            for replacements in replacements_list {
-                                                for symb in
-                                                    input_alphabet.iter().filter(|s| condition(s))
-                                                {
-                                                    let mut new_replacements = replacements.clone();
-                                                    new_replacements
-                                                        .push((symbol.clone(), symb.clone()));
-                                                    new_list.push(new_replacements);
-                                                }
-                                            }
-                                            replacements_list = new_list;
-                                        }
-                                    }
-
-                                    // Create transitions for all combinations of replacements
-                                    if !replacements_list.is_empty()
-                                        && replacements_list[0].is_empty()
-                                    {
-                                        new_transitions.push(t.clone());
-                                    } else {
-                                        for replacements in replacements_list {
-                                            new_transitions.push(create_substituted_transition(
-                                                t,
-                                                &replacements,
-                                            ));
-                                        }
-                                    }
-                                }
-
-                                this.transitions = new_transitions
-                                    .into_iter()
-                                    .map(|t| {
-                                        this.add_transition(
-                                            t.state.clone(),
-                                            t.symbols.clone(),
-                                            t.new_state.clone(),
-                                            t.new_symbols.clone(),
-                                            t.directions.clone(),
-                                        );
-                                        t
-                                    })
-                                    .collect();
-
-                                this.input_alphabet = input_alphabet.clone().into_iter().collect();
-                                this.tape_alphabet = input_alphabet.into_iter().collect();
-                                this.tape_alphabet.push("_".to_string());
-                                this.tape_alphabet.push("$".to_string());
-                                self.element = ComputingElem::Tm(Box::new(*this));
-                            }
-                        }
-
-                        Ok(self.clone())
+                        this.input_alphabet = input_alphabet.clone().into_iter().collect();
+                        this.tape_alphabet = input_alphabet.into_iter().collect();
+                        this.tape_alphabet.push("_".to_string());
+                        this.tape_alphabet.push("$".to_string());
+                        self.element = ComputingElem::Tm(Box::new(*this));
                     }
-                    Err(error) => Err(error),
                 }
+
+                Ok(self.clone())
             }
             ComputingElem::Tm(_) => Err("already TM".to_string()),
             ComputingElem::Ram(m) => {
                 options.file = "src/standard/ram over tm.tm".to_string();
                 options.input = options.input.clone()
-                    + &(match m.to_encoding() {
-                        Ok(enc) => enc,
-                        Err(error) => return Err(error),
-                    })
+                    + &(m.to_encoding()?)
                     .0;
                 let orig_c = self.clone();
-                match file_handler::handle_file_reads(options.file.clone(), s) {
-                    Ok(computer) => {
-                        let comp = computer;
-                        *self = comp;
-                    }
-                    Err(error) => return Err(error),
-                }
+                *self = file_handler::handle_file_reads(options.file.clone(), s)?;
                 let mut layers_vec = Vec::new();
                 let mut this_layer = vec![0];
                 let mut internal_count = 0;
@@ -555,12 +527,12 @@ impl Computer {
                 states_map.iter().for_each(|(k, v)| println!("STATE {} -> {}", k, v));
                 symbols_map.iter().for_each(|(k, v)| println!("SYMBOL {} -> {}", k, v));
                 options.input = "1".to_string()
-                    + &symbols_map.get(&m.blank_symbol).unwrap().to_owned()
+                    + &symbols_map.get(&m.blank_symbol).ok_or_else(|| "Blank symbol not found in mapping".to_string())?.to_owned()
                     + "1"
                     + &utils::input_string_to_vec(m.tape_alphabet.clone(), options.input.clone())
                         .iter()
-                        .filter_map(|s| symbols_map.get(s).cloned())
-                        .collect::<Vec<String>>()
+                        .map(|s| symbols_map.get(s).cloned().ok_or_else(|| format!("Symbol '{}' not found in mapping", s)))
+                        .collect::<Result<Vec<String>, String>>()?
                         .join("1")
                     + "0"
                     + &m.transitions
@@ -590,13 +562,7 @@ impl Computer {
                         .collect::<Result<Vec<String>, String>>()?
                         .join("1")
                     + "0";
-                match file_handler::handle_file_reads(options.file.clone(), s) {
-                    Ok(computer) => {
-                        let comp = computer;
-                        *self = comp;
-                    }
-                    Err(error) => return Err(error),
-                }
+                *self = file_handler::handle_file_reads(options.file.clone(), s)?;
                 match self.element.clone() {
                     ComputingElem::Ram(mut ram) => {
                         ram.labels_map.insert(
@@ -659,13 +625,9 @@ impl Computer {
                     ComputingElem::Lambda(_) => Err("something went wrong".to_string()),
                 }
             }
-            ComputingElem::Lambda(_) => match self.to_tm(options, s) {
-                Ok(c) => {
-                    let comp = c;
-                    *self = comp;
-                    self.to_ram(options, s)
-                }
-                Err(error) => Err(error),
+            ComputingElem::Lambda(_) => {
+                *self = self.to_tm(options, s)?;
+                self.to_ram(options, s)
             },
         }
     }
@@ -722,26 +684,19 @@ impl Server {
         let mut current_head = 0;
         let mut tot_comp = Vec::new();
         for name in self.computation_order.clone() {
-            let computer = self.get_computer(name.clone()).unwrap();
-            let result = computer
+            let computer = self.get_computer(name.clone()).ok_or_else(|| format!("cannot find computer with name '{}'", name.clone()).to_string())?;
+            let (state, head, tape, s, computation) = computer
                 .clone()
-                .simulate(output, max_steps - steps, self.clone(), 0);
-            match result {
-                Ok((state, head, tape, s, computation)) => {
+                .simulate(output, max_steps - steps, self.clone(), 0)?;
                     final_state = state;
                     current_head = head;
                     output = tape.join("");
                     steps += s;
                     tot_comp.extend(computation);
-                }
-                Err(e) => {
-                    return Err(e);
-                }
-            }
         }
         let last_computer = self
             .get_computer(self.computation_order[self.computation_order.len() - 1].clone())
-            .unwrap();
+            .ok_or_else(|| "cannot find computer".to_string())?;
         match last_computer.element.clone() {
             ComputingElem::Lambda(_) => {}
             ComputingElem::Ram(_) => {}

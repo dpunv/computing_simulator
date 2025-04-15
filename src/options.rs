@@ -68,10 +68,7 @@ pub fn get_options() -> Options {
                 "--version" => version = true,
                 "--status" => status = true,
                 "--print-encoding" => print_encoding = true,
-                _ => {
-                    file = arg;
-                    input = args.next().unwrap();
-                }
+                _ => {}
             }
         }
     }
