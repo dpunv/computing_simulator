@@ -61,7 +61,11 @@ pub fn bin2alphabet(s: String, alphabet: Vec<String>) -> Result<String, String> 
     }
     let mut result = String::new();
     for i in 0..(s.len() / bitnum) {
-        let symbol = &s.get(i * bitnum..((i + 1) * bitnum - 1)).ok_or(format!("char not founds in range: {} - {}", i * bitnum, ((i + 1) * bitnum - 1)))?;
+        let symbol = &s.get(i * bitnum..((i + 1) * bitnum - 1)).ok_or(format!(
+            "char not founds in range: {} - {}",
+            i * bitnum,
+            ((i + 1) * bitnum - 1)
+        ))?;
         result.push_str(&alphabet[bin2int(symbol.to_string())? as usize]);
     }
     Ok(result)

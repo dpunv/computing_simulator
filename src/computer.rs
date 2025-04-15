@@ -119,7 +119,7 @@ impl Computer {
                     force_currying: false,
                 };
                 l_new.simulate()
-            },
+            }
         }
     }
     pub fn add_mapping(&mut self, name: String, value: String) {
@@ -127,7 +127,10 @@ impl Computer {
     }
     pub fn get_mapping(&self, name: String) -> Result<String, String> {
         if self.mapping.contains_key(&name) {
-            self.mapping.get(&name).ok_or(format!("key not found: {}", name)).cloned()
+            self.mapping
+                .get(&name)
+                .ok_or(format!("key not found: {}", name))
+                .cloned()
         } else {
             Ok("".to_string())
         }
@@ -208,8 +211,7 @@ impl Computer {
                                 for replacements in replacements_list {
                                     for symb in variables.iter() {
                                         let mut new_replacements = replacements.clone();
-                                        new_replacements
-                                            .push(("x".to_string(), symb.clone()));
+                                        new_replacements.push(("x".to_string(), symb.clone()));
                                         new_list.push(new_replacements);
                                     }
                                 }
@@ -220,8 +222,7 @@ impl Computer {
                                 for replacements in replacements_list {
                                     for symb2 in variables.iter() {
                                         let mut new_replacements = replacements.clone();
-                                        new_replacements
-                                            .push(("x1".to_string(), symb2.clone()));
+                                        new_replacements.push(("x1".to_string(), symb2.clone()));
                                         new_list.push(new_replacements);
                                     }
                                 }
@@ -249,17 +250,13 @@ impl Computer {
                             fn check_d3(s: &String, vars: &[String]) -> bool {
                                 !vars.contains(s)
                             }
-                            type SymbolRulePredicate =
-                                (String, Box<dyn Fn(&String) -> bool>);
+                            type SymbolRulePredicate = (String, Box<dyn Fn(&String) -> bool>);
                             //type SymbolPredicate = fn(&String) -> bool;
                             let symbol_rules: Vec<SymbolRulePredicate> = vec![
                                 ("A".to_string(), Box::new(|s: &String| s != "(")),
                                 ("F".to_string(), Box::new(|s: &String| s != ")")),
                                 ("B".to_string(), Box::new(|s: &String| s != ".")),
-                                (
-                                    "C".to_string(),
-                                    Box::new(|s: &String| s != "(" && s != ")"),
-                                ),
+                                ("C".to_string(), Box::new(|s: &String| s != "(" && s != ")")),
                                 ("D".to_string(), Box::new(|_: &String| true)),
                                 ("D2".to_string(), Box::new(|_: &String| true)),
                                 (
@@ -276,12 +273,9 @@ impl Computer {
                                 if t.symbols.contains(&symbol) {
                                     let mut new_list = Vec::new();
                                     for replacements in replacements_list {
-                                        for symb in
-                                            input_alphabet.iter().filter(|s| condition(s))
-                                        {
+                                        for symb in input_alphabet.iter().filter(|s| condition(s)) {
                                             let mut new_replacements = replacements.clone();
-                                            new_replacements
-                                                .push((symbol.clone(), symb.clone()));
+                                            new_replacements.push((symbol.clone(), symb.clone()));
                                             new_list.push(new_replacements);
                                         }
                                     }
@@ -290,16 +284,12 @@ impl Computer {
                             }
 
                             // Create transitions for all combinations of replacements
-                            if !replacements_list.is_empty()
-                                && replacements_list[0].is_empty()
-                            {
+                            if !replacements_list.is_empty() && replacements_list[0].is_empty() {
                                 new_transitions.push(t.clone());
                             } else {
                                 for replacements in replacements_list {
-                                    new_transitions.push(create_substituted_transition(
-                                        t,
-                                        &replacements,
-                                    ));
+                                    new_transitions
+                                        .push(create_substituted_transition(t, &replacements));
                                 }
                             }
                         }
@@ -331,9 +321,7 @@ impl Computer {
             ComputingElem::Tm(_) => Err("already TM".to_string()),
             ComputingElem::Ram(m) => {
                 options.file = "src/standard/ram over tm.tm".to_string();
-                options.input = options.input.clone()
-                    + &(m.to_encoding()?)
-                    .0;
+                options.input = options.input.clone() + &(m.to_encoding()?).0;
                 let orig_c = self.clone();
                 *self = file_handler::handle_file_reads(options.file.clone(), s)?;
                 let mut layers_vec = Vec::new();
@@ -524,14 +512,26 @@ impl Computer {
                         (state.clone(), utils::int2bin(index as i32, symbol_size))
                     })
                     .collect();
-                states_map.iter().for_each(|(k, v)| println!("STATE {} -> {}", k, v));
-                symbols_map.iter().for_each(|(k, v)| println!("SYMBOL {} -> {}", k, v));
+                states_map
+                    .iter()
+                    .for_each(|(k, v)| println!("STATE {} -> {}", k, v));
+                symbols_map
+                    .iter()
+                    .for_each(|(k, v)| println!("SYMBOL {} -> {}", k, v));
                 options.input = "1".to_string()
-                    + &symbols_map.get(&m.blank_symbol).ok_or_else(|| "Blank symbol not found in mapping".to_string())?.to_owned()
+                    + &symbols_map
+                        .get(&m.blank_symbol)
+                        .ok_or_else(|| "Blank symbol not found in mapping".to_string())?
+                        .to_owned()
                     + "1"
                     + &utils::input_string_to_vec(m.tape_alphabet.clone(), options.input.clone())
                         .iter()
-                        .map(|s| symbols_map.get(s).cloned().ok_or_else(|| format!("Symbol '{}' not found in mapping", s)))
+                        .map(|s| {
+                            symbols_map
+                                .get(s)
+                                .cloned()
+                                .ok_or_else(|| format!("Symbol '{}' not found in mapping", s))
+                        })
                         .collect::<Result<Vec<String>, String>>()?
                         .join("1")
                     + "0"
@@ -628,7 +628,7 @@ impl Computer {
             ComputingElem::Lambda(_) => {
                 *self = self.to_tm(options, s)?;
                 self.to_ram(options, s)
-            },
+            }
         }
     }
 }
@@ -684,15 +684,18 @@ impl Server {
         let mut current_head = 0;
         let mut tot_comp = Vec::new();
         for name in self.computation_order.clone() {
-            let computer = self.get_computer(name.clone()).ok_or_else(|| format!("cannot find computer with name '{}'", name.clone()).to_string())?;
-            let (state, head, tape, s, computation) = computer
-                .clone()
-                .simulate(output, max_steps - steps, self.clone(), 0)?;
-                    final_state = state;
-                    current_head = head;
-                    output = tape.join("");
-                    steps += s;
-                    tot_comp.extend(computation);
+            let computer = self.get_computer(name.clone()).ok_or_else(|| {
+                format!("cannot find computer with name '{}'", name.clone()).to_string()
+            })?;
+            let (state, head, tape, s, computation) =
+                computer
+                    .clone()
+                    .simulate(output, max_steps - steps, self.clone(), 0)?;
+            final_state = state;
+            current_head = head;
+            output = tape.join("");
+            steps += s;
+            tot_comp.extend(computation);
         }
         let last_computer = self
             .get_computer(self.computation_order[self.computation_order.len() - 1].clone())

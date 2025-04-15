@@ -113,12 +113,15 @@ fn interactive_tui(server: &mut computer::Server, opt: options::Options) {
     loop {
         print!("> ");
         match std::io::stdout().flush() {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(error) => println!("Error: {}", error),
         }
         input.clear();
-        match std::io::stdin().read_line(&mut input).map_err(|e| e.to_string()) {
-            Ok(_) => {},
+        match std::io::stdin()
+            .read_line(&mut input)
+            .map_err(|e| e.to_string())
+        {
+            Ok(_) => {}
             Err(error) => println!("Error: {}", error),
         };
         let mut new_opt = opt.clone();
@@ -127,7 +130,8 @@ fn interactive_tui(server: &mut computer::Server, opt: options::Options) {
         if trimmed_input == "status" {
             match server
                 .get_computer(server.computes_at(0).clone())
-                .map(|c| c.element.clone()) {
+                .map(|c| c.element.clone())
+            {
                 Some(element) => match element {
                     computer::ComputingElem::Tm(m) => print_status_tm(&m),
                     computer::ComputingElem::Ram(m) => print_status_ram(&m),
@@ -323,8 +327,8 @@ fn handle_computation(options: &mut options::Options) {
                 match m.convert_multi_tape_to_single_tape_tm() {
                     Ok(m_st) => {
                         c.set_turing(m_st);
-                    },
-                    Err(error) => println!("error: {}", error)
+                    }
+                    Err(error) => println!("error: {}", error),
                 }
             }
             if options.print_number {

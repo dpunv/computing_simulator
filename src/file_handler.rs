@@ -15,7 +15,8 @@ pub fn handle_file_reads(
     file_name: String,
     context: &mut computer::Server,
 ) -> Result<computer::Computer, String> {
-    let file =  std::fs::read_to_string(file_name.clone()).map_err(|_| "Error reading the file".to_string())?;
+    let file = std::fs::read_to_string(file_name.clone())
+        .map_err(|_| "Error reading the file".to_string())?;
 
     let mut lines: Vec<String> = file
         .lines()
@@ -52,7 +53,7 @@ pub fn handle_file_reads(
             let new_comp = handle_file_reads(f.clone(), context)?;
             context.add_computer(f.clone(), new_comp);
             c.add_mapping(name, f);
-        } else if c.get_mapping(name.clone())? == "" {
+        } else if (c.get_mapping(name.clone())?).is_empty() {
             c.add_mapping(name.clone(), f.clone());
         }
     }
@@ -99,7 +100,9 @@ pub fn read_turing_machine(
     for symbol in tape_alphabet {
         tm.tape_alphabet.push(symbol.to_string());
     }
-    let tape_count: usize = lines[8].parse().map_err(|_| "Error parsing tape count".to_string())?;
+    let tape_count: usize = lines[8]
+        .parse()
+        .map_err(|_| "Error parsing tape count".to_string())?;
     tm.tape_count = tape_count;
 
     for line in lines.iter().skip(9) {
@@ -413,7 +416,9 @@ pub fn read_tm_from_encoding(
                 states = true;
                 continue;
             }
-            let (key, value) = line.split_once(" ").ok_or_else(|| "cannot split".to_string())?;
+            let (key, value) = line
+                .split_once(" ")
+                .ok_or_else(|| "cannot split".to_string())?;
             if states {
                 state_encoding.insert(key.to_string(), value.to_string());
             } else {

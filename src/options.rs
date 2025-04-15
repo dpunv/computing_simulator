@@ -36,8 +36,8 @@ pub fn get_options() -> Options {
     let mut print_encoding = false;
     let mut verbose = 1;
 
-    let mut args = std::env::args().skip(1);
-    while let Some(arg) = args.next() {
+    let args = std::env::args().skip(1);
+    for arg in args {
         if arg.starts_with("--input=") {
             input = arg.strip_prefix("--input=").unwrap_or("").to_string();
         } else if arg.starts_with("--file=") {

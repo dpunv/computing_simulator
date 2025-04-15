@@ -79,7 +79,11 @@ impl RamMachine {
                 } else {
                     memory.insert(
                         utils::int2bin(index as i32, 0),
-                        instr.opcode.clone() + &self.labels_map.get(&instr.label).ok_or(format!("key not found: {}", instr.label))?,
+                        instr.opcode.clone()
+                            + self
+                                .labels_map
+                                .get(&instr.label)
+                                .ok_or(format!("key not found: {}", instr.label))?,
                     );
                 }
             } else {
@@ -90,18 +94,23 @@ impl RamMachine {
         let mut steps = 0;
         while steps < max_steps {
             steps += 1;
-            ir = memory.get(&pc).ok_or(format!("key not found: {}", pc))?.clone()[0..4].to_string();
-            ar = memory.get(&pc).ok_or(format!("key not found: {}", pc))?.clone()[4..].to_string();
-            pc = utils::int2bin(utils::bin2int(pc)? + 1,
-                0,
-            );
+            ir = memory
+                .get(&pc)
+                .ok_or(format!("key not found: {}", pc))?
+                .clone()[0..4]
+                .to_string();
+            ar = memory
+                .get(&pc)
+                .ok_or(format!("key not found: {}", pc))?
+                .clone()[4..]
+                .to_string();
+            pc = utils::int2bin(utils::bin2int(pc)? + 1, 0);
             computation
                 .push("ram;".to_string() + &ir.clone() + ";" + &ar.clone() + ";" + &acc.clone());
             match ir.as_str() {
                 "0000" => {
                     // R: Read [operands] bit from input
-                    let end = input_head
-                        + (utils::bin2int(ar)? as usize);
+                    let end = input_head + (utils::bin2int(ar)? as usize);
                     if input.len() < end {
                         acc = format!(
                             "{:0>width$b}",
@@ -136,18 +145,34 @@ impl RamMachine {
                     if !memory.contains_key(&ar) {
                         memory.insert(ar.clone(), "0".to_string());
                     }
-                    acc = memory.get(&ar).ok_or(format!("key not found: {}", ar))?.clone();
+                    acc = memory
+                        .get(&ar)
+                        .ok_or(format!("key not found: {}", ar))?
+                        .clone();
                 }
                 "0101" => {
                     // A: Add AR to ACC
                     acc = utils::int2bin(
-                        utils::bin2int(acc)? + utils::bin2int(memory.get(&ar).ok_or(format!("key not found: {}", ar))?.clone())?,
+                        utils::bin2int(acc)?
+                            + utils::bin2int(
+                                memory
+                                    .get(&ar)
+                                    .ok_or(format!("key not found: {}", ar))?
+                                    .clone(),
+                            )?,
                         0,
                     );
                 }
                 "0110" => {
                     // S: Subtract AR from ACC
-                    acc = utils::int2bin(utils::bin2int(acc)? - (utils::bin2int(memory.get(&ar).ok_or(format!("key not found: {}", ar))?.clone())?),
+                    acc = utils::int2bin(
+                        utils::bin2int(acc)?
+                            - (utils::bin2int(
+                                memory
+                                    .get(&ar)
+                                    .ok_or(format!("key not found: {}", ar))?
+                                    .clone(),
+                            )?),
                         0,
                     );
                 }
@@ -175,12 +200,15 @@ impl RamMachine {
                 }
                 "1100" => {
                     // CALL: call a subroutine
-                    let mapping_key = (utils::bin2int(ar.clone())?)
-                    .to_string();
+                    let mapping_key = (utils::bin2int(ar.clone())?).to_string();
                     let mapping = this_computer_object
                         .clone()
                         .get_mapping(mapping_key.clone())?;
-                    let subroutine = context.clone().get_computer(mapping.clone()).ok_or_else(|| format!("cannot find computer with name '{}'", mapping))?.clone();
+                    let subroutine = context
+                        .clone()
+                        .get_computer(mapping.clone())
+                        .ok_or_else(|| format!("cannot find computer with name '{}'", mapping))?
+                        .clone();
                     let (state, _, tape, steps, sub_computation) = subroutine.clone().simulate(
                         acc.clone(),
                         max_steps - steps,
@@ -205,13 +233,7 @@ impl RamMachine {
                             }
                         }
                     } else {
-                        return Ok((
-                            "reject".to_string(),
-                            0,
-                            vec![out],
-                            steps,
-                            computation,
-                        ));
+                        return Ok(("reject".to_string(), 0, vec![out], steps, computation));
                     }
                 }
                 "1101" => {
@@ -223,7 +245,10 @@ impl RamMachine {
                     if !memory.contains_key(&mov) {
                         memory.insert(mov.clone(), "0".to_string());
                     }
-                    acc = memory.get(&mov).ok_or(format!("key not found: {}", mov))?.clone();
+                    acc = memory
+                        .get(&mov)
+                        .ok_or(format!("key not found: {}", mov))?
+                        .clone();
                 }
                 "1111" => {
                     // STD: store the memory at address in MOV
@@ -258,10 +283,7 @@ impl RamMachine {
                     + &utils::int2bin(counter as i32, (counter_number_bits) as usize)
                     + ","
                     + &instr.opcode
-                    + &(utils::int2bin(
-                        utils::bin2int(instr.operand)?,
-                        0,
-                    ))
+                    + &(utils::int2bin(utils::bin2int(instr.operand)?, 0))
                     + "#";
             }
         }
