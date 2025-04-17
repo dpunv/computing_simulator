@@ -298,7 +298,7 @@ impl Computer {
 
                         this.transitions = new_transitions
                             .into_iter()
-                            .map(|t| {
+                            .inspect(|t| {
                                 this.add_transition(
                                     t.state.clone(),
                                     t.symbols.clone(),
@@ -306,12 +306,12 @@ impl Computer {
                                     t.new_symbols.clone(),
                                     t.directions.clone(),
                                 );
-                                t
                             })
                             .collect();
 
                         this.input_alphabet = input_alphabet.clone().into_iter().collect();
-                        this.tape_alphabet = [input_alphabet.into_iter().collect(), m.tape_alphabet].concat();
+                        this.tape_alphabet =
+                            [input_alphabet.into_iter().collect(), m.tape_alphabet].concat();
                         self.element = ComputingElem::Tm(Box::new(*this));
                     }
                 }
@@ -750,8 +750,14 @@ mod tests {
     fn test_computer_mapping() {
         let mut computer = Computer::new();
         computer.add_mapping("test".to_string(), "value".to_string());
-        assert_eq!(computer.get_mapping("test".to_string()), Ok("value".to_string()));
-        assert_eq!(computer.get_mapping("missing".to_string()), Ok("".to_string()));
+        assert_eq!(
+            computer.get_mapping("test".to_string()),
+            Ok("value".to_string())
+        );
+        assert_eq!(
+            computer.get_mapping("missing".to_string()),
+            Ok("".to_string())
+        );
     }
 
     #[test]
@@ -781,15 +787,15 @@ mod tests {
     #[test]
     fn test_set_machine_types() {
         let mut computer = Computer::new();
-        
+
         let ram = ram_machine::RamMachine {
             instructions: Vec::new(),
             labels_map: std::collections::HashMap::new(),
         };
         computer.set_ram(ram);
         assert!(computer.is_ram());
-        
-        let tm = turing_machine::TuringMachine::new(); 
+
+        let tm = turing_machine::TuringMachine::new();
         computer.set_turing(tm);
         assert!(!computer.is_ram());
 
@@ -797,7 +803,7 @@ mod tests {
             expr: lambda::LambdaExpr::Var("".to_string()),
             references: Vec::new(),
             name: "".to_string(),
-            force_currying: false
+            force_currying: false,
         };
         computer.set_lambda(lambda);
         assert!(!computer.is_ram());
@@ -806,11 +812,11 @@ mod tests {
     #[test]
     fn test_server_computation_order_operations() {
         let mut server = Server::new();
-        
+
         server.set_computation_order_at(0, "a".to_string());
         server.set_computation_order_at(1, "b".to_string());
         server.set_computation_order_at(2, "c".to_string());
-        
+
         assert_eq!(server.computation_order.len(), 3);
         assert_eq!(server.computes_at(0), "a");
         assert_eq!(server.computes_at(1), "b");
@@ -820,15 +826,27 @@ mod tests {
     #[test]
     fn test_multiple_computer_mappings() {
         let mut computer = Computer::new();
-        
+
         computer.add_mapping("key1".to_string(), "val1".to_string());
         computer.add_mapping("key2".to_string(), "val2".to_string());
         computer.add_mapping("key3".to_string(), "val3".to_string());
 
-        assert_eq!(computer.get_mapping("key1".to_string()), Ok("val1".to_string()));
-        assert_eq!(computer.get_mapping("key2".to_string()), Ok("val2".to_string())); 
-        assert_eq!(computer.get_mapping("key3".to_string()), Ok("val3".to_string()));
-        assert_eq!(computer.get_mapping("missing".to_string()), Ok("".to_string()));
+        assert_eq!(
+            computer.get_mapping("key1".to_string()),
+            Ok("val1".to_string())
+        );
+        assert_eq!(
+            computer.get_mapping("key2".to_string()),
+            Ok("val2".to_string())
+        );
+        assert_eq!(
+            computer.get_mapping("key3".to_string()),
+            Ok("val3".to_string())
+        );
+        assert_eq!(
+            computer.get_mapping("missing".to_string()),
+            Ok("".to_string())
+        );
     }
     #[test]
     fn test_server_add_multiple_computers() {
@@ -842,7 +860,7 @@ mod tests {
         server.add_computer("comp3".to_string(), computer3);
 
         assert!(server.contains("comp1".to_string()));
-        assert!(server.contains("comp2".to_string())); 
+        assert!(server.contains("comp2".to_string()));
         assert!(server.contains("comp3".to_string()));
         assert!(!server.contains("comp4".to_string()));
     }
@@ -859,14 +877,13 @@ mod tests {
             reject_state: "q1".to_string(),
             halt_state: "q1".to_string(),
             blank_symbol: "_".to_string(),
-            transitions: vec![
-                turing_machine::Transition { 
-                    state: "q0".to_string(),
-                    symbols: vec!["_".to_string()],
-                    new_state: "q1".to_string(),
-                    new_symbols: vec!["_".to_string()],
-                    directions: vec![turing_machine::Direction::Stay] }
-            ],
+            transitions: vec![turing_machine::Transition {
+                state: "q0".to_string(),
+                symbols: vec!["_".to_string()],
+                new_state: "q1".to_string(),
+                new_symbols: vec!["_".to_string()],
+                directions: vec![turing_machine::Direction::Stay],
+            }],
             tape_count: 1,
             next_state_id: 10,
         };
@@ -891,7 +908,7 @@ mod tests {
     fn test_computer_clone() {
         let computer1 = Computer::new();
         let computer2 = computer1.clone();
-        
+
         assert!(matches!(computer2.element, ComputingElem::Tm(_)));
         assert_eq!(computer1.mapping.len(), computer2.mapping.len());
     }
@@ -900,9 +917,9 @@ mod tests {
     fn test_server_clone() {
         let mut server1 = Server::new();
         server1.set_computation_order_at(0, "test".to_string());
-        
+
         let server2 = server1.clone();
-        
+
         assert_eq!(server1.computation_order, server2.computation_order);
         assert_eq!(server1.map_computers.len(), server2.map_computers.len());
     }
@@ -913,10 +930,10 @@ mod tests {
             expr: lambda::LambdaExpr::Var("x".to_string()),
             references: Vec::new(),
             name: "test".to_string(),
-            force_currying: false
+            force_currying: false,
         };
         computer.set_lambda(lambda);
-        
+
         let result = computer.to_encoding();
         assert!(result.is_ok());
         if let Ok((encoding, map1, map2)) = result {
@@ -926,12 +943,12 @@ mod tests {
         }
     }
 
-    #[test] 
+    #[test]
     fn test_computer_to_encoding_ram() {
         let mut computer = Computer::new();
         let ram = ram_machine::RamMachine {
             instructions: vec![],
-            labels_map: std::collections::HashMap::new()
+            labels_map: std::collections::HashMap::new(),
         };
         computer.set_ram(ram);
 
@@ -955,9 +972,9 @@ mod tests {
         let mut computer = Computer::new();
         let lambda = lambda::Lambda {
             expr: lambda::LambdaExpr::Var("x".to_string()),
-            references: Vec::new(), 
+            references: Vec::new(),
             name: "".to_string(),
-            force_currying: false
+            force_currying: false,
         };
         computer.set_lambda(lambda);
 
@@ -974,30 +991,30 @@ mod tests {
                 ram_machine::Instruction {
                     opcode: "0111".to_string(),
                     operand: "100".to_string(),
-                    label: "".to_string()
+                    label: "".to_string(),
                 },
                 ram_machine::Instruction {
                     opcode: "0100".to_string(),
                     operand: "1111".to_string(),
-                    label: "".to_string()
+                    label: "".to_string(),
                 },
                 ram_machine::Instruction {
                     opcode: "1000".to_string(),
                     operand: "1111".to_string(),
-                    label: "".to_string()
+                    label: "".to_string(),
                 },
                 ram_machine::Instruction {
                     opcode: "0011".to_string(),
                     operand: "".to_string(),
-                    label: "".to_string()
+                    label: "".to_string(),
                 },
                 ram_machine::Instruction {
                     opcode: "1011".to_string(),
                     operand: "".to_string(),
-                    label: "".to_string()
+                    label: "".to_string(),
                 },
             ],
-            labels_map: std::collections::HashMap::new()
+            labels_map: std::collections::HashMap::new(),
         };
         computer.set_ram(ram);
 
@@ -1011,16 +1028,16 @@ mod tests {
         let mut server = Server::new();
         let computer1 = Computer::new();
         let computer2 = Computer::new();
-        
+
         server.add_computer("c1".to_string(), computer1);
         server.add_computer("c2".to_string(), computer2);
-        
+
         server.set_computation_order_at(0, "c1".to_string());
         server.set_computation_order_at(1, "c2".to_string());
 
         let result1 = server.execute("test1".to_string(), 100);
         assert!(result1.is_ok());
-        
+
         let result2 = server.execute("test2".to_string(), 200);
         assert!(result2.is_ok());
     }
@@ -1030,15 +1047,18 @@ mod tests {
         let mut computer = Computer::new();
         computer.add_mapping("key".to_string(), "value1".to_string());
         computer.add_mapping("key".to_string(), "value2".to_string());
-        
-        assert_eq!(computer.get_mapping("key".to_string()), Ok("value2".to_string()));
+
+        assert_eq!(
+            computer.get_mapping("key".to_string()),
+            Ok("value2".to_string())
+        );
     }
 
     #[test]
     fn test_server_invalid_computer_name() {
         let mut server = Server::new();
         server.set_computation_order_at(0, "nonexistent".to_string());
-        
+
         let result = server.execute("test".to_string(), 100);
         assert!(result.is_err());
     }
@@ -1051,25 +1071,25 @@ mod tests {
                 ram_machine::Instruction {
                     opcode: "0111".to_string(),
                     operand: "100".to_string(),
-                    label: "".to_string()
+                    label: "".to_string(),
                 },
                 ram_machine::Instruction {
                     opcode: "1001".to_string(),
                     operand: "0".to_string(),
-                    label: "".to_string()
+                    label: "".to_string(),
                 },
                 ram_machine::Instruction {
                     opcode: "1011".to_string(),
                     operand: "".to_string(),
-                    label: "".to_string()
+                    label: "".to_string(),
                 },
             ],
-            labels_map: std::collections::HashMap::new()
+            labels_map: std::collections::HashMap::new(),
         };
         computer.set_ram(ram);
 
         let context = Server::new();
-        
+
         let result = computer.simulate("test".to_string(), 0, context, 0);
         assert!(result.is_ok());
     }
@@ -1080,7 +1100,7 @@ mod tests {
             expr: lambda::LambdaExpr::Var("x".to_string()),
             references: Vec::new(),
             name: "".to_string(),
-            force_currying: false
+            force_currying: false,
         };
         computer.set_lambda(lambda);
 
@@ -1114,14 +1134,12 @@ mod tests {
     fn test_computer_to_tm_from_ram() {
         let mut computer = Computer::new();
         let ram = ram_machine::RamMachine {
-            instructions: vec![
-                ram_machine::Instruction {
-                    opcode: "0111".to_string(), 
-                    operand: "100".to_string(),
-                    label: "".to_string()
-                }
-            ],
-            labels_map: std::collections::HashMap::new()
+            instructions: vec![ram_machine::Instruction {
+                opcode: "0111".to_string(),
+                operand: "100".to_string(),
+                label: "".to_string(),
+            }],
+            labels_map: std::collections::HashMap::new(),
         };
         computer.set_ram(ram);
 
@@ -1159,7 +1177,7 @@ mod tests {
 
         let mut options = options::Options {
             file: "".to_string(),
-            input: "".to_string(), 
+            input: "".to_string(),
             convert_to_tm: false,
             convert_to_ram: false,
             convert_to_singletape: false,
@@ -1187,7 +1205,7 @@ mod tests {
             expr: lambda::LambdaExpr::Var("x".to_string()),
             references: Vec::new(),
             name: "test".to_string(),
-            force_currying: false
+            force_currying: false,
         };
         computer.set_lambda(lambda);
 
@@ -1215,7 +1233,7 @@ mod tests {
         if let Ok(converted) = result {
             if let ComputingElem::Tm(tm) = converted.element {
                 assert!(!tm.states.is_empty());
-                assert!(!tm.input_alphabet.is_empty()); 
+                assert!(!tm.input_alphabet.is_empty());
                 assert!(!tm.tape_alphabet.is_empty());
                 assert!(!tm.transitions.is_empty());
             }
@@ -1228,8 +1246,8 @@ mod tests {
         let lambda = lambda::Lambda {
             expr: lambda::LambdaExpr::Var("x".to_string()),
             references: Vec::new(),
-            name: "test".to_string(), 
-            force_currying: false
+            name: "test".to_string(),
+            force_currying: false,
         };
         computer.set_lambda(lambda);
         computer.add_mapping("key1".to_string(), "val1".to_string());
@@ -1258,8 +1276,14 @@ mod tests {
 
         if let Ok(converted) = result {
             assert_eq!(converted.mapping.len(), computer.mapping.len());
-            assert_eq!(converted.get_mapping("key1".to_string()), Ok("val1".to_string()));
-            assert_eq!(converted.get_mapping("key2".to_string()), Ok("val2".to_string()));
+            assert_eq!(
+                converted.get_mapping("key1".to_string()),
+                Ok("val1".to_string())
+            );
+            assert_eq!(
+                converted.get_mapping("key2".to_string()),
+                Ok("val2".to_string())
+            );
         }
     }
     #[test]
@@ -1269,20 +1293,18 @@ mod tests {
             states: vec!["q0".to_string(), "q1".to_string()],
             input_alphabet: vec!["0".to_string(), "1".to_string()],
             tape_alphabet: vec!["0".to_string(), "1".to_string(), "_".to_string()],
-            initial_state: "q0".to_string(), 
+            initial_state: "q0".to_string(),
             accept_state: "q1".to_string(),
             reject_state: "q1".to_string(),
             halt_state: "q1".to_string(),
             blank_symbol: "_".to_string(),
-            transitions: vec![
-                turing_machine::Transition {
-                    state: "q0".to_string(),
-                    symbols: vec!["0".to_string()],
-                    new_state: "q1".to_string(), 
-                    new_symbols: vec!["1".to_string()],
-                    directions: vec![turing_machine::Direction::Right]
-                }
-            ],
+            transitions: vec![turing_machine::Transition {
+                state: "q0".to_string(),
+                symbols: vec!["0".to_string()],
+                new_state: "q1".to_string(),
+                new_symbols: vec!["1".to_string()],
+                directions: vec![turing_machine::Direction::Right],
+            }],
             tape_count: 1,
             next_state_id: 2,
         };
@@ -1321,7 +1343,7 @@ mod tests {
             expr: lambda::LambdaExpr::Var("x".to_string()),
             references: Vec::new(),
             name: "test".to_string(),
-            force_currying: false
+            force_currying: false,
         };
         computer.set_lambda(lambda);
 
@@ -1356,7 +1378,7 @@ mod tests {
         let mut computer = Computer::new();
         let ram = ram_machine::RamMachine {
             instructions: vec![],
-            labels_map: std::collections::HashMap::new()
+            labels_map: std::collections::HashMap::new(),
         };
         computer.set_ram(ram);
 
@@ -1394,15 +1416,13 @@ mod tests {
             reject_state: "q1".to_string(),
             halt_state: "q1".to_string(),
             blank_symbol: "_".to_string(),
-            transitions: vec![
-                turing_machine::Transition {
-                    state: "q0".to_string(),
-                    symbols: vec!["0".to_string()],
-                    new_state: "q1".to_string(),
-                    new_symbols: vec!["1".to_string()],
-                    directions: vec![turing_machine::Direction::Right]
-                }
-            ],
+            transitions: vec![turing_machine::Transition {
+                state: "q0".to_string(),
+                symbols: vec!["0".to_string()],
+                new_state: "q1".to_string(),
+                new_symbols: vec!["1".to_string()],
+                directions: vec![turing_machine::Direction::Right],
+            }],
             tape_count: 1,
             next_state_id: 2,
         };
@@ -1449,15 +1469,13 @@ mod tests {
         tm.reject_state = "q1".to_string();
         tm.halt_state = "q1".to_string();
         tm.blank_symbol = "_".to_string();
-        tm.transitions = vec![
-            turing_machine::Transition {
-                state: "q0".to_string(),
-                symbols: vec!["0".to_string()],
-                new_state: "q1".to_string(),
-                new_symbols: vec!["1".to_string()],
-                directions: vec![turing_machine::Direction::Right]
-            }
-        ];
+        tm.transitions = vec![turing_machine::Transition {
+            state: "q0".to_string(),
+            symbols: vec!["0".to_string()],
+            new_state: "q1".to_string(),
+            new_symbols: vec!["1".to_string()],
+            directions: vec![turing_machine::Direction::Right],
+        }];
         tm.tape_count = 1;
         tm.next_state_id = 2;
         computer.set_turing(tm);
@@ -1487,32 +1505,38 @@ mod tests {
 
         if let Ok(converted) = result {
             assert_eq!(converted.mapping.len(), computer.mapping.len());
-            assert_eq!(converted.get_mapping("key1".to_string()), Ok("val1".to_string()));
-            assert_eq!(converted.get_mapping("key2".to_string()), Ok("val2".to_string()));
+            assert_eq!(
+                converted.get_mapping("key1".to_string()),
+                Ok("val1".to_string())
+            );
+            assert_eq!(
+                converted.get_mapping("key2".to_string()),
+                Ok("val2".to_string())
+            );
         }
     }
     #[test]
     fn test_server_execute_complex() {
         let mut server = Server::new();
-        
+
         // Add multiple computers
         let computer1 = Computer::new();
         let computer2 = Computer::new();
         let computer3 = Computer::new();
-        
+
         server.add_computer("c1".to_string(), computer1);
-        server.add_computer("c2".to_string(), computer2); 
+        server.add_computer("c2".to_string(), computer2);
         server.add_computer("c3".to_string(), computer3);
-        
+
         // Set computation order
         server.set_computation_order_at(0, "c1".to_string());
         server.set_computation_order_at(1, "c2".to_string());
         server.set_computation_order_at(2, "c3".to_string());
-        
+
         // Test execution with chained computers
         let result = server.execute("test input".to_string(), 1000);
         assert!(result.is_ok());
-        
+
         if let Ok((state, _, output, _, comp)) = result {
             assert!(!state.is_empty());
             assert!(output.is_empty());
@@ -1525,27 +1549,25 @@ mod tests {
         let mut computer = Computer::new();
         let tm = turing_machine::TuringMachine {
             states: vec!["q0".to_string(), "q1".to_string()],
-            input_alphabet: vec!["0".to_string(), "1".to_string()], 
+            input_alphabet: vec!["0".to_string(), "1".to_string()],
             tape_alphabet: vec!["0".to_string(), "1".to_string(), "_".to_string()],
             initial_state: "q0".to_string(),
             accept_state: "q1".to_string(),
             reject_state: "q1".to_string(),
             halt_state: "q1".to_string(),
             blank_symbol: "_".to_string(),
-            transitions: vec![
-                turing_machine::Transition {
-                    state: "q0".to_string(),
-                    symbols: vec!["0".to_string()],
-                    new_state: "q1".to_string(),
-                    new_symbols: vec!["1".to_string()],
-                    directions: vec![turing_machine::Direction::Right]
-                }
-            ],
+            transitions: vec![turing_machine::Transition {
+                state: "q0".to_string(),
+                symbols: vec!["0".to_string()],
+                new_state: "q1".to_string(),
+                new_symbols: vec!["1".to_string()],
+                directions: vec![turing_machine::Direction::Right],
+            }],
             tape_count: 1,
-            next_state_id: 2
+            next_state_id: 2,
         };
         computer.set_turing(tm);
-        
+
         let context = Server::new();
         let result = computer.simulate("0".to_string(), 100, context, 0);
         assert!(result.is_ok());
@@ -1560,17 +1582,17 @@ mod tests {
     fn test_computer_simulate_empty_input() {
         let computer = Computer::new();
         let context = Server::new();
-        
+
         let result = computer.simulate("".to_string(), 100, context, 0);
         assert!(result.is_ok());
     }
 
-    #[test] 
+    #[test]
     fn test_server_empty_computer_list() {
         let mut server = Server::new();
         assert!(server.map_computers.is_empty());
         assert!(server.computation_order.is_empty());
-        
+
         let result = server.execute("test".to_string(), 100);
         assert!(result.is_err());
     }
@@ -1579,10 +1601,10 @@ mod tests {
     fn test_server_invalid_computation_order() {
         let mut server = Server::new();
         let computer = Computer::new();
-        
+
         server.add_computer("test".to_string(), computer);
         server.set_computation_order_at(0, "invalid".to_string());
-        
+
         let result = server.execute("test".to_string(), 100);
         assert!(result.is_err());
     }
@@ -1591,7 +1613,7 @@ mod tests {
     fn test_computer_simulate_zero_steps() {
         let computer = Computer::new();
         let context = Server::new();
-        
+
         let result = computer.simulate("test".to_string(), 0, context, 0);
         assert!(result.is_err());
     }
@@ -1600,7 +1622,7 @@ mod tests {
     fn test_computer_simulate_large_input() {
         let computer = Computer::new();
         let context = Server::new();
-        
+
         let large_input = "0".repeat(1000);
         let result = computer.simulate(large_input, 100, context, 0);
         assert!(result.is_ok());
@@ -1610,9 +1632,9 @@ mod tests {
     fn test_server_execute_empty_computation_order() {
         let mut server = Server::new();
         let computer = Computer::new();
-        
+
         server.add_computer("test".to_string(), computer);
-        
+
         let result = server.execute("test".to_string(), 100);
         assert!(result.is_err());
     }
@@ -1626,15 +1648,15 @@ mod tests {
             tape_alphabet: vec!["0".to_string(), "_".to_string()],
             initial_state: "q0".to_string(),
             accept_state: "q1".to_string(), // Invalid state
-            reject_state: "q1".to_string(), // Invalid state  
-            halt_state: "q1".to_string(), // Invalid state
+            reject_state: "q1".to_string(), // Invalid state
+            halt_state: "q1".to_string(),   // Invalid state
             blank_symbol: "_".to_string(),
             transitions: vec![],
             tape_count: 1,
-            next_state_id: 1
+            next_state_id: 1,
         };
         computer.set_turing(tm);
-        
+
         let context = Server::new();
         let result = computer.simulate("0".to_string(), 100, context, 0);
         assert!(result.is_ok());
@@ -1646,7 +1668,7 @@ mod tests {
         for i in 0..100 {
             server.add_computer(format!("comp{}", i), Computer::new());
         }
-        
+
         let computer = Computer::new();
         let result = computer.simulate("test".to_string(), 100, server, 0);
         assert!(result.is_ok());
@@ -1656,10 +1678,10 @@ mod tests {
     fn test_computer_simulate_with_nested_context() {
         let mut inner_server = Server::new();
         inner_server.add_computer("inner".to_string(), Computer::new());
-        
+
         let mut outer_server = Server::new();
         outer_server.add_computer("outer".to_string(), Computer::new());
-        
+
         let computer = Computer::new();
         let result = computer.simulate("test".to_string(), 100, outer_server, 0);
         assert!(result.is_ok());

@@ -228,10 +228,12 @@ impl TuringMachine {
         tree[0].push(TreeElement {
             state: self.initial_state.clone(),
             tapes: tapes.clone(),
-            computation: vec!["tm;".to_string()
-                                + &self.initial_state.clone()
-                                + ";"
-                                + &tapes[0].tape.clone().join("")],
+            computation: vec![
+                "tm;".to_string()
+                    + &self.initial_state.clone()
+                    + ";"
+                    + &tapes[0].tape.clone().join(""),
+            ],
         });
         let mut steps = 0;
         let mut halts = false;
@@ -618,10 +620,10 @@ impl TuringMachine {
                 }
             }
         }
-        
-        if !(self.accept_state == "" || self.states.contains(&self.accept_state))
-            || !(self.reject_state == "" || self.states.contains(&self.reject_state))
-            || !(self.halt_state == "" || self.states.contains(&self.halt_state))
+
+        if !(self.accept_state.is_empty() || self.states.contains(&self.accept_state))
+            || !(self.reject_state.is_empty() || self.states.contains(&self.reject_state))
+            || !(self.halt_state.is_empty() || self.states.contains(&self.halt_state))
         {
             is_final_states_valid = false;
         }
@@ -694,7 +696,7 @@ impl TuringMachine {
             let initial_state_tape =
                 initial_state_fake.clone() + "<INIT_TP" + &tapenum.to_string() + "_START>";
             let end_state_tape =
-            initial_state_fake.clone() + "<INIT_TP" + &tapenum.to_string() + "_END>";
+                initial_state_fake.clone() + "<INIT_TP" + &tapenum.to_string() + "_END>";
             new_states.push(initial_state_tape.clone());
             new_states.push(end_state_tape.clone());
             if tapenum == 0 {
@@ -1061,14 +1063,9 @@ impl TuringMachine {
                                         }
                                         new_tm.add_transition(
                                             state_mid_tape.clone(),
-                                            vec![
-                                                self.blank_symbol.clone(),
-                                            ],
+                                            vec![self.blank_symbol.clone()],
                                             state_end_tape.clone(),
-                                            vec![
-                                                self.blank_symbol.clone()
-                                                    + "^",
-                                            ],
+                                            vec![self.blank_symbol.clone() + "^"],
                                             vec![Direction::Left],
                                         );
                                     } else {
@@ -1344,7 +1341,7 @@ impl TuringMachine {
         let mut tm = TuringMachine::new();
         let mut transitions: Vec<&str> = encoding.split(")").collect();
         transitions.pop();
-        if transitions.len() < 1 {
+        if transitions.is_empty() {
             return Err(format!("invalid encoding: {}", encoding));
         }
         for transition in transitions {
@@ -1769,9 +1766,9 @@ mod tests {
     fn test_final_states() {
         let mut tm = TuringMachine::new();
         tm.accept_state = "accept".to_string();
-        tm.reject_state = "reject".to_string(); 
+        tm.reject_state = "reject".to_string();
         tm.halt_state = "halt".to_string();
-        
+
         let final_states = tm.final_states();
         assert_eq!(final_states.len(), 3);
         assert!(final_states.contains(&"accept".to_string()));
@@ -1782,24 +1779,24 @@ mod tests {
     #[test]
     fn test_is_deterministic() {
         let mut tm = TuringMachine::new();
-        
+
         // Single transition for state/symbol pair is deterministic
         tm.add_transition(
             "q0".to_string(),
             vec!["0".to_string()],
-            "q1".to_string(), 
+            "q1".to_string(),
             vec!["1".to_string()],
-            vec![Direction::Right]
+            vec![Direction::Right],
         );
         assert!(tm.is_deterministic());
 
         // Multiple transitions for same state/symbol pair is non-deterministic
         tm.add_transition(
             "q0".to_string(),
-            vec!["0".to_string()], 
+            vec!["0".to_string()],
             "q2".to_string(),
             vec!["1".to_string()],
-            vec![Direction::Left]
+            vec![Direction::Left],
         );
         assert!(!tm.is_deterministic());
     }
@@ -1811,7 +1808,7 @@ mod tests {
             symbols: vec!["0".to_string()],
             new_state: "q1".to_string(),
             new_symbols: vec!["1".to_string()],
-            directions: vec![Direction::Right]
+            directions: vec![Direction::Right],
         };
 
         let t2 = Transition {
@@ -1819,7 +1816,7 @@ mod tests {
             symbols: vec!["0".to_string()],
             new_state: "q1".to_string(),
             new_symbols: vec!["1".to_string()],
-            directions: vec![Direction::Right]
+            directions: vec![Direction::Right],
         };
 
         let t3 = Transition {
@@ -1827,7 +1824,7 @@ mod tests {
             symbols: vec!["1".to_string()],
             new_state: "q1".to_string(),
             new_symbols: vec!["0".to_string()],
-            directions: vec![Direction::Left]
+            directions: vec![Direction::Left],
         };
 
         assert_eq!(t1, t2);
@@ -1838,9 +1835,9 @@ mod tests {
     fn test_tape_operations() {
         let tape = Tape {
             tape: vec!["0".to_string(), "1".to_string(), "0".to_string()],
-            head: 1
+            head: 1,
         };
-        
+
         assert_eq!(tape.tape.len(), 3);
         assert_eq!(tape.head, 1);
         assert_eq!(tape.tape[tape.head], "1".to_string());
@@ -1854,10 +1851,10 @@ mod tests {
         tm.reject_state = "qreject".to_string();
         tm.states = vec![
             "qstart".to_string(),
-            "q0".to_string(), 
+            "q0".to_string(),
             "q1".to_string(),
             "qaccept".to_string(),
-            "qreject".to_string()
+            "qreject".to_string(),
         ];
         tm.input_alphabet = vec!["0".to_string(), "1".to_string()];
         tm.tape_alphabet = vec!["0".to_string(), "1".to_string(), "B".to_string()];
@@ -1868,37 +1865,37 @@ mod tests {
             vec!["1".to_string()],
             "q1".to_string(),
             vec!["1".to_string()],
-            vec![Direction::Right]
+            vec![Direction::Right],
         );
 
         tm.add_transition(
-            "q0".to_string(), 
+            "q0".to_string(),
             vec!["0".to_string()],
             "q0".to_string(),
             vec!["0".to_string()],
-            vec![Direction::Right]
+            vec![Direction::Right],
         );
         tm.add_transition(
-            "q1".to_string(), 
+            "q1".to_string(),
             vec!["0".to_string()],
             "q0".to_string(),
             vec!["0".to_string()],
-            vec![Direction::Right]
+            vec![Direction::Right],
         );
         tm.add_transition(
-            "q0".to_string(), 
+            "q0".to_string(),
             vec!["B".to_string()],
             "qreject".to_string(),
             vec!["B".to_string()],
-            vec![Direction::Stay]
+            vec![Direction::Stay],
         );
 
         tm.add_transition(
-            "qstart".to_string(), 
+            "qstart".to_string(),
             vec!["B".to_string()],
             "q0".to_string(),
             vec!["B".to_string()],
-            vec![Direction::Right]
+            vec![Direction::Right],
         );
 
         tm.add_transition(
@@ -1906,50 +1903,53 @@ mod tests {
             vec!["B".to_string()],
             "qaccept".to_string(),
             vec!["B".to_string()],
-            vec![Direction::Stay]
+            vec![Direction::Stay],
         );
 
         let computer = computer::Computer::new();
         let context = computer::Server::new();
-        
+
         // Should accept "1"
-        let result: (String, usize, Vec<String>, usize, Vec<String>) = tm.clone().simulate(
-            vec!["1".to_string()],
-            100,
-            computer.clone(),
-            context.clone(),
-            0
-        ).unwrap();
+        let result: (String, usize, Vec<String>, usize, Vec<String>) = tm
+            .clone()
+            .simulate(
+                vec!["1".to_string()],
+                100,
+                computer.clone(),
+                context.clone(),
+                0,
+            )
+            .unwrap();
         assert_eq!(result.0, "accept");
 
         // Should accept "01"
-        let result = tm.clone().simulate(
-            vec!["0".to_string(), "1".to_string()],
-            100,
-            computer.clone(),
-            context.clone(),
-            0
-        ).unwrap();
+        let result = tm
+            .clone()
+            .simulate(
+                vec!["0".to_string(), "1".to_string()],
+                100,
+                computer.clone(),
+                context.clone(),
+                0,
+            )
+            .unwrap();
         assert_eq!(result.0, "accept");
 
         // Should reject "0"
-        let result = tm.clone().simulate(
-            vec!["0".to_string()],
-            100,
-            computer.clone(), 
-            context.clone(),
-            0
-        ).unwrap();
+        let result = tm
+            .clone()
+            .simulate(
+                vec!["0".to_string()],
+                100,
+                computer.clone(),
+                context.clone(),
+                0,
+            )
+            .unwrap();
         assert_eq!(result.0, "reject");
 
         // Should reject empty input
-        let result = tm.simulate(
-            vec![],
-            100,
-            computer,
-            context,
-            0
-        ).unwrap();
+        let result = tm.simulate(vec![], 100, computer, context, 0).unwrap();
         assert_eq!(result.0, "reject");
     }
 
@@ -1964,7 +1964,7 @@ mod tests {
         tm.states = vec![
             "q0".to_string(),
             "qaccept".to_string(),
-            "qreject".to_string()
+            "qreject".to_string(),
         ];
         tm.input_alphabet = vec!["0".to_string(), "1".to_string()];
         tm.tape_alphabet = vec!["0".to_string(), "1".to_string(), "B".to_string()];
@@ -1972,13 +1972,13 @@ mod tests {
         tm.add_transition(
             "q0".to_string(),
             vec!["1".to_string(), "B".to_string()],
-            "qaccept".to_string(), 
+            "qaccept".to_string(),
             vec!["1".to_string(), "1".to_string()],
-            vec![Direction::Stay, Direction::Stay]
+            vec![Direction::Stay, Direction::Stay],
         );
 
         let single_tape = tm.convert_multi_tape_to_single_tape_tm().unwrap();
-        
+
         assert_eq!(single_tape.tape_count, 1);
         assert!(single_tape.tape_alphabet.len() > tm.tape_alphabet.len());
         assert!(single_tape.states.len() > tm.states.len());
@@ -1993,8 +1993,8 @@ mod tests {
         tm.reject_state = "qreject".to_string();
         tm.states = vec![
             "q0".to_string(),
-            "qaccept".to_string(), 
-            "qreject".to_string()
+            "qaccept".to_string(),
+            "qreject".to_string(),
         ];
         tm.input_alphabet = vec!["0".to_string()];
         tm.tape_alphabet = vec!["0".to_string(), "B".to_string()];
@@ -2004,7 +2004,7 @@ mod tests {
             vec!["0".to_string()],
             "qaccept".to_string(),
             vec!["0".to_string()],
-            vec![Direction::Stay]
+            vec![Direction::Stay],
         );
 
         let encoding = tm.to_encoding().unwrap().0;
@@ -2017,16 +2017,16 @@ mod tests {
     #[test]
     fn test_multi_to_single_tape_equivalence() {
         let mut tm = TuringMachine::new();
-        tm.blank_symbol = "B".to_string(); 
+        tm.blank_symbol = "B".to_string();
         tm.initial_state = "q0".to_string();
         tm.accept_state = "qa".to_string();
         tm.reject_state = "qr".to_string();
         tm.tape_count = 2;
         tm.states = vec![
             "q0".to_string(),
-            "q1".to_string(), 
+            "q1".to_string(),
             "qa".to_string(),
-            "qr".to_string()
+            "qr".to_string(),
         ];
         tm.input_alphabet = vec!["0".to_string(), "1".to_string()];
         tm.tape_alphabet = vec!["0".to_string(), "1".to_string(), "B".to_string()];
@@ -2037,31 +2037,31 @@ mod tests {
             vec!["0".to_string(), "B".to_string()],
             "q0".to_string(),
             vec!["0".to_string(), "0".to_string()],
-            vec![Direction::Right, Direction::Right]
+            vec![Direction::Right, Direction::Right],
         );
 
         tm.add_transition(
-            "q0".to_string(), 
+            "q0".to_string(),
             vec!["1".to_string(), "B".to_string()],
             "q0".to_string(),
             vec!["1".to_string(), "1".to_string()],
-            vec![Direction::Right, Direction::Right]
+            vec![Direction::Right, Direction::Right],
         );
 
         tm.add_transition(
             "q0".to_string(),
             vec!["B".to_string(), "B".to_string()],
-            "q1".to_string(), 
+            "q1".to_string(),
             vec!["B".to_string(), "B".to_string()],
-            vec![Direction::Left, Direction::Left]
+            vec![Direction::Left, Direction::Left],
         );
 
         tm.add_transition(
             "q1".to_string(),
             vec!["0".to_string(), "0".to_string()],
             "q1".to_string(),
-            vec!["0".to_string(), "0".to_string()], 
-            vec![Direction::Left, Direction::Left]
+            vec!["0".to_string(), "0".to_string()],
+            vec![Direction::Left, Direction::Left],
         );
 
         tm.add_transition(
@@ -2069,15 +2069,15 @@ mod tests {
             vec!["1".to_string(), "1".to_string()],
             "q1".to_string(),
             vec!["1".to_string(), "1".to_string()],
-            vec![Direction::Left, Direction::Left]  
+            vec![Direction::Left, Direction::Left],
         );
 
         tm.add_transition(
             "q1".to_string(),
-            vec!["B".to_string(), "B".to_string()], 
+            vec!["B".to_string(), "B".to_string()],
             "qa".to_string(),
             vec!["B".to_string(), "B".to_string()],
-            vec![Direction::Stay, Direction::Stay]
+            vec![Direction::Stay, Direction::Stay],
         );
 
         let single_tape = tm.clone().convert_multi_tape_to_single_tape_tm().unwrap();
@@ -2086,59 +2086,64 @@ mod tests {
         let context = computer::Server::new();
 
         // Test empty input
-        let multi_result = tm.clone().simulate(
-            vec![],
-            1000,
-            computer.clone(),
-            context.clone(),
-            0
-        ).unwrap();
+        let multi_result = tm
+            .clone()
+            .simulate(vec![], 1000, computer.clone(), context.clone(), 0)
+            .unwrap();
 
-        let single_result = single_tape.clone().simulate(
-            vec![],
-            1000,
-            computer.clone(),
-            context.clone(),
-            0
-        ).unwrap();
+        let single_result = single_tape
+            .clone()
+            .simulate(vec![], 1000, computer.clone(), context.clone(), 0)
+            .unwrap();
 
         assert_eq!(multi_result.0, single_result.0);
 
         // Test input "0"
-        let multi_result = tm.clone().simulate(
-            vec!["0".to_string()],
-            1000,
-            computer.clone(), 
-            context.clone(),
-            0
-        ).unwrap();
+        let multi_result = tm
+            .clone()
+            .simulate(
+                vec!["0".to_string()],
+                1000,
+                computer.clone(),
+                context.clone(),
+                0,
+            )
+            .unwrap();
 
-        let single_result = single_tape.clone().simulate(
-            vec!["0".to_string()],
-            1000,
-            computer.clone(),
-            context.clone(), 
-            0
-        ).unwrap();
+        let single_result = single_tape
+            .clone()
+            .simulate(
+                vec!["0".to_string()],
+                1000,
+                computer.clone(),
+                context.clone(),
+                0,
+            )
+            .unwrap();
 
         assert_eq!(multi_result.0, single_result.0);
 
-        // Test input "01" 
-        let multi_result = tm.clone().simulate(
-            vec!["0".to_string(), "1".to_string()],
-            1000,
-            computer.clone(),
-            context.clone(),
-            0
-        ).unwrap();
+        // Test input "01"
+        let multi_result = tm
+            .clone()
+            .simulate(
+                vec!["0".to_string(), "1".to_string()],
+                1000,
+                computer.clone(),
+                context.clone(),
+                0,
+            )
+            .unwrap();
 
-        let single_result = single_tape.simulate(
-            vec!["0".to_string(), "1".to_string()],
-            1000,
-            computer,
-            context,
-            0
-        ).unwrap();
+        let single_result = single_tape
+            .simulate(
+                vec!["0".to_string(), "1".to_string()],
+                1000,
+                computer,
+                context,
+                0,
+            )
+            .unwrap();
 
         assert_eq!(multi_result.0, single_result.0);
     }
@@ -2147,15 +2152,11 @@ mod tests {
     fn test_multi_to_single_tape_edge_cases() {
         let mut tm = TuringMachine::new();
         tm.blank_symbol = "B".to_string();
-        tm.initial_state = "q0".to_string(); 
+        tm.initial_state = "q0".to_string();
         tm.accept_state = "qa".to_string();
         tm.reject_state = "qr".to_string();
         tm.tape_count = 3; // Test with 3 tapes
-        tm.states = vec![
-            "q0".to_string(),
-            "qa".to_string(),
-            "qr".to_string()
-        ];
+        tm.states = vec!["q0".to_string(), "qa".to_string(), "qr".to_string()];
         tm.input_alphabet = vec!["0".to_string()];
         tm.tape_alphabet = vec!["0".to_string(), "B".to_string()];
 
@@ -2165,14 +2166,14 @@ mod tests {
             vec!["B".to_string(), "B".to_string(), "B".to_string()],
             "q0".to_string(),
             vec!["B".to_string(), "B".to_string(), "B".to_string()],
-            vec![Direction::Right, Direction::Stay, Direction::Stay]
+            vec![Direction::Right, Direction::Stay, Direction::Stay],
         );
         tm.add_transition(
             "q0".to_string(),
             vec!["0".to_string(), "B".to_string(), "B".to_string()],
             "qa".to_string(),
             vec!["0".to_string(), "0".to_string(), "0".to_string()],
-            vec![Direction::Stay, Direction::Stay, Direction::Stay]
+            vec![Direction::Stay, Direction::Stay, Direction::Stay],
         );
 
         let single_tape = tm.clone().convert_multi_tape_to_single_tape_tm().unwrap();
@@ -2190,22 +2191,20 @@ mod tests {
         let computer = computer::Computer::new();
         let context = computer::Server::new();
 
-        // Test input "0" 
-        let multi_result = tm.simulate(
-            vec!["0".to_string()],
-            100,
-            computer.clone(),
-            context.clone(), 
-            0
-        ).unwrap();
+        // Test input "0"
+        let multi_result = tm
+            .simulate(
+                vec!["0".to_string()],
+                100,
+                computer.clone(),
+                context.clone(),
+                0,
+            )
+            .unwrap();
 
-        let single_result = single_tape.simulate(
-            vec!["0".to_string()],
-            100,
-            computer,
-            context,
-            0
-        ).unwrap();
+        let single_result = single_tape
+            .simulate(vec!["0".to_string()], 100, computer, context, 0)
+            .unwrap();
 
         assert_eq!(multi_result.0, single_result.0);
         assert_eq!(multi_result.0, "accept");
@@ -2219,11 +2218,7 @@ mod tests {
         tm.accept_state = "qa".to_string();
         tm.reject_state = "qr".to_string();
         tm.tape_count = 2;
-        tm.states = vec![
-            "q0".to_string(),
-            "qa".to_string(),
-            "qr".to_string()
-        ];
+        tm.states = vec!["q0".to_string(), "qa".to_string(), "qr".to_string()];
         tm.input_alphabet = vec!["1".to_string()];
         tm.tape_alphabet = vec!["1".to_string(), "B".to_string()];
 
@@ -2233,7 +2228,7 @@ mod tests {
             vec!["1".to_string(), "B".to_string()],
             "qa".to_string(),
             vec!["1".to_string(), "1".to_string()],
-            vec![Direction::Left, Direction::Right]
+            vec![Direction::Left, Direction::Right],
         );
 
         let single_tape = tm.clone().convert_multi_tape_to_single_tape_tm().unwrap();
@@ -2242,21 +2237,19 @@ mod tests {
         let context = computer::Server::new();
 
         // Test behavior maintains with different movement directions
-        let multi_result = tm.simulate(
-            vec!["1".to_string()],
-            100,
-            computer.clone(),
-            context.clone(),
-            1 // Test with head not at start
-        ).unwrap();
+        let multi_result = tm
+            .simulate(
+                vec!["1".to_string()],
+                100,
+                computer.clone(),
+                context.clone(),
+                1, // Test with head not at start
+            )
+            .unwrap();
 
-        let single_result = single_tape.simulate(
-            vec!["1".to_string()],
-            100,
-            computer,
-            context,
-            1
-        ).unwrap();
+        let single_result = single_tape
+            .simulate(vec!["1".to_string()], 100, computer, context, 1)
+            .unwrap();
 
         assert_eq!(multi_result.0, single_result.0);
         assert_eq!(multi_result.0, "accept");
@@ -2270,11 +2263,7 @@ mod tests {
         tm.accept_state = "qa".to_string();
         tm.reject_state = "qr".to_string();
         tm.tape_count = 2;
-        tm.states = vec![
-            "q0".to_string(),
-            "qa".to_string(),
-            "qr".to_string()
-        ];
+        tm.states = vec!["q0".to_string(), "qa".to_string(), "qr".to_string()];
         tm.input_alphabet = vec!["1".to_string()];
         tm.tape_alphabet = vec!["1".to_string(), "B".to_string()];
 
@@ -2284,14 +2273,14 @@ mod tests {
             vec!["B".to_string(), "B".to_string()],
             "q0".to_string(),
             vec!["B".to_string(), "B".to_string()],
-            vec![Direction::Right, Direction::Stay]
+            vec![Direction::Right, Direction::Stay],
         );
         tm.add_transition(
             "q0".to_string(),
             vec!["1".to_string(), "B".to_string()],
             "qa".to_string(),
             vec!["1".to_string(), "1".to_string()],
-            vec![Direction::Stay, Direction::Stay]
+            vec![Direction::Stay, Direction::Stay],
         );
 
         let single_tape = tm.clone().convert_multi_tape_to_single_tape_tm().unwrap();
@@ -2300,24 +2289,21 @@ mod tests {
         let context = computer::Server::new();
 
         // Test Stay direction is handled correctly
-        let multi_result = tm.simulate(
-            vec!["1".to_string()],
-            100,
-            computer.clone(),
-            context.clone(),
-            0
-        ).unwrap();
+        let multi_result = tm
+            .simulate(
+                vec!["1".to_string()],
+                100,
+                computer.clone(),
+                context.clone(),
+                0,
+            )
+            .unwrap();
 
-        let single_result = single_tape.simulate(
-            vec!["1".to_string()],
-            100,
-            computer,
-            context,
-            0
-        ).unwrap();
+        let single_result = single_tape
+            .simulate(vec!["1".to_string()], 100, computer, context, 0)
+            .unwrap();
 
         assert_eq!(multi_result.0, single_result.0);
         assert_eq!(multi_result.0, "accept");
     }
-
 }

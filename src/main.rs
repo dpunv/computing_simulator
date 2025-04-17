@@ -27,10 +27,11 @@ mod tests {
             // Redirect stdout to avoid printing during tests
             let stdout = std::io::stdout();
             let _handle = stdout.lock();
-            
+
             // Call main_cli with mock args if needed
             cli::main_cli();
-        }).is_ok());
+        })
+        .is_ok());
     }
 
     // Integration test to ensure all modules are properly linked
@@ -40,12 +41,18 @@ mod tests {
         assert!(std::panic::catch_unwind(|| {
             let _cli = cli::main_cli;
             let _computer = computer::Computer::new();
-            let _lambda = lambda::Lambda { expr: lambda::LambdaExpr::Var("a".to_string()), references: Vec::new(), name: "test".to_string(), force_currying: false };
+            let _lambda = lambda::Lambda {
+                expr: lambda::LambdaExpr::Var("a".to_string()),
+                references: Vec::new(),
+                name: "test".to_string(),
+                force_currying: false,
+            };
             let _ram = ram_machine::RamMachine {
                 instructions: Vec::new(),
-                labels_map: std::collections::HashMap::new()
+                labels_map: std::collections::HashMap::new(),
             };
             let _turing = turing_machine::TuringMachine::new();
-        }).is_ok());
+        })
+        .is_ok());
     }
 }

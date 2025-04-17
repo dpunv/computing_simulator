@@ -429,14 +429,14 @@ fn handle_computation(options: &mut options::Options) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_validate_options() {
         let mut opt = options::Options::default();
 
         opt.file = "test.tm".to_string();
         assert!(validate_options(&opt));
-        
+
         opt.file = "".to_string();
         opt.print_nth_tm = 1;
         assert!(validate_options(&opt));
@@ -464,7 +464,7 @@ mod tests {
     fn test_print_status_ram() {
         let ram = ram_machine::RamMachine {
             instructions: vec![],
-            labels_map: std::collections::HashMap::new()
+            labels_map: std::collections::HashMap::new(),
         };
         print_status_ram(&ram);
     }
@@ -476,7 +476,7 @@ mod tests {
         opt.verbose = 1;
         opt.input = "test".to_string();
         opt.max_steps = 100;
-        
+
         let mut computer = computer::Computer::new();
         computer.set_turing(turing_machine::TuringMachine::new());
         server.add_computer("test".to_string(), computer);
@@ -494,15 +494,13 @@ mod tests {
             reject_state: "qr".to_string(),
             halt_state: "qh".to_string(),
             blank_symbol: "B".to_string(),
-            transitions: vec![
-                turing_machine::Transition {
-                    state: "q0".to_string(),
-                    new_state: "q1".to_string(),
-                    symbols: vec!["0".to_string()],
-                    new_symbols: vec!["1".to_string()],
-                    directions: vec![turing_machine::Direction::Right],
-                }
-            ],
+            transitions: vec![turing_machine::Transition {
+                state: "q0".to_string(),
+                new_state: "q1".to_string(),
+                symbols: vec!["0".to_string()],
+                new_symbols: vec!["1".to_string()],
+                directions: vec![turing_machine::Direction::Right],
+            }],
             tape_count: 1,
             next_state_id: 1,
         };
@@ -523,7 +521,7 @@ mod tests {
 
     #[test]
     fn test_print_help() {
-        print_help(); 
+        print_help();
     }
     #[test]
     fn test_print_ram() {
@@ -532,15 +530,15 @@ mod tests {
                 ram_machine::Instruction {
                     opcode: "0101".to_string(),
                     operand: "1".to_string(),
-                    label: "".to_string()
+                    label: "".to_string(),
                 },
                 ram_machine::Instruction {
                     opcode: "0110".to_string(),
                     operand: "10".to_string(),
-                    label: "".to_string()
-                }
+                    label: "".to_string(),
+                },
             ],
-            labels_map: std::collections::HashMap::new()
+            labels_map: std::collections::HashMap::new(),
         };
         print_ram(ram);
     }
@@ -554,7 +552,7 @@ mod tests {
                 name: "test2".to_string(),
                 expr: lambda::parse_lambda("(\\x.(x))").unwrap(),
                 references: vec![],
-                force_currying: false
+                force_currying: false,
             }],
             force_currying: false,
         };
@@ -567,7 +565,7 @@ mod tests {
             name: "test".to_string(),
             expr: lambda::LambdaExpr::Abs(
                 vec!["x".to_string()],
-                Box::new(lambda::LambdaExpr::Var("x".to_string()))
+                Box::new(lambda::LambdaExpr::Var("x".to_string())),
             ),
             references: vec![],
             force_currying: false,
@@ -582,7 +580,7 @@ mod tests {
         opt.verbose = -1;
         opt.input = "test".to_string();
         opt.max_steps = 100;
-        
+
         let result = std::panic::catch_unwind(|| {
             process_results(server, opt);
         });

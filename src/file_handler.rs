@@ -621,7 +621,7 @@ mod tests {
         let mut computer = computer::Computer::new();
         let lines = vec![
             "q0".to_string(),
-            "qa".to_string(), 
+            "qa".to_string(),
             "qr".to_string(),
             "qh".to_string(),
             "_".to_string(),
@@ -629,7 +629,7 @@ mod tests {
             "0 1".to_string(),
             "0 1 _".to_string(),
             "1".to_string(),
-            "invalid transition".to_string()
+            "invalid transition".to_string(),
         ];
         let result = read_turing_machine(lines, &mut computer);
         assert!(result.is_err());
@@ -641,9 +641,9 @@ mod tests {
         let lines = vec![
             "q0".to_string(),
             "qa".to_string(),
-            "q0 qa".to_string(), 
+            "q0 qa".to_string(),
             "0 1".to_string(),
-            "q0 0 1 2 qa".to_string() // Invalid transition format
+            "q0 0 1 2 qa".to_string(), // Invalid transition format
         ];
         let result = read_finite_state_machine(lines, &mut computer);
         assert!(result.is_err());
@@ -656,10 +656,10 @@ mod tests {
             "q0".to_string(),
             "qa".to_string(),
             "q0 qa".to_string(),
-            "0 1".to_string(), 
+            "0 1".to_string(),
             "Z $".to_string(),
             "_".to_string(),
-            "invalid pda transition".to_string()
+            "invalid pda transition".to_string(),
         ];
         let result = read_pushdown_automaton(lines, &mut computer);
         assert!(result.is_err());
@@ -668,9 +668,7 @@ mod tests {
     #[test]
     fn test_read_tm_from_encoding_invalid() {
         let mut computer = computer::Computer::new();
-        let lines = vec![
-            "invalid_encoding".to_string()
-        ];
+        let lines = vec!["invalid_encoding".to_string()];
         let result = read_tm_from_encoding(lines, &mut computer);
         assert!(result.is_err());
     }
@@ -678,9 +676,7 @@ mod tests {
     #[test]
     fn test_read_ram_program_invalid_instruction() {
         let mut computer = computer::Computer::new();
-        let lines = vec![
-            "INVALID 123".to_string()
-        ];
+        let lines = vec!["INVALID 123".to_string()];
         let result = read_ram_program(lines, &mut computer);
         assert!(result.is_err());
     }
@@ -688,9 +684,7 @@ mod tests {
     #[test]
     fn test_read_ram_program_from_encoding_invalid() {
         let mut computer = computer::Computer::new();
-        let lines = vec![
-            "invalid_encoding".to_string()
-        ];
+        let lines = vec!["invalid_encoding".to_string()];
         let result = read_ram_program_from_encoding(lines, &mut computer);
         assert!(result.is_err());
     }
@@ -699,7 +693,7 @@ mod tests {
     fn test_read_regex_invalid() {
         let mut computer = computer::Computer::new();
         let lines = vec![
-            "(((".to_string() // Invalid regex
+            "(((".to_string(), // Invalid regex
         ];
         let result = read_regex(lines, &mut computer);
         assert!(result.is_err());
@@ -708,9 +702,7 @@ mod tests {
     #[test]
     fn test_read_lambda_invalid() {
         let mut computer = computer::Computer::new();
-        let lines = vec![
-            "invalid lambda expression".to_string()
-        ];
+        let lines = vec!["invalid lambda expression".to_string()];
         let result = read_lambda(lines, &mut computer);
         assert!(result.is_err());
     }
@@ -720,14 +712,14 @@ mod tests {
         let lines = vec![
             "q0".to_string(),
             "qa".to_string(),
-            "qr".to_string(), 
+            "qr".to_string(),
             "qh".to_string(),
             "_".to_string(),
             "q0 qa qr qh".to_string(),
             "0 1".to_string(),
             "0 1 _".to_string(),
             "1".to_string(),
-            "q0 0 qa 1 R".to_string()
+            "q0 0 qa 1 R".to_string(),
         ];
         let result = read_turing_machine(lines, &mut computer);
         assert!(result.is_ok());
@@ -738,10 +730,10 @@ mod tests {
         let mut computer = computer::Computer::new();
         let lines = vec![
             "q0".to_string(),
-            "qa".to_string(), 
+            "qa".to_string(),
             "q0 qa".to_string(),
             "0 1".to_string(),
-            "q0 0 qa".to_string()
+            "q0 0 qa".to_string(),
         ];
         let result = read_finite_state_machine(lines, &mut computer);
         assert!(result.is_ok());
@@ -765,7 +757,7 @@ mod tests {
             "0 1".to_string(),
             "Z $".to_string(),
             "_".to_string(),
-            "q0 0 Z qa Z Z".to_string()
+            "q0 0 Z qa Z Z".to_string(),
         ];
         let result = read_pushdown_automaton(lines, &mut computer);
         assert!(result.is_ok());
@@ -774,11 +766,7 @@ mod tests {
     #[test]
     fn test_read_ram_program_valid() {
         let mut computer = computer::Computer::new();
-        let lines = vec![
-            "START L 1".to_string(),
-            "ST 2".to_string(),
-            "H".to_string()
-        ];
+        let lines = vec!["START L 1".to_string(), "ST 2".to_string(), "H".to_string()];
         let result = read_ram_program(lines, &mut computer);
         assert!(result.is_ok());
     }
@@ -786,9 +774,7 @@ mod tests {
     #[test]
     fn test_read_regex_valid() {
         let mut computer = computer::Computer::new();
-        let lines = vec![
-            "(a|b)*".to_string()
-        ];
+        let lines = vec!["(a|b)*".to_string()];
         let result = read_regex(lines, &mut computer);
         assert!(result.is_ok());
     }
@@ -798,13 +784,13 @@ mod tests {
         let lines = vec![
             "(i00;b10;q01;a01;R)(q01;a01;h10;a00;R)".to_string(),
             "".to_string(),
-            "a00 1".to_string(), 
+            "a00 1".to_string(),
             "a01 0".to_string(),
             "b10 _".to_string(),
             "".to_string(),
             "i00 s0".to_string(),
             "q01 s0".to_string(),
-            "h10 s1".to_string()
+            "h10 s1".to_string(),
         ];
         let result = read_tm_from_encoding(lines, &mut computer);
         assert!(result.is_ok());
@@ -815,18 +801,16 @@ mod tests {
         let mut computer = computer::Computer::new();
         let lines = vec![
             "id: (\\x.(x))".to_string(),
-            "const: (\\x.((\\y.(x))))".to_string()
+            "const: (\\x.((\\y.(x))))".to_string(),
         ];
         let result = read_lambda(lines, &mut computer);
         assert!(result.is_ok());
     }
 
-    #[test] 
+    #[test]
     fn test_read_ram_program_from_encoding_valid() {
         let mut computer = computer::Computer::new();
-        let lines = vec![
-            "#0,00001#1,00010#10,00100#".to_string()
-        ];
+        let lines = vec!["#0,00001#1,00010#10,00100#".to_string()];
         let result = read_ram_program_from_encoding(lines, &mut computer);
         assert!(result.is_ok());
     }
@@ -837,7 +821,7 @@ mod tests {
         let mut computer = computer::Computer::new();
         computer.set_turing(turing_machine::TuringMachine::new());
         context.add_computer("test.tm".to_string(), computer);
-        
+
         let lines = [
             "tm",
             "q0",
@@ -851,11 +835,12 @@ mod tests {
             "1",
             "q0 0 qa 1 R",
             ": test test.tm",
-        ].join("\n");
-        
+        ]
+        .join("\n");
+
         let temp_file = std::fs::write("temp.txt", lines);
         assert!(temp_file.is_ok());
-        
+
         let result = handle_file_reads("temp.txt".to_string(), &mut context);
         std::fs::remove_file("temp.txt").unwrap();
         assert!(result.is_ok());

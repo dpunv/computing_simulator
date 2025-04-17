@@ -37,7 +37,10 @@ pub fn get_options() -> Options {
     let mut verbose = 1;
 
     #[cfg(test)]
-    let args = tests::ARGS.with(|args| args.borrow().clone()).into_iter().skip(1);
+    let args = tests::ARGS
+        .with(|args| args.borrow().clone())
+        .into_iter()
+        .skip(1);
     #[cfg(not(test))]
     let args = std::env::args().skip(1);
     for arg in args {
@@ -97,7 +100,7 @@ pub fn get_options() -> Options {
 mod tests {
     use std::cell::RefCell;
     thread_local! {
-        pub static ARGS: RefCell<Vec<String>> = RefCell::new(Vec::new());
+        pub static ARGS: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
     }
     use super::*;
 
@@ -115,7 +118,7 @@ mod tests {
         });
 
         let options = get_options();
-        assert_eq!(options.convert_to_tm, true);
+        assert!(options.convert_to_tm);
         assert_eq!(options.input, "test_input");
         assert_eq!(options.file, "test.txt");
         assert_eq!(options.max_steps, 500);
@@ -127,9 +130,9 @@ mod tests {
         ARGS.with(|args| {
             *args.borrow_mut() = Vec::new();
         });
-        
+
         let options = get_options();
-        assert_eq!(options.convert_to_tm, false);
+        assert!(!options.convert_to_tm);
         assert_eq!(options.max_steps, 1000);
         assert_eq!(options.verbose, 1);
         assert_eq!(options.input, "");
@@ -148,8 +151,8 @@ mod tests {
         });
 
         let options = get_options();
-        assert_eq!(options.print_computer, true);
-        assert_eq!(options.status, true);
-        assert_eq!(options.print_encoding, true);
+        assert!(options.print_computer);
+        assert!(options.status);
+        assert!(options.print_encoding);
     }
 }

@@ -366,7 +366,10 @@ mod tests {
         let result = parse_lambda("(\\x.(x))").unwrap();
         assert_eq!(
             result,
-            LambdaExpr::Abs(vec!["x".to_string()], Box::new(LambdaExpr::Var("x".to_string())))
+            LambdaExpr::Abs(
+                vec!["x".to_string()],
+                Box::new(LambdaExpr::Var("x".to_string()))
+            )
         );
     }
 

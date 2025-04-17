@@ -18,15 +18,15 @@ pub fn input_string_to_vec(input_alphabet: Vec<String>, input: String) -> Vec<St
 pub fn int2bin(n: i32, bitnum: usize) -> String {
     if bitnum > 0 {
         let s = format!("{:0>width$b}", n, width = bitnum);
-        s[s.len()-bitnum..s.len()].to_string()
+        s[s.len() - bitnum..s.len()].to_string()
     } else {
         format!("{:b}", n)
     }
 }
 
 pub fn bin2int(s: String) -> Result<i32, String> {
-    if s.is_empty() || s.chars().nth(0) == Some('-') {
-        return Err(format!("invalid input string: {}",  s))
+    if s.is_empty() || s.starts_with('-') {
+        return Err(format!("invalid input string: {}", s));
     }
     i32::from_str_radix(s.as_str(), 2).map_err(|e| e.to_string())
 }
@@ -40,7 +40,7 @@ where
 } */
 
 pub fn uint2str(n: usize, alphabet: Vec<String>) -> Result<String, String> {
-    if alphabet.len() < 1 {
+    if alphabet.is_empty() {
         return Err("void alphabet, cannot convert int2str".to_string());
     }
     let mut i = 1;
@@ -92,8 +92,8 @@ pub fn bin2alphabet(s: String, alphabet: Vec<String>) -> Result<String, String> 
 } */
 
 pub fn is_numeric(s: String) -> bool {
-    if s.len() < 1 {
-        return false
+    if s.is_empty() {
+        return false;
     }
     for ch in s.chars() {
         if !ch.is_ascii_digit() {
@@ -121,7 +121,7 @@ mod tests {
             input_string_to_vec(alphabet2, "aabbc".to_string()),
             vec!["aa", "bb", "c"]
         );
-        
+
         // Test empty input
         let alphabet3 = vec!["a".to_string(), "b".to_string()];
         assert_eq!(
@@ -155,7 +155,7 @@ mod tests {
     fn test_uint2str() {
         let alphabet = vec!["a".to_string(), "b".to_string()];
         assert_eq!(uint2str(1, alphabet.clone()), Ok("a".to_string()));
-        
+
         // Test with larger alphabet
         let alphabet2 = vec!["x".to_string(), "y".to_string(), "z".to_string()];
         assert_eq!(uint2str(2, alphabet2.clone()), Ok("y".to_string()));
@@ -164,12 +164,23 @@ mod tests {
     #[test]
     fn test_bin2alphabet() {
         let alphabet = vec!["a".to_string(), "b".to_string()];
-        assert_eq!(bin2alphabet("0".to_string(), alphabet.clone()), Ok("a".to_string()));
+        assert_eq!(
+            bin2alphabet("0".to_string(), alphabet.clone()),
+            Ok("a".to_string())
+        );
         assert!(bin2alphabet("".to_string(), alphabet.clone()).is_err());
-        
+
         // Additional cases
-        let large_alphabet = vec!["a".to_string(), "b".to_string(), "c".to_string(), "d".to_string()];
-        assert_eq!(bin2alphabet("10".to_string(), large_alphabet.clone()), Ok("c".to_string()));
+        let large_alphabet = vec![
+            "a".to_string(),
+            "b".to_string(),
+            "c".to_string(),
+            "d".to_string(),
+        ];
+        assert_eq!(
+            bin2alphabet("10".to_string(), large_alphabet.clone()),
+            Ok("c".to_string())
+        );
         assert!(bin2alphabet("111".to_string(), large_alphabet).is_err()); // Invalid bit length
     }
 
@@ -201,7 +212,7 @@ mod tests {
         );
     }
 
-    #[test] 
+    #[test]
     fn test_int2bin_negative() {
         assert_eq!(int2bin(-5, 5), "11011");
         assert_eq!(int2bin(-1, 8), "11111111");
@@ -222,8 +233,16 @@ mod tests {
 
     #[test]
     fn test_bin2alphabet_complex() {
-        let alphabet = vec!["00".to_string(), "11".to_string(), "22".to_string(), "33".to_string()];
-        assert_eq!(bin2alphabet("0010".to_string(), alphabet.clone()), Ok("0022".to_string()));
+        let alphabet = vec![
+            "00".to_string(),
+            "11".to_string(),
+            "22".to_string(),
+            "33".to_string(),
+        ];
+        assert_eq!(
+            bin2alphabet("0010".to_string(), alphabet.clone()),
+            Ok("0022".to_string())
+        );
         assert!(bin2alphabet("0".to_string(), alphabet).is_err()); // Insufficient bits
     }
 
