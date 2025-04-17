@@ -14,7 +14,7 @@ h
 // blank symbol
 _
 // states
-0 1 1b 1c 1ca 1cb 1cc 1cd 1ce 1cf 1d 1e 1f 1g 1h 1ha 1i 1j 1k 1l 1m 1n 1o 1p 1pa 1q 1r 1s 1t 1u 1v 1w 1x 1y 1z 1aa 1bb 1cc 1dd 1ee 2 3 3a 3b 4 5 6 7 8 9 10 10b 11 12 13 14 14a 14b 14c 14d 15 16 17 18 19 20 21 22 23 23a 23c 24 24b 25 26 27 28 29 30 31 h
+0 1 1b 1c 1ca 1cb 1cc 1cd 1ce 1cf 1d 1e 1f 1fa 1g 1h 1ha 1i 1j 1k 1l 1m 1n 1o 1p 1pa 1q 1r 1s 1t 1u 1v 1w 1x 1y 1z 1aa 1bb 1cc 1dd 1ee 2 3 3a 3b 4 5 6 7 8 9 10 10b 11 12 13 14 14a 14b 14c 14d 15 16 17 18 19 20 21 22 23 23a 23c 24 24b 25 26 27 28 29 30 31 h
 // input alphabet
 ( ) / .
 // tape alphabet

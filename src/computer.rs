@@ -28,7 +28,7 @@ pub struct Computer {
     pub mapping: std::collections::HashMap<String, String>,
 }
 
-pub type SimulationResult = (String, usize, Vec<String>, i32, Vec<String>);
+pub type SimulationResult = (String, usize, Vec<String>, usize, Vec<String>);
 
 #[derive(Clone)]
 pub struct Server {
@@ -101,7 +101,7 @@ impl Computer {
     pub fn simulate(
         self,
         input: String,
-        max_steps: i32,
+        max_steps: usize,
         context: Server,
         head: usize,
     ) -> Result<SimulationResult, String> {
@@ -159,7 +159,9 @@ impl Computer {
                     .filter(|e| *e != "(" && *e != ")" && *e != "." && *e != "/")
                     .cloned()
                     .collect();
+                let mapping = self.mapping.clone();
                 *self = file_handler::handle_file_reads(options.file.clone(), s)?;
+                self.mapping = mapping;
                 match self.element.clone() {
                     ComputingElem::Ram(_) => return Err("something went wrong".to_string()),
                     ComputingElem::Lambda(_) => return Err("something went wrong".to_string()),
@@ -309,13 +311,10 @@ impl Computer {
                             .collect();
 
                         this.input_alphabet = input_alphabet.clone().into_iter().collect();
-                        this.tape_alphabet = input_alphabet.into_iter().collect();
-                        this.tape_alphabet.push("_".to_string());
-                        this.tape_alphabet.push("$".to_string());
+                        this.tape_alphabet = [input_alphabet.into_iter().collect(), m.tape_alphabet].concat();
                         self.element = ComputingElem::Tm(Box::new(*this));
                     }
                 }
-
                 Ok(self.clone())
             }
             ComputingElem::Tm(_) => Err("already TM".to_string()),
@@ -323,7 +322,9 @@ impl Computer {
                 options.file = "src/standard/ram over tm.tm".to_string();
                 options.input = options.input.clone() + &(m.to_encoding()?).0;
                 let orig_c = self.clone();
+                let mapping = self.mapping.clone();
                 *self = file_handler::handle_file_reads(options.file.clone(), s)?;
+                self.mapping = mapping;
                 let mut layers_vec = Vec::new();
                 let mut this_layer = vec![0];
                 let mut internal_count = 0;
@@ -562,7 +563,9 @@ impl Computer {
                         .collect::<Result<Vec<String>, String>>()?
                         .join("1")
                     + "0";
+                let mapping = self.mapping.clone();
                 *self = file_handler::handle_file_reads(options.file.clone(), s)?;
+                self.mapping = mapping;
                 match self.element.clone() {
                     ComputingElem::Ram(mut ram) => {
                         ram.labels_map.insert(
@@ -676,13 +679,19 @@ impl Server {
     pub fn execute(
         &mut self,
         input: String,
-        max_steps: i32,
-    ) -> Result<(String, usize, String, i32, Vec<String>), String> {
-        let mut steps: i32 = 0;
+        max_steps: usize,
+    ) -> Result<(String, usize, String, usize, Vec<String>), String> {
+        let mut steps: usize = 0;
         let mut output: String = input;
         let mut final_state = "".to_string();
         let mut current_head = 0;
         let mut tot_comp = Vec::new();
+        if self.map_computers.is_empty() {
+            return Err("empty server".to_string());
+        }
+        if self.computation_order.is_empty() {
+            return Err("empry computation order".to_string());
+        }
         for name in self.computation_order.clone() {
             let computer = self.get_computer(name.clone()).ok_or_else(|| {
                 format!("cannot find computer with name '{}'", name.clone()).to_string()
@@ -712,5 +721,947 @@ impl Server {
             }
         }
         Ok((final_state, current_head, output, steps, tot_comp))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_computer_new() {
+        let computer = Computer::new();
+        assert!(matches!(computer.element, ComputingElem::Tm(_)));
+        assert!(computer.mapping.is_empty());
+    }
+
+    #[test]
+    fn test_computer_is_ram() {
+        let mut computer = Computer::new();
+        assert!(!computer.is_ram());
+        computer.set_ram(ram_machine::RamMachine {
+            instructions: Vec::new(),
+            labels_map: std::collections::HashMap::new(),
+        });
+        assert!(computer.is_ram());
+    }
+
+    #[test]
+    fn test_computer_mapping() {
+        let mut computer = Computer::new();
+        computer.add_mapping("test".to_string(), "value".to_string());
+        assert_eq!(computer.get_mapping("test".to_string()), Ok("value".to_string()));
+        assert_eq!(computer.get_mapping("missing".to_string()), Ok("".to_string()));
+    }
+
+    #[test]
+    fn test_server_new() {
+        let server = Server::new();
+        assert!(server.map_computers.is_empty());
+        assert!(server.computation_order.is_empty());
+    }
+
+    #[test]
+    fn test_server_add_get_computer() {
+        let mut server = Server::new();
+        let computer = Computer::new();
+        server.add_computer("test".to_string(), computer.clone());
+        assert!(server.contains("test".to_string()));
+        assert!(server.get_computer("test".to_string()).is_some());
+    }
+
+    #[test]
+    fn test_server_computation_order() {
+        let mut server = Server::new();
+        server.set_computation_order_at(0, "first".to_string());
+        server.set_computation_order_at(1, "second".to_string());
+        assert_eq!(server.computes_at(0), "first");
+        assert_eq!(server.computes_at(1), "second");
+    }
+    #[test]
+    fn test_set_machine_types() {
+        let mut computer = Computer::new();
+        
+        let ram = ram_machine::RamMachine {
+            instructions: Vec::new(),
+            labels_map: std::collections::HashMap::new(),
+        };
+        computer.set_ram(ram);
+        assert!(computer.is_ram());
+        
+        let tm = turing_machine::TuringMachine::new(); 
+        computer.set_turing(tm);
+        assert!(!computer.is_ram());
+
+        let lambda = lambda::Lambda {
+            expr: lambda::LambdaExpr::Var("".to_string()),
+            references: Vec::new(),
+            name: "".to_string(),
+            force_currying: false
+        };
+        computer.set_lambda(lambda);
+        assert!(!computer.is_ram());
+    }
+
+    #[test]
+    fn test_server_computation_order_operations() {
+        let mut server = Server::new();
+        
+        server.set_computation_order_at(0, "a".to_string());
+        server.set_computation_order_at(1, "b".to_string());
+        server.set_computation_order_at(2, "c".to_string());
+        
+        assert_eq!(server.computation_order.len(), 3);
+        assert_eq!(server.computes_at(0), "a");
+        assert_eq!(server.computes_at(1), "b");
+        assert_eq!(server.computes_at(2), "c");
+    }
+
+    #[test]
+    fn test_multiple_computer_mappings() {
+        let mut computer = Computer::new();
+        
+        computer.add_mapping("key1".to_string(), "val1".to_string());
+        computer.add_mapping("key2".to_string(), "val2".to_string());
+        computer.add_mapping("key3".to_string(), "val3".to_string());
+
+        assert_eq!(computer.get_mapping("key1".to_string()), Ok("val1".to_string()));
+        assert_eq!(computer.get_mapping("key2".to_string()), Ok("val2".to_string())); 
+        assert_eq!(computer.get_mapping("key3".to_string()), Ok("val3".to_string()));
+        assert_eq!(computer.get_mapping("missing".to_string()), Ok("".to_string()));
+    }
+    #[test]
+    fn test_server_add_multiple_computers() {
+        let mut server = Server::new();
+        let computer1 = Computer::new();
+        let computer2 = Computer::new();
+        let computer3 = Computer::new();
+
+        server.add_computer("comp1".to_string(), computer1);
+        server.add_computer("comp2".to_string(), computer2);
+        server.add_computer("comp3".to_string(), computer3);
+
+        assert!(server.contains("comp1".to_string()));
+        assert!(server.contains("comp2".to_string())); 
+        assert!(server.contains("comp3".to_string()));
+        assert!(!server.contains("comp4".to_string()));
+    }
+
+    #[test]
+    fn test_computer_encoding() {
+        let mut _computer = Computer::new();
+        let _tm = turing_machine::TuringMachine {
+            states: vec!["q0".to_string(), "q1".to_string()],
+            input_alphabet: vec!["0".to_string(), "1".to_string()],
+            tape_alphabet: vec!["0".to_string(), "1".to_string(), "_".to_string()],
+            initial_state: "q0".to_string(),
+            accept_state: "q1".to_string(),
+            reject_state: "q1".to_string(),
+            halt_state: "q1".to_string(),
+            blank_symbol: "_".to_string(),
+            transitions: vec![
+                turing_machine::Transition { 
+                    state: "q0".to_string(),
+                    symbols: vec!["_".to_string()],
+                    new_state: "q1".to_string(),
+                    new_symbols: vec!["_".to_string()],
+                    directions: vec![turing_machine::Direction::Stay] }
+            ],
+            tape_count: 1,
+            next_state_id: 10,
+        };
+        _computer.set_turing(_tm);
+        let result = _computer.to_encoding();
+        assert!(result.is_ok());
+        if let Ok((encoding, map1, map2)) = result {
+            assert!(!encoding.is_empty());
+            assert!(!map1.is_empty());
+            assert!(!map2.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_server_empty_execution() {
+        let mut server = Server::new();
+        let result = server.execute("test input".to_string(), 100);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_computer_clone() {
+        let computer1 = Computer::new();
+        let computer2 = computer1.clone();
+        
+        assert!(matches!(computer2.element, ComputingElem::Tm(_)));
+        assert_eq!(computer1.mapping.len(), computer2.mapping.len());
+    }
+
+    #[test]
+    fn test_server_clone() {
+        let mut server1 = Server::new();
+        server1.set_computation_order_at(0, "test".to_string());
+        
+        let server2 = server1.clone();
+        
+        assert_eq!(server1.computation_order, server2.computation_order);
+        assert_eq!(server1.map_computers.len(), server2.map_computers.len());
+    }
+    #[test]
+    fn test_computer_to_encoding_lambda() {
+        let mut computer = Computer::new();
+        let lambda = lambda::Lambda {
+            expr: lambda::LambdaExpr::Var("x".to_string()),
+            references: Vec::new(),
+            name: "test".to_string(),
+            force_currying: false
+        };
+        computer.set_lambda(lambda);
+        
+        let result = computer.to_encoding();
+        assert!(result.is_ok());
+        if let Ok((encoding, map1, map2)) = result {
+            assert!(!encoding.is_empty());
+            assert!(map1.is_empty());
+            assert!(map2.is_empty());
+        }
+    }
+
+    #[test] 
+    fn test_computer_to_encoding_ram() {
+        let mut computer = Computer::new();
+        let ram = ram_machine::RamMachine {
+            instructions: vec![],
+            labels_map: std::collections::HashMap::new()
+        };
+        computer.set_ram(ram);
+
+        let result = computer.to_encoding();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_server_execute_single_computer() {
+        let mut server = Server::new();
+        let computer = Computer::new();
+        server.add_computer("test".to_string(), computer);
+        server.set_computation_order_at(0, "test".to_string());
+
+        let result = server.execute("test".to_string(), 100);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_computer_simulate_lambda() {
+        let mut computer = Computer::new();
+        let lambda = lambda::Lambda {
+            expr: lambda::LambdaExpr::Var("x".to_string()),
+            references: Vec::new(), 
+            name: "".to_string(),
+            force_currying: false
+        };
+        computer.set_lambda(lambda);
+
+        let context = Server::new();
+        let result = computer.simulate("(x)".to_string(), 100, context, 0);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_computer_simulate_ram() {
+        let mut computer = Computer::new();
+        let ram = ram_machine::RamMachine {
+            instructions: vec![
+                ram_machine::Instruction {
+                    opcode: "0111".to_string(),
+                    operand: "100".to_string(),
+                    label: "".to_string()
+                },
+                ram_machine::Instruction {
+                    opcode: "0100".to_string(),
+                    operand: "1111".to_string(),
+                    label: "".to_string()
+                },
+                ram_machine::Instruction {
+                    opcode: "1000".to_string(),
+                    operand: "1111".to_string(),
+                    label: "".to_string()
+                },
+                ram_machine::Instruction {
+                    opcode: "0011".to_string(),
+                    operand: "".to_string(),
+                    label: "".to_string()
+                },
+                ram_machine::Instruction {
+                    opcode: "1011".to_string(),
+                    operand: "".to_string(),
+                    label: "".to_string()
+                },
+            ],
+            labels_map: std::collections::HashMap::new()
+        };
+        computer.set_ram(ram);
+
+        let context = Server::new();
+        let result = computer.simulate("".to_string(), 100, context, 0);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_server_multiple_executions() {
+        let mut server = Server::new();
+        let computer1 = Computer::new();
+        let computer2 = Computer::new();
+        
+        server.add_computer("c1".to_string(), computer1);
+        server.add_computer("c2".to_string(), computer2);
+        
+        server.set_computation_order_at(0, "c1".to_string());
+        server.set_computation_order_at(1, "c2".to_string());
+
+        let result1 = server.execute("test1".to_string(), 100);
+        assert!(result1.is_ok());
+        
+        let result2 = server.execute("test2".to_string(), 200);
+        assert!(result2.is_ok());
+    }
+
+    #[test]
+    fn test_computer_mapping_overwrite() {
+        let mut computer = Computer::new();
+        computer.add_mapping("key".to_string(), "value1".to_string());
+        computer.add_mapping("key".to_string(), "value2".to_string());
+        
+        assert_eq!(computer.get_mapping("key".to_string()), Ok("value2".to_string()));
+    }
+
+    #[test]
+    fn test_server_invalid_computer_name() {
+        let mut server = Server::new();
+        server.set_computation_order_at(0, "nonexistent".to_string());
+        
+        let result = server.execute("test".to_string(), 100);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_computer_max_steps_limit() {
+        let mut computer = Computer::new();
+        let ram = ram_machine::RamMachine {
+            instructions: vec![
+                ram_machine::Instruction {
+                    opcode: "0111".to_string(),
+                    operand: "100".to_string(),
+                    label: "".to_string()
+                },
+                ram_machine::Instruction {
+                    opcode: "1001".to_string(),
+                    operand: "0".to_string(),
+                    label: "".to_string()
+                },
+                ram_machine::Instruction {
+                    opcode: "1011".to_string(),
+                    operand: "".to_string(),
+                    label: "".to_string()
+                },
+            ],
+            labels_map: std::collections::HashMap::new()
+        };
+        computer.set_ram(ram);
+
+        let context = Server::new();
+        
+        let result = computer.simulate("test".to_string(), 0, context, 0);
+        assert!(result.is_ok());
+    }
+    #[test]
+    fn test_computer_to_tm_from_lambda() {
+        let mut computer = Computer::new();
+        let lambda = lambda::Lambda {
+            expr: lambda::LambdaExpr::Var("x".to_string()),
+            references: Vec::new(),
+            name: "".to_string(),
+            force_currying: false
+        };
+        computer.set_lambda(lambda);
+
+        let mut options = options::Options {
+            file: "".to_string(),
+            input: "(x)".to_string(),
+            convert_to_tm: false,
+            convert_to_ram: false,
+            convert_to_singletape: false,
+            print_computer: false,
+            print_number: false,
+            print_nth_tm: -1,
+            help: false,
+            version: false,
+            max_steps: 1000,
+            status: false,
+            print_encoding: false,
+            verbose: 1,
+        };
+        let mut server = Server::new();
+
+        let result = computer.to_tm(&mut options, &mut server);
+        assert!(result.is_ok());
+
+        if let Ok(converted) = result {
+            assert!(matches!(converted.element, ComputingElem::Tm(_)));
+        }
+    }
+
+    #[test]
+    fn test_computer_to_tm_from_ram() {
+        let mut computer = Computer::new();
+        let ram = ram_machine::RamMachine {
+            instructions: vec![
+                ram_machine::Instruction {
+                    opcode: "0111".to_string(), 
+                    operand: "100".to_string(),
+                    label: "".to_string()
+                }
+            ],
+            labels_map: std::collections::HashMap::new()
+        };
+        computer.set_ram(ram);
+
+        let mut options = options::Options {
+            file: "".to_string(),
+            input: "1010".to_string(),
+            convert_to_tm: false,
+            convert_to_ram: false,
+            convert_to_singletape: false,
+            print_computer: false,
+            print_number: false,
+            print_nth_tm: -1,
+            help: false,
+            version: false,
+            max_steps: 1000,
+            status: false,
+            print_encoding: false,
+            verbose: 1,
+        };
+        let mut server = Server::new();
+
+        let result = computer.to_tm(&mut options, &mut server);
+        assert!(result.is_ok());
+
+        if let Ok(converted) = result {
+            assert!(matches!(converted.element, ComputingElem::Tm(_)));
+        }
+    }
+
+    #[test]
+    fn test_computer_to_tm_already_tm() {
+        let mut computer = Computer::new();
+        let tm = turing_machine::TuringMachine::new();
+        computer.set_turing(tm);
+
+        let mut options = options::Options {
+            file: "".to_string(),
+            input: "".to_string(), 
+            convert_to_tm: false,
+            convert_to_ram: false,
+            convert_to_singletape: false,
+            print_computer: false,
+            print_number: false,
+            print_nth_tm: -1,
+            help: false,
+            version: false,
+            max_steps: 1000,
+            status: false,
+            print_encoding: false,
+            verbose: 1,
+        };
+        let mut server = Server::new();
+
+        let result = computer.to_tm(&mut options, &mut server);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_computer_to_tm_preservation() {
+        // Test that important properties are preserved during conversion
+        let mut computer = Computer::new();
+        let lambda = lambda::Lambda {
+            expr: lambda::LambdaExpr::Var("x".to_string()),
+            references: Vec::new(),
+            name: "test".to_string(),
+            force_currying: false
+        };
+        computer.set_lambda(lambda);
+
+        let mut options = options::Options {
+            file: "".to_string(),
+            input: "(x)".to_string(),
+            convert_to_tm: false,
+            convert_to_ram: false,
+            convert_to_singletape: false,
+            print_computer: false,
+            print_number: false,
+            print_nth_tm: -1,
+            help: false,
+            version: false,
+            max_steps: 1000,
+            status: false,
+            print_encoding: false,
+            verbose: 1,
+        };
+        let mut server = Server::new();
+
+        let result = computer.to_tm(&mut options, &mut server);
+        assert!(result.is_ok());
+
+        if let Ok(converted) = result {
+            if let ComputingElem::Tm(tm) = converted.element {
+                assert!(!tm.states.is_empty());
+                assert!(!tm.input_alphabet.is_empty()); 
+                assert!(!tm.tape_alphabet.is_empty());
+                assert!(!tm.transitions.is_empty());
+            }
+        }
+    }
+
+    #[test]
+    fn test_computer_to_tm_mapping_preservation() {
+        let mut computer = Computer::new();
+        let lambda = lambda::Lambda {
+            expr: lambda::LambdaExpr::Var("x".to_string()),
+            references: Vec::new(),
+            name: "test".to_string(), 
+            force_currying: false
+        };
+        computer.set_lambda(lambda);
+        computer.add_mapping("key1".to_string(), "val1".to_string());
+        computer.add_mapping("key2".to_string(), "val2".to_string());
+
+        let mut options = options::Options {
+            file: "".to_string(),
+            input: "(x)".to_string(),
+            convert_to_tm: false,
+            convert_to_ram: false,
+            convert_to_singletape: false,
+            print_computer: false,
+            print_number: false,
+            print_nth_tm: -1,
+            help: false,
+            version: false,
+            max_steps: 1000,
+            status: false,
+            print_encoding: false,
+            verbose: 1,
+        };
+        let mut server = Server::new();
+
+        let result = computer.to_tm(&mut options, &mut server);
+        assert!(result.is_ok());
+
+        if let Ok(converted) = result {
+            assert_eq!(converted.mapping.len(), computer.mapping.len());
+            assert_eq!(converted.get_mapping("key1".to_string()), Ok("val1".to_string()));
+            assert_eq!(converted.get_mapping("key2".to_string()), Ok("val2".to_string()));
+        }
+    }
+    #[test]
+    fn test_computer_to_ram_from_tm() {
+        let mut computer = Computer::new();
+        let tm = turing_machine::TuringMachine {
+            states: vec!["q0".to_string(), "q1".to_string()],
+            input_alphabet: vec!["0".to_string(), "1".to_string()],
+            tape_alphabet: vec!["0".to_string(), "1".to_string(), "_".to_string()],
+            initial_state: "q0".to_string(), 
+            accept_state: "q1".to_string(),
+            reject_state: "q1".to_string(),
+            halt_state: "q1".to_string(),
+            blank_symbol: "_".to_string(),
+            transitions: vec![
+                turing_machine::Transition {
+                    state: "q0".to_string(),
+                    symbols: vec!["0".to_string()],
+                    new_state: "q1".to_string(), 
+                    new_symbols: vec!["1".to_string()],
+                    directions: vec![turing_machine::Direction::Right]
+                }
+            ],
+            tape_count: 1,
+            next_state_id: 2,
+        };
+        computer.set_turing(tm);
+
+        let mut options = options::Options {
+            file: "".to_string(),
+            input: "0".to_string(),
+            convert_to_tm: false,
+            convert_to_ram: false,
+            convert_to_singletape: false,
+            print_computer: false,
+            print_number: false,
+            print_nth_tm: -1,
+            help: false,
+            version: false,
+            max_steps: 1000,
+            status: false,
+            print_encoding: false,
+            verbose: 1,
+        };
+        let mut server = Server::new();
+
+        let result = computer.to_ram(&mut options, &mut server);
+        assert!(result.is_ok());
+
+        if let Ok(converted) = result {
+            assert!(matches!(converted.element, ComputingElem::Ram(_)));
+        }
+    }
+
+    #[test]
+    fn test_computer_to_ram_from_lambda() {
+        let mut computer = Computer::new();
+        let lambda = lambda::Lambda {
+            expr: lambda::LambdaExpr::Var("x".to_string()),
+            references: Vec::new(),
+            name: "test".to_string(),
+            force_currying: false
+        };
+        computer.set_lambda(lambda);
+
+        let mut options = options::Options {
+            file: "".to_string(),
+            input: "(x)".to_string(),
+            convert_to_tm: false,
+            convert_to_ram: false,
+            convert_to_singletape: false,
+            print_computer: false,
+            print_number: false,
+            print_nth_tm: -1,
+            help: false,
+            version: false,
+            max_steps: 1000,
+            status: false,
+            print_encoding: false,
+            verbose: 1,
+        };
+        let mut server = Server::new();
+
+        let result = computer.to_ram(&mut options, &mut server);
+        assert!(result.is_ok());
+
+        if let Ok(converted) = result {
+            assert!(matches!(converted.element, ComputingElem::Ram(_)));
+        }
+    }
+
+    #[test]
+    fn test_computer_to_ram_already_ram() {
+        let mut computer = Computer::new();
+        let ram = ram_machine::RamMachine {
+            instructions: vec![],
+            labels_map: std::collections::HashMap::new()
+        };
+        computer.set_ram(ram);
+
+        let mut options = options::Options {
+            file: "".to_string(),
+            input: "".to_string(),
+            convert_to_tm: false,
+            convert_to_ram: false,
+            convert_to_singletape: false,
+            print_computer: false,
+            print_number: false,
+            print_nth_tm: -1,
+            help: false,
+            version: false,
+            max_steps: 1000,
+            status: false,
+            print_encoding: false,
+            verbose: 1,
+        };
+        let mut server = Server::new();
+
+        let result = computer.to_ram(&mut options, &mut server);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_computer_to_ram_preservation() {
+        let mut computer = Computer::new();
+        let tm = turing_machine::TuringMachine {
+            states: vec!["q0".to_string(), "q1".to_string()],
+            input_alphabet: vec!["0".to_string(), "1".to_string()],
+            tape_alphabet: vec!["0".to_string(), "1".to_string(), "_".to_string()],
+            initial_state: "q0".to_string(),
+            accept_state: "q1".to_string(),
+            reject_state: "q1".to_string(),
+            halt_state: "q1".to_string(),
+            blank_symbol: "_".to_string(),
+            transitions: vec![
+                turing_machine::Transition {
+                    state: "q0".to_string(),
+                    symbols: vec!["0".to_string()],
+                    new_state: "q1".to_string(),
+                    new_symbols: vec!["1".to_string()],
+                    directions: vec![turing_machine::Direction::Right]
+                }
+            ],
+            tape_count: 1,
+            next_state_id: 2,
+        };
+        computer.set_turing(tm);
+
+        let mut options = options::Options {
+            file: "".to_string(),
+            input: "0".to_string(),
+            convert_to_tm: false,
+            convert_to_ram: false,
+            convert_to_singletape: false,
+            print_computer: false,
+            print_number: false,
+            print_nth_tm: -1,
+            help: false,
+            version: false,
+            max_steps: 1000,
+            status: false,
+            print_encoding: false,
+            verbose: 1,
+        };
+        let mut server = Server::new();
+
+        let result = computer.to_ram(&mut options, &mut server);
+        assert!(result.is_ok());
+
+        if let Ok(converted) = result {
+            if let ComputingElem::Ram(ram) = converted.element {
+                assert!(!ram.instructions.is_empty());
+                assert!(!ram.labels_map.is_empty());
+            }
+        }
+    }
+
+    #[test]
+    fn test_computer_to_ram_mapping_preservation() {
+        let mut computer = Computer::new();
+        let mut tm = turing_machine::TuringMachine::new();
+        tm.states = vec!["q0".to_string(), "q1".to_string()];
+        tm.input_alphabet = vec!["0".to_string(), "1".to_string()];
+        tm.tape_alphabet = vec!["0".to_string(), "1".to_string(), "_".to_string()];
+        tm.initial_state = "q0".to_string();
+        tm.accept_state = "q1".to_string();
+        tm.reject_state = "q1".to_string();
+        tm.halt_state = "q1".to_string();
+        tm.blank_symbol = "_".to_string();
+        tm.transitions = vec![
+            turing_machine::Transition {
+                state: "q0".to_string(),
+                symbols: vec!["0".to_string()],
+                new_state: "q1".to_string(),
+                new_symbols: vec!["1".to_string()],
+                directions: vec![turing_machine::Direction::Right]
+            }
+        ];
+        tm.tape_count = 1;
+        tm.next_state_id = 2;
+        computer.set_turing(tm);
+        computer.add_mapping("key1".to_string(), "val1".to_string());
+        computer.add_mapping("key2".to_string(), "val2".to_string());
+
+        let mut options = options::Options {
+            file: "".to_string(),
+            input: "test".to_string(),
+            convert_to_tm: false,
+            convert_to_ram: false,
+            convert_to_singletape: false,
+            print_computer: false,
+            print_number: false,
+            print_nth_tm: -1,
+            help: false,
+            version: false,
+            max_steps: 1000,
+            status: false,
+            print_encoding: false,
+            verbose: 1,
+        };
+        let mut server = Server::new();
+
+        let result = computer.to_ram(&mut options, &mut server);
+        assert!(result.is_ok());
+
+        if let Ok(converted) = result {
+            assert_eq!(converted.mapping.len(), computer.mapping.len());
+            assert_eq!(converted.get_mapping("key1".to_string()), Ok("val1".to_string()));
+            assert_eq!(converted.get_mapping("key2".to_string()), Ok("val2".to_string()));
+        }
+    }
+    #[test]
+    fn test_server_execute_complex() {
+        let mut server = Server::new();
+        
+        // Add multiple computers
+        let computer1 = Computer::new();
+        let computer2 = Computer::new();
+        let computer3 = Computer::new();
+        
+        server.add_computer("c1".to_string(), computer1);
+        server.add_computer("c2".to_string(), computer2); 
+        server.add_computer("c3".to_string(), computer3);
+        
+        // Set computation order
+        server.set_computation_order_at(0, "c1".to_string());
+        server.set_computation_order_at(1, "c2".to_string());
+        server.set_computation_order_at(2, "c3".to_string());
+        
+        // Test execution with chained computers
+        let result = server.execute("test input".to_string(), 1000);
+        assert!(result.is_ok());
+        
+        if let Ok((state, _, output, _, comp)) = result {
+            assert!(!state.is_empty());
+            assert!(output.is_empty());
+            assert!(!comp.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_computer_simulate_tm() {
+        let mut computer = Computer::new();
+        let tm = turing_machine::TuringMachine {
+            states: vec!["q0".to_string(), "q1".to_string()],
+            input_alphabet: vec!["0".to_string(), "1".to_string()], 
+            tape_alphabet: vec!["0".to_string(), "1".to_string(), "_".to_string()],
+            initial_state: "q0".to_string(),
+            accept_state: "q1".to_string(),
+            reject_state: "q1".to_string(),
+            halt_state: "q1".to_string(),
+            blank_symbol: "_".to_string(),
+            transitions: vec![
+                turing_machine::Transition {
+                    state: "q0".to_string(),
+                    symbols: vec!["0".to_string()],
+                    new_state: "q1".to_string(),
+                    new_symbols: vec!["1".to_string()],
+                    directions: vec![turing_machine::Direction::Right]
+                }
+            ],
+            tape_count: 1,
+            next_state_id: 2
+        };
+        computer.set_turing(tm);
+        
+        let context = Server::new();
+        let result = computer.simulate("0".to_string(), 100, context, 0);
+        assert!(result.is_ok());
+        if let Ok((state, _, tape, _, comp)) = result {
+            assert!(!state.is_empty());
+            assert!(!tape.is_empty());
+            assert!(!comp.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_computer_simulate_empty_input() {
+        let computer = Computer::new();
+        let context = Server::new();
+        
+        let result = computer.simulate("".to_string(), 100, context, 0);
+        assert!(result.is_ok());
+    }
+
+    #[test] 
+    fn test_server_empty_computer_list() {
+        let mut server = Server::new();
+        assert!(server.map_computers.is_empty());
+        assert!(server.computation_order.is_empty());
+        
+        let result = server.execute("test".to_string(), 100);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_server_invalid_computation_order() {
+        let mut server = Server::new();
+        let computer = Computer::new();
+        
+        server.add_computer("test".to_string(), computer);
+        server.set_computation_order_at(0, "invalid".to_string());
+        
+        let result = server.execute("test".to_string(), 100);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_computer_simulate_zero_steps() {
+        let computer = Computer::new();
+        let context = Server::new();
+        
+        let result = computer.simulate("test".to_string(), 0, context, 0);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_computer_simulate_large_input() {
+        let computer = Computer::new();
+        let context = Server::new();
+        
+        let large_input = "0".repeat(1000);
+        let result = computer.simulate(large_input, 100, context, 0);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_server_execute_empty_computation_order() {
+        let mut server = Server::new();
+        let computer = Computer::new();
+        
+        server.add_computer("test".to_string(), computer);
+        
+        let result = server.execute("test".to_string(), 100);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_computer_simulate_invalid_tm_transition() {
+        let mut computer = Computer::new();
+        let tm = turing_machine::TuringMachine {
+            states: vec!["q0".to_string()],
+            input_alphabet: vec!["0".to_string()],
+            tape_alphabet: vec!["0".to_string(), "_".to_string()],
+            initial_state: "q0".to_string(),
+            accept_state: "q1".to_string(), // Invalid state
+            reject_state: "q1".to_string(), // Invalid state  
+            halt_state: "q1".to_string(), // Invalid state
+            blank_symbol: "_".to_string(),
+            transitions: vec![],
+            tape_count: 1,
+            next_state_id: 1
+        };
+        computer.set_turing(tm);
+        
+        let context = Server::new();
+        let result = computer.simulate("0".to_string(), 100, context, 0);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_computer_simulate_with_large_context() {
+        let mut server = Server::new();
+        for i in 0..100 {
+            server.add_computer(format!("comp{}", i), Computer::new());
+        }
+        
+        let computer = Computer::new();
+        let result = computer.simulate("test".to_string(), 100, server, 0);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_computer_simulate_with_nested_context() {
+        let mut inner_server = Server::new();
+        inner_server.add_computer("inner".to_string(), Computer::new());
+        
+        let mut outer_server = Server::new();
+        outer_server.add_computer("outer".to_string(), Computer::new());
+        
+        let computer = Computer::new();
+        let result = computer.simulate("test".to_string(), 100, outer_server, 0);
+        assert!(result.is_ok());
     }
 }

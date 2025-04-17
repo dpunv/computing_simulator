@@ -2,7 +2,7 @@
 // Project: Computing Simulator
 // author: dp
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Options {
     pub convert_to_tm: bool,
     pub convert_to_ram: bool,
@@ -12,7 +12,7 @@ pub struct Options {
     pub print_nth_tm: i128,
     pub help: bool,
     pub version: bool,
-    pub max_steps: i32,
+    pub max_steps: usize,
     pub input: String,
     pub file: String,
     pub status: bool,
@@ -36,6 +36,9 @@ pub fn get_options() -> Options {
     let mut print_encoding = false;
     let mut verbose = 1;
 
+    #[cfg(test)]
+    let args = tests::ARGS.with(|args| args.borrow().clone()).into_iter().skip(1);
+    #[cfg(not(test))]
     let args = std::env::args().skip(1);
     for arg in args {
         if arg.starts_with("--input=") {
@@ -88,5 +91,65 @@ pub fn get_options() -> Options {
         status,
         print_encoding,
         verbose,
+    }
+}
+#[cfg(test)]
+mod tests {
+    use std::cell::RefCell;
+    thread_local! {
+        pub static ARGS: RefCell<Vec<String>> = RefCell::new(Vec::new());
+    }
+    use super::*;
+
+    #[test]
+    fn test_command_line_options() {
+        ARGS.with(|args| {
+            *args.borrow_mut() = vec![
+                "program".to_string(),
+                "--convert-to-tm".to_string(),
+                "--input=test_input".to_string(),
+                "--file=test.txt".to_string(),
+                "--max-steps=500".to_string(),
+                "--verbose=2".to_string(),
+            ];
+        });
+
+        let options = get_options();
+        assert_eq!(options.convert_to_tm, true);
+        assert_eq!(options.input, "test_input");
+        assert_eq!(options.file, "test.txt");
+        assert_eq!(options.max_steps, 500);
+        assert_eq!(options.verbose, 2);
+    }
+
+    #[test]
+    fn test_default_options() {
+        ARGS.with(|args| {
+            *args.borrow_mut() = Vec::new();
+        });
+        
+        let options = get_options();
+        assert_eq!(options.convert_to_tm, false);
+        assert_eq!(options.max_steps, 1000);
+        assert_eq!(options.verbose, 1);
+        assert_eq!(options.input, "");
+        assert_eq!(options.file, "");
+    }
+
+    #[test]
+    fn test_flag_options() {
+        ARGS.with(|args| {
+            *args.borrow_mut() = vec![
+                "program".to_string(),
+                "--print-computer".to_string(),
+                "--status".to_string(),
+                "--print-encoding".to_string(),
+            ];
+        });
+
+        let options = get_options();
+        assert_eq!(options.print_computer, true);
+        assert_eq!(options.status, true);
+        assert_eq!(options.print_encoding, true);
     }
 }

@@ -26,7 +26,7 @@ pub struct Tape {
     pub head: usize,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Transition {
     pub state: String,
     pub symbols: Vec<String>,
@@ -71,7 +71,7 @@ impl PartialEq for Transition {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Direction {
     Left,
     Right,
@@ -147,7 +147,6 @@ impl TuringMachine {
             tape_alphabet: Vec::new(),
             transitions: Vec::new(),
             tape_count: 1,
-            //last_execution: ("".to_string(), Vec::new(), 0, Vec::new()),
             next_state_id: 0,
         }
     }
@@ -193,12 +192,18 @@ impl TuringMachine {
     pub fn simulate(
         self,
         input: Vec<String>,
-        max_steps: i32,
+        max_steps: usize,
         this_computer_object: computer::Computer,
         context: computer::Server,
         prev_head: usize,
     ) -> Result<computer::SimulationResult, String> {
+        if max_steps == 0 {
+            return Err("max steps should be greater than 0".to_string());
+        }
         let transitions_map = self.make_transition_map();
+        /* if transitions_map.is_empty(){
+            return Err("empty transition function".to_string());
+        } */
         let mut tree = Vec::new();
         tree.push(Vec::new());
         let det = self.is_deterministic();
@@ -223,7 +228,10 @@ impl TuringMachine {
         tree[0].push(TreeElement {
             state: self.initial_state.clone(),
             tapes: tapes.clone(),
-            computation: Vec::new(),
+            computation: vec!["tm;".to_string()
+                                + &self.initial_state.clone()
+                                + ";"
+                                + &tapes[0].tape.clone().join("")],
         });
         let mut steps = 0;
         let mut halts = false;
@@ -532,7 +540,7 @@ impl TuringMachine {
         let encoding = self.to_encoding()?.0;
         while tm_string != encoding {
             i += 1;
-            tm_string = utils::int2str(i, alphabet.clone())?;
+            tm_string = utils::uint2str(i, alphabet.clone())?;
             if TuringMachine::check_tm_encoding(tm_string.clone())? {
                 p += 1;
             }
@@ -610,10 +618,10 @@ impl TuringMachine {
                 }
             }
         }
-
-        if !self.states.contains(&self.accept_state)
-            || !self.states.contains(&self.reject_state)
-            || !self.states.contains(&self.halt_state)
+        
+        if !(self.accept_state == "" || self.states.contains(&self.accept_state))
+            || !(self.reject_state == "" || self.states.contains(&self.reject_state))
+            || !(self.halt_state == "" || self.states.contains(&self.halt_state))
         {
             is_final_states_valid = false;
         }
@@ -653,8 +661,9 @@ impl TuringMachine {
     }
 
     pub fn convert_multi_tape_to_single_tape_tm(&self) -> Result<TuringMachine, String> {
+        let initial_state_fake = self.initial_state.clone() + "<FAKE>";
         let mut new_tm = TuringMachine {
-            initial_state: self.initial_state.clone(),
+            initial_state: initial_state_fake.clone(),
             accept_state: self.accept_state.clone(),
             reject_state: self.reject_state.clone(),
             halt_state: self.halt_state.clone(),
@@ -664,7 +673,6 @@ impl TuringMachine {
             tape_alphabet: Vec::new(),
             transitions: Vec::new(),
             tape_count: 1,
-            //last_execution: ("".to_string(), Vec::new(), 0, Vec::new()),
             next_state_id: 0,
         };
         let head_symbols = vec!["^".to_string(), "_".to_string()];
@@ -684,15 +692,15 @@ impl TuringMachine {
         let mut new_states = Vec::new();
         for tapenum in 0..self.tape_count {
             let initial_state_tape =
-                self.initial_state.clone() + "<INIT_TP" + &tapenum.to_string() + "_START>";
+                initial_state_fake.clone() + "<INIT_TP" + &tapenum.to_string() + "_START>";
             let end_state_tape =
-                self.initial_state.clone() + "<INIT_TP" + &tapenum.to_string() + "_END>";
+            initial_state_fake.clone() + "<INIT_TP" + &tapenum.to_string() + "_END>";
             new_states.push(initial_state_tape.clone());
             new_states.push(end_state_tape.clone());
             if tapenum == 0 {
                 for symbol in &self.tape_alphabet {
                     new_tm.add_transition(
-                        self.initial_state.clone(),
+                        initial_state_fake.clone(),
                         vec![symbol.clone()],
                         initial_state_tape.clone(),
                         vec![symbol.clone() + "^"],
@@ -717,7 +725,7 @@ impl TuringMachine {
                 }
             } else {
                 new_tm.add_transition(
-                    self.initial_state.clone() + "<INIT_TP" + &(tapenum - 1).to_string() + "_END>",
+                    initial_state_fake.clone() + "<INIT_TP" + &(tapenum - 1).to_string() + "_END>",
                     vec![self.blank_symbol.clone()],
                     initial_state_tape.clone(),
                     vec![tape_sep_symbol.clone()],
@@ -732,10 +740,10 @@ impl TuringMachine {
                 );
             }
         }
-        let setup_state = self.initial_state.clone() + "<SETUP>";
+        let setup_state = initial_state_fake.clone() + "<SETUP>";
         new_states.push(setup_state.clone());
-        let new_start_state = self.initial_state.clone() + "<START>";
-        new_states.push(new_start_state.clone());
+        // let new_start_state = initial_state_fake.clone() + "<START>";
+        // new_states.push(self.initial_state.clone());
         for symbol in new_tape_alphabet.clone() {
             if symbol != self.blank_symbol {
                 new_tm.add_transition(
@@ -747,7 +755,7 @@ impl TuringMachine {
                 );
             } else {
                 new_tm.add_transition(
-                    self.initial_state.clone()
+                    initial_state_fake.clone()
                         + "<INIT_TP"
                         + (self.tape_count - 1).to_string().as_str()
                         + "_END>",
@@ -759,7 +767,7 @@ impl TuringMachine {
                 new_tm.add_transition(
                     setup_state.clone(),
                     vec![self.blank_symbol.clone()],
-                    new_start_state.clone(),
+                    self.initial_state.clone(),
                     vec![self.blank_symbol.clone()],
                     vec![Direction::Right],
                 );
@@ -767,10 +775,10 @@ impl TuringMachine {
         }
         let mut states_to_process = Vec::new();
         for state in &self.states {
-            if state != &self.initial_state {
+            if state != &initial_state_fake {
                 states_to_process.push(state.clone());
             } else {
-                states_to_process.push(new_start_state.clone());
+                states_to_process.push(self.initial_state.clone());
             }
         }
         let mut map_states: std::collections::HashMap<String, Vec<String>> =
@@ -1051,6 +1059,18 @@ impl TuringMachine {
                                                 );
                                             }
                                         }
+                                        new_tm.add_transition(
+                                            state_mid_tape.clone(),
+                                            vec![
+                                                self.blank_symbol.clone(),
+                                            ],
+                                            state_end_tape.clone(),
+                                            vec![
+                                                self.blank_symbol.clone()
+                                                    + "^",
+                                            ],
+                                            vec![Direction::Left],
+                                        );
                                     } else {
                                         new_tm.add_transition(
                                             state_init_tape.clone(),
@@ -1277,8 +1297,8 @@ impl TuringMachine {
             );
             state_final_2
         }
-        if !states_vec.contains(&self.initial_state) {
-            states_vec.push(self.initial_state.clone());
+        if !states_vec.contains(&initial_state_fake) {
+            states_vec.push(initial_state_fake.clone());
         }
         for state in &new_states {
             if !states_vec.contains(state) {
@@ -1324,6 +1344,9 @@ impl TuringMachine {
         let mut tm = TuringMachine::new();
         let mut transitions: Vec<&str> = encoding.split(")").collect();
         transitions.pop();
+        if transitions.len() < 1 {
+            return Err(format!("invalid encoding: {}", encoding));
+        }
         for transition in transitions {
             let transition = transition.trim();
             let transition = transition
@@ -1529,7 +1552,6 @@ impl TuringMachine {
                 .cloned()
                 .collect(),
             tape_count: tm.tape_count,
-            //last_execution: ("".to_string(), Vec::new(), 0, Vec::new()),
             next_state_id: 0,
         };
         if !tm.accept_state.is_empty() {
@@ -1570,7 +1592,7 @@ impl TuringMachine {
         let mut tm_string = "".to_string();
         while p != nth {
             i += 1;
-            tm_string = utils::int2str(i, alphabet.clone())?;
+            tm_string = utils::uint2str(i, alphabet.clone())?;
             if TuringMachine::check_tm_encoding(tm_string.clone())? {
                 p += 1;
             }
@@ -1664,4 +1686,638 @@ impl TuringMachine {
         }
         Ok(true)
     }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new() {
+        let tm = TuringMachine::new();
+        assert_eq!(tm.initial_state, "");
+        assert_eq!(tm.accept_state, "");
+        assert_eq!(tm.reject_state, "");
+        assert_eq!(tm.halt_state, "");
+        assert_eq!(tm.blank_symbol, "");
+        assert_eq!(tm.states.len(), 0);
+        assert_eq!(tm.input_alphabet.len(), 0);
+        assert_eq!(tm.tape_alphabet.len(), 0);
+        assert_eq!(tm.transitions.len(), 0);
+        assert_eq!(tm.tape_count, 1);
+        assert_eq!(tm.next_state_id, 0);
+    }
+
+    #[test]
+    fn test_add_state() {
+        let mut tm = TuringMachine::new();
+        let state = tm.add_state();
+        assert_eq!(state, "state 0");
+        assert_eq!(tm.states.len(), 1);
+        assert_eq!(tm.states[0], "state 0");
+        assert_eq!(tm.next_state_id, 1);
+    }
+
+    #[test]
+    fn test_add_transition() {
+        let mut tm = TuringMachine::new();
+        let state = tm.add_state();
+        tm.add_transition(
+            state.clone(),
+            vec!["0".to_string()],
+            "state 1".to_string(),
+            vec!["1".to_string()],
+            vec![Direction::Right],
+        );
+        assert_eq!(tm.transitions.len(), 1);
+        assert_eq!(tm.transitions[0].state, state);
+        assert_eq!(tm.transitions[0].symbols, vec!["0".to_string()]);
+        assert_eq!(tm.transitions[0].new_state, "state 1".to_string());
+        assert_eq!(tm.transitions[0].new_symbols, vec!["1".to_string()]);
+        assert_eq!(tm.transitions[0].directions, vec![Direction::Right]);
+    }
+
+    #[test]
+    fn test_is_final() {
+        let mut tm = TuringMachine::new();
+        tm.accept_state = "accept".to_string();
+        tm.reject_state = "reject".to_string();
+        tm.halt_state = "halt".to_string();
+        assert!(tm.is_final(&"accept".to_string()));
+        assert!(tm.is_final(&"reject".to_string()));
+        assert!(tm.is_final(&"halt".to_string()));
+        assert!(!tm.is_final(&"other".to_string()));
+    }
+
+    #[test]
+    fn test_direction_eq() {
+        assert_eq!(Direction::Left, Direction::Left);
+        assert_eq!(Direction::Right, Direction::Right);
+        assert_eq!(Direction::Stay, Direction::Stay);
+        assert_ne!(Direction::Left, Direction::Right);
+        assert_ne!(Direction::Left, Direction::Stay);
+        assert_ne!(Direction::Right, Direction::Stay);
+    }
+
+    #[test]
+    fn test_direction_from_string() {
+        assert!(matches!(Direction::from_string("L"), Direction::Left));
+        assert!(matches!(Direction::from_string("R"), Direction::Right));
+        assert!(matches!(Direction::from_string("S"), Direction::Stay));
+        assert!(matches!(Direction::from_string("other"), Direction::Stay));
+    }
+    #[test]
+    fn test_final_states() {
+        let mut tm = TuringMachine::new();
+        tm.accept_state = "accept".to_string();
+        tm.reject_state = "reject".to_string(); 
+        tm.halt_state = "halt".to_string();
+        
+        let final_states = tm.final_states();
+        assert_eq!(final_states.len(), 3);
+        assert!(final_states.contains(&"accept".to_string()));
+        assert!(final_states.contains(&"reject".to_string()));
+        assert!(final_states.contains(&"halt".to_string()));
+    }
+
+    #[test]
+    fn test_is_deterministic() {
+        let mut tm = TuringMachine::new();
+        
+        // Single transition for state/symbol pair is deterministic
+        tm.add_transition(
+            "q0".to_string(),
+            vec!["0".to_string()],
+            "q1".to_string(), 
+            vec!["1".to_string()],
+            vec![Direction::Right]
+        );
+        assert!(tm.is_deterministic());
+
+        // Multiple transitions for same state/symbol pair is non-deterministic
+        tm.add_transition(
+            "q0".to_string(),
+            vec!["0".to_string()], 
+            "q2".to_string(),
+            vec!["1".to_string()],
+            vec![Direction::Left]
+        );
+        assert!(!tm.is_deterministic());
+    }
+
+    #[test]
+    fn test_transition_equality() {
+        let t1 = Transition {
+            state: "q0".to_string(),
+            symbols: vec!["0".to_string()],
+            new_state: "q1".to_string(),
+            new_symbols: vec!["1".to_string()],
+            directions: vec![Direction::Right]
+        };
+
+        let t2 = Transition {
+            state: "q0".to_string(),
+            symbols: vec!["0".to_string()],
+            new_state: "q1".to_string(),
+            new_symbols: vec!["1".to_string()],
+            directions: vec![Direction::Right]
+        };
+
+        let t3 = Transition {
+            state: "q0".to_string(),
+            symbols: vec!["1".to_string()],
+            new_state: "q1".to_string(),
+            new_symbols: vec!["0".to_string()],
+            directions: vec![Direction::Left]
+        };
+
+        assert_eq!(t1, t2);
+        assert_ne!(t1, t3);
+    }
+
+    #[test]
+    fn test_tape_operations() {
+        let tape = Tape {
+            tape: vec!["0".to_string(), "1".to_string(), "0".to_string()],
+            head: 1
+        };
+        
+        assert_eq!(tape.tape.len(), 3);
+        assert_eq!(tape.head, 1);
+        assert_eq!(tape.tape[tape.head], "1".to_string());
+    }
+    #[test]
+    fn test_simulation() {
+        let mut tm = TuringMachine::new();
+        tm.blank_symbol = "B".to_string();
+        tm.initial_state = "qstart".to_string();
+        tm.accept_state = "qaccept".to_string();
+        tm.reject_state = "qreject".to_string();
+        tm.states = vec![
+            "qstart".to_string(),
+            "q0".to_string(), 
+            "q1".to_string(),
+            "qaccept".to_string(),
+            "qreject".to_string()
+        ];
+        tm.input_alphabet = vec!["0".to_string(), "1".to_string()];
+        tm.tape_alphabet = vec!["0".to_string(), "1".to_string(), "B".to_string()];
+
+        // Simple machine that accepts strings ending in 1
+        tm.add_transition(
+            "q0".to_string(),
+            vec!["1".to_string()],
+            "q1".to_string(),
+            vec!["1".to_string()],
+            vec![Direction::Right]
+        );
+
+        tm.add_transition(
+            "q0".to_string(), 
+            vec!["0".to_string()],
+            "q0".to_string(),
+            vec!["0".to_string()],
+            vec![Direction::Right]
+        );
+        tm.add_transition(
+            "q1".to_string(), 
+            vec!["0".to_string()],
+            "q0".to_string(),
+            vec!["0".to_string()],
+            vec![Direction::Right]
+        );
+        tm.add_transition(
+            "q0".to_string(), 
+            vec!["B".to_string()],
+            "qreject".to_string(),
+            vec!["B".to_string()],
+            vec![Direction::Stay]
+        );
+
+        tm.add_transition(
+            "qstart".to_string(), 
+            vec!["B".to_string()],
+            "q0".to_string(),
+            vec!["B".to_string()],
+            vec![Direction::Right]
+        );
+
+        tm.add_transition(
+            "q1".to_string(),
+            vec!["B".to_string()],
+            "qaccept".to_string(),
+            vec!["B".to_string()],
+            vec![Direction::Stay]
+        );
+
+        let computer = computer::Computer::new();
+        let context = computer::Server::new();
+        
+        // Should accept "1"
+        let result: (String, usize, Vec<String>, usize, Vec<String>) = tm.clone().simulate(
+            vec!["1".to_string()],
+            100,
+            computer.clone(),
+            context.clone(),
+            0
+        ).unwrap();
+        assert_eq!(result.0, "accept");
+
+        // Should accept "01"
+        let result = tm.clone().simulate(
+            vec!["0".to_string(), "1".to_string()],
+            100,
+            computer.clone(),
+            context.clone(),
+            0
+        ).unwrap();
+        assert_eq!(result.0, "accept");
+
+        // Should reject "0"
+        let result = tm.clone().simulate(
+            vec!["0".to_string()],
+            100,
+            computer.clone(), 
+            context.clone(),
+            0
+        ).unwrap();
+        assert_eq!(result.0, "reject");
+
+        // Should reject empty input
+        let result = tm.simulate(
+            vec![],
+            100,
+            computer,
+            context,
+            0
+        ).unwrap();
+        assert_eq!(result.0, "reject");
+    }
+
+    #[test]
+    fn test_multi_tape_conversion() {
+        let mut tm = TuringMachine::new();
+        tm.blank_symbol = "B".to_string();
+        tm.initial_state = "q0".to_string();
+        tm.accept_state = "qaccept".to_string();
+        tm.reject_state = "qreject".to_string();
+        tm.tape_count = 2;
+        tm.states = vec![
+            "q0".to_string(),
+            "qaccept".to_string(),
+            "qreject".to_string()
+        ];
+        tm.input_alphabet = vec!["0".to_string(), "1".to_string()];
+        tm.tape_alphabet = vec!["0".to_string(), "1".to_string(), "B".to_string()];
+
+        tm.add_transition(
+            "q0".to_string(),
+            vec!["1".to_string(), "B".to_string()],
+            "qaccept".to_string(), 
+            vec!["1".to_string(), "1".to_string()],
+            vec![Direction::Stay, Direction::Stay]
+        );
+
+        let single_tape = tm.convert_multi_tape_to_single_tape_tm().unwrap();
+        
+        assert_eq!(single_tape.tape_count, 1);
+        assert!(single_tape.tape_alphabet.len() > tm.tape_alphabet.len());
+        assert!(single_tape.states.len() > tm.states.len());
+    }
+
+    #[test]
+    fn test_encoding_decoding() {
+        let mut tm = TuringMachine::new();
+        tm.blank_symbol = "B".to_string();
+        tm.initial_state = "q0".to_string();
+        tm.accept_state = "qaccept".to_string();
+        tm.reject_state = "qreject".to_string();
+        tm.states = vec![
+            "q0".to_string(),
+            "qaccept".to_string(), 
+            "qreject".to_string()
+        ];
+        tm.input_alphabet = vec!["0".to_string()];
+        tm.tape_alphabet = vec!["0".to_string(), "B".to_string()];
+
+        tm.add_transition(
+            "q0".to_string(),
+            vec!["0".to_string()],
+            "qaccept".to_string(),
+            vec!["0".to_string()],
+            vec![Direction::Stay]
+        );
+
+        let encoding = tm.to_encoding().unwrap().0;
+        assert!(TuringMachine::check_tm_encoding(encoding.clone()).unwrap());
+
+        let decoded = TuringMachine::encoding_to_tm(encoding).unwrap();
+        assert_eq!(decoded.transitions.len(), tm.transitions.len());
+        assert_eq!(decoded.tape_count, tm.tape_count);
+    }
+    #[test]
+    fn test_multi_to_single_tape_equivalence() {
+        let mut tm = TuringMachine::new();
+        tm.blank_symbol = "B".to_string(); 
+        tm.initial_state = "q0".to_string();
+        tm.accept_state = "qa".to_string();
+        tm.reject_state = "qr".to_string();
+        tm.tape_count = 2;
+        tm.states = vec![
+            "q0".to_string(),
+            "q1".to_string(), 
+            "qa".to_string(),
+            "qr".to_string()
+        ];
+        tm.input_alphabet = vec!["0".to_string(), "1".to_string()];
+        tm.tape_alphabet = vec!["0".to_string(), "1".to_string(), "B".to_string()];
+
+        // Machine that copies input from tape 1 to tape 2 and accepts if tape 2 matches tape 1
+        tm.add_transition(
+            "q0".to_string(),
+            vec!["0".to_string(), "B".to_string()],
+            "q0".to_string(),
+            vec!["0".to_string(), "0".to_string()],
+            vec![Direction::Right, Direction::Right]
+        );
+
+        tm.add_transition(
+            "q0".to_string(), 
+            vec!["1".to_string(), "B".to_string()],
+            "q0".to_string(),
+            vec!["1".to_string(), "1".to_string()],
+            vec![Direction::Right, Direction::Right]
+        );
+
+        tm.add_transition(
+            "q0".to_string(),
+            vec!["B".to_string(), "B".to_string()],
+            "q1".to_string(), 
+            vec!["B".to_string(), "B".to_string()],
+            vec![Direction::Left, Direction::Left]
+        );
+
+        tm.add_transition(
+            "q1".to_string(),
+            vec!["0".to_string(), "0".to_string()],
+            "q1".to_string(),
+            vec!["0".to_string(), "0".to_string()], 
+            vec![Direction::Left, Direction::Left]
+        );
+
+        tm.add_transition(
+            "q1".to_string(),
+            vec!["1".to_string(), "1".to_string()],
+            "q1".to_string(),
+            vec!["1".to_string(), "1".to_string()],
+            vec![Direction::Left, Direction::Left]  
+        );
+
+        tm.add_transition(
+            "q1".to_string(),
+            vec!["B".to_string(), "B".to_string()], 
+            "qa".to_string(),
+            vec!["B".to_string(), "B".to_string()],
+            vec![Direction::Stay, Direction::Stay]
+        );
+
+        let single_tape = tm.clone().convert_multi_tape_to_single_tape_tm().unwrap();
+
+        let computer = computer::Computer::new();
+        let context = computer::Server::new();
+
+        // Test empty input
+        let multi_result = tm.clone().simulate(
+            vec![],
+            1000,
+            computer.clone(),
+            context.clone(),
+            0
+        ).unwrap();
+
+        let single_result = single_tape.clone().simulate(
+            vec![],
+            1000,
+            computer.clone(),
+            context.clone(),
+            0
+        ).unwrap();
+
+        assert_eq!(multi_result.0, single_result.0);
+
+        // Test input "0"
+        let multi_result = tm.clone().simulate(
+            vec!["0".to_string()],
+            1000,
+            computer.clone(), 
+            context.clone(),
+            0
+        ).unwrap();
+
+        let single_result = single_tape.clone().simulate(
+            vec!["0".to_string()],
+            1000,
+            computer.clone(),
+            context.clone(), 
+            0
+        ).unwrap();
+
+        assert_eq!(multi_result.0, single_result.0);
+
+        // Test input "01" 
+        let multi_result = tm.clone().simulate(
+            vec!["0".to_string(), "1".to_string()],
+            1000,
+            computer.clone(),
+            context.clone(),
+            0
+        ).unwrap();
+
+        let single_result = single_tape.simulate(
+            vec!["0".to_string(), "1".to_string()],
+            1000,
+            computer,
+            context,
+            0
+        ).unwrap();
+
+        assert_eq!(multi_result.0, single_result.0);
+    }
+
+    #[test]
+    fn test_multi_to_single_tape_edge_cases() {
+        let mut tm = TuringMachine::new();
+        tm.blank_symbol = "B".to_string();
+        tm.initial_state = "q0".to_string(); 
+        tm.accept_state = "qa".to_string();
+        tm.reject_state = "qr".to_string();
+        tm.tape_count = 3; // Test with 3 tapes
+        tm.states = vec![
+            "q0".to_string(),
+            "qa".to_string(),
+            "qr".to_string()
+        ];
+        tm.input_alphabet = vec!["0".to_string()];
+        tm.tape_alphabet = vec!["0".to_string(), "B".to_string()];
+
+        // Machine that writes a 0 on tape 2 and 3 if there's a 0 on tape 1
+        tm.add_transition(
+            "q0".to_string(),
+            vec!["B".to_string(), "B".to_string(), "B".to_string()],
+            "q0".to_string(),
+            vec!["B".to_string(), "B".to_string(), "B".to_string()],
+            vec![Direction::Right, Direction::Stay, Direction::Stay]
+        );
+        tm.add_transition(
+            "q0".to_string(),
+            vec!["0".to_string(), "B".to_string(), "B".to_string()],
+            "qa".to_string(),
+            vec!["0".to_string(), "0".to_string(), "0".to_string()],
+            vec![Direction::Stay, Direction::Stay, Direction::Stay]
+        );
+
+        let single_tape = tm.clone().convert_multi_tape_to_single_tape_tm().unwrap();
+
+        // Test tape separator is added
+        assert!(single_tape.tape_alphabet.contains(&"#".to_string()));
+
+        // Test head markers are added
+        assert!(single_tape.tape_alphabet.iter().any(|s| s.ends_with("^")));
+        assert!(single_tape.tape_alphabet.iter().any(|s| s.ends_with("_")));
+
+        // Test states for tape initialization are created
+        assert!(single_tape.states.iter().any(|s| s.contains("<INIT_TP")));
+
+        let computer = computer::Computer::new();
+        let context = computer::Server::new();
+
+        // Test input "0" 
+        let multi_result = tm.simulate(
+            vec!["0".to_string()],
+            100,
+            computer.clone(),
+            context.clone(), 
+            0
+        ).unwrap();
+
+        let single_result = single_tape.simulate(
+            vec!["0".to_string()],
+            100,
+            computer,
+            context,
+            0
+        ).unwrap();
+
+        assert_eq!(multi_result.0, single_result.0);
+        assert_eq!(multi_result.0, "accept");
+    }
+
+    #[test]
+    fn test_multi_tape_different_directions() {
+        let mut tm = TuringMachine::new();
+        tm.blank_symbol = "B".to_string();
+        tm.initial_state = "q0".to_string();
+        tm.accept_state = "qa".to_string();
+        tm.reject_state = "qr".to_string();
+        tm.tape_count = 2;
+        tm.states = vec![
+            "q0".to_string(),
+            "qa".to_string(),
+            "qr".to_string()
+        ];
+        tm.input_alphabet = vec!["1".to_string()];
+        tm.tape_alphabet = vec!["1".to_string(), "B".to_string()];
+
+        // Machine that moves left on tape 1 and right on tape 2
+        tm.add_transition(
+            "q0".to_string(),
+            vec!["1".to_string(), "B".to_string()],
+            "qa".to_string(),
+            vec!["1".to_string(), "1".to_string()],
+            vec![Direction::Left, Direction::Right]
+        );
+
+        let single_tape = tm.clone().convert_multi_tape_to_single_tape_tm().unwrap();
+
+        let computer = computer::Computer::new();
+        let context = computer::Server::new();
+
+        // Test behavior maintains with different movement directions
+        let multi_result = tm.simulate(
+            vec!["1".to_string()],
+            100,
+            computer.clone(),
+            context.clone(),
+            1 // Test with head not at start
+        ).unwrap();
+
+        let single_result = single_tape.simulate(
+            vec!["1".to_string()],
+            100,
+            computer,
+            context,
+            1
+        ).unwrap();
+
+        assert_eq!(multi_result.0, single_result.0);
+        assert_eq!(multi_result.0, "accept");
+    }
+
+    #[test]
+    fn test_multi_tape_stay_direction() {
+        let mut tm = TuringMachine::new();
+        tm.blank_symbol = "B".to_string();
+        tm.initial_state = "q0".to_string();
+        tm.accept_state = "qa".to_string();
+        tm.reject_state = "qr".to_string();
+        tm.tape_count = 2;
+        tm.states = vec![
+            "q0".to_string(),
+            "qa".to_string(),
+            "qr".to_string()
+        ];
+        tm.input_alphabet = vec!["1".to_string()];
+        tm.tape_alphabet = vec!["1".to_string(), "B".to_string()];
+
+        // Machine using Stay direction
+        tm.add_transition(
+            "q0".to_string(),
+            vec!["B".to_string(), "B".to_string()],
+            "q0".to_string(),
+            vec!["B".to_string(), "B".to_string()],
+            vec![Direction::Right, Direction::Stay]
+        );
+        tm.add_transition(
+            "q0".to_string(),
+            vec!["1".to_string(), "B".to_string()],
+            "qa".to_string(),
+            vec!["1".to_string(), "1".to_string()],
+            vec![Direction::Stay, Direction::Stay]
+        );
+
+        let single_tape = tm.clone().convert_multi_tape_to_single_tape_tm().unwrap();
+
+        let computer = computer::Computer::new();
+        let context = computer::Server::new();
+
+        // Test Stay direction is handled correctly
+        let multi_result = tm.simulate(
+            vec!["1".to_string()],
+            100,
+            computer.clone(),
+            context.clone(),
+            0
+        ).unwrap();
+
+        let single_result = single_tape.simulate(
+            vec!["1".to_string()],
+            100,
+            computer,
+            context,
+            0
+        ).unwrap();
+
+        assert_eq!(multi_result.0, single_result.0);
+        assert_eq!(multi_result.0, "accept");
+    }
+
 }

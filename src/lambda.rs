@@ -357,3 +357,198 @@ fn beta_reduction(expr: &LambdaExpr) -> LambdaExpr {
         },
     }
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_simple_lambda() {
+        let result = parse_lambda("(\\x.(x))").unwrap();
+        assert_eq!(
+            result,
+            LambdaExpr::Abs(vec!["x".to_string()], Box::new(LambdaExpr::Var("x".to_string())))
+        );
+    }
+
+    #[test]
+    fn test_parse_multi_param_lambda() {
+        let result = parse_lambda("(\\x y.(x y))").unwrap();
+        assert_eq!(
+            result,
+            LambdaExpr::Abs(
+                vec!["x".to_string(), "y".to_string()],
+                Box::new(LambdaExpr::App(vec![
+                    LambdaExpr::Var("x".to_string()),
+                    LambdaExpr::Var("y".to_string())
+                ]))
+            )
+        );
+    }
+
+    #[test]
+    fn test_beta_reduction() {
+        let expr = parse_lambda("((\\x.(x)) y)").unwrap();
+        let result = beta_reduction(&expr);
+        assert_eq!(result, LambdaExpr::Var("y".to_string()));
+    }
+
+    #[test]
+    fn test_nested_application() {
+        let expr = parse_lambda("((\\x.(\\y.(x y))) a b)").unwrap();
+        let result = beta_reduction(&expr);
+        let result = beta_reduction(&result);
+        assert_eq!(
+            result,
+            LambdaExpr::App(vec![
+                LambdaExpr::Var("a".to_string()),
+                LambdaExpr::Var("b".to_string())
+            ])
+        );
+    }
+
+    #[test]
+    fn test_substitute() {
+        let mut expr = LambdaExpr::Var("x".to_string());
+        let sub = LambdaExpr::Var("y".to_string());
+        let result = substitute(&mut expr, sub, "x".to_string());
+        assert_eq!(result, LambdaExpr::Var("y".to_string()));
+    }
+    #[test]
+    fn test_lambda_with_multiple_args() {
+        let expr = parse_lambda("((\\x y z.(x y z)) a b c)").unwrap();
+        let result = beta_reduction(&expr);
+        assert_eq!(
+            result,
+            LambdaExpr::App(vec![
+                LambdaExpr::Var("a".to_string()),
+                LambdaExpr::Var("b".to_string()),
+                LambdaExpr::Var("c".to_string())
+            ])
+        );
+    }
+
+    #[test]
+    fn test_partial_application() {
+        let expr = parse_lambda("((\\x y.(x y)) a)").unwrap();
+        let result = beta_reduction(&expr);
+        assert_eq!(
+            result,
+            LambdaExpr::Abs(
+                vec!["y".to_string()],
+                Box::new(LambdaExpr::App(vec![
+                    LambdaExpr::Var("a".to_string()),
+                    LambdaExpr::Var("y".to_string())
+                ]))
+            )
+        );
+    }
+
+    #[test]
+    fn test_nested_lambda() {
+        let expr = parse_lambda("(\\x.(\\y.(\\z.(x y z))))").unwrap();
+        assert_eq!(
+            expr,
+            LambdaExpr::Abs(
+                vec!["x".to_string()],
+                Box::new(LambdaExpr::Abs(
+                    vec!["y".to_string()],
+                    Box::new(LambdaExpr::Abs(
+                        vec!["z".to_string()],
+                        Box::new(LambdaExpr::App(vec![
+                            LambdaExpr::Var("x".to_string()),
+                            LambdaExpr::Var("y".to_string()),
+                            LambdaExpr::Var("z".to_string())
+                        ]))
+                    ))
+                ))
+            )
+        );
+    }
+
+    #[test]
+    fn test_curry_lambda() {
+        let expr = parse_lambda("(\\x y.(x y))").unwrap();
+        let result = expr.curry();
+        assert_eq!(
+            result,
+            LambdaExpr::Abs(
+                vec!["x".to_string(), "y".to_string()],
+                Box::new(LambdaExpr::App(vec![
+                    LambdaExpr::Var("x".to_string()),
+                    LambdaExpr::Var("y".to_string())
+                ]))
+            )
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_invalid_lambda() {
+        parse_lambda("(x y").unwrap();
+    }
+    #[test]
+    fn test_complex_beta_reduction() {
+        let expr = parse_lambda("((\\x.((\\y.(y x)) z)) a)").unwrap();
+        let result1 = beta_reduction(&expr);
+        let result2 = beta_reduction(&result1);
+        assert_eq!(
+            result2,
+            LambdaExpr::App(vec![
+                LambdaExpr::Var("z".to_string()),
+                LambdaExpr::Var("a".to_string())
+            ])
+        );
+    }
+
+    #[test]
+    fn test_beta_reduction_with_multiple_applications() {
+        let expr = parse_lambda("((\\x y.((\\z.(z x)) y)) a b)").unwrap();
+        let result1 = beta_reduction(&expr);
+        let result2 = beta_reduction(&result1);
+        let result3 = beta_reduction(&result2);
+        assert_eq!(
+            result3,
+            LambdaExpr::App(vec![
+                LambdaExpr::Var("b".to_string()),
+                LambdaExpr::Var("a".to_string())
+            ])
+        );
+    }
+
+    #[test]
+    fn test_beta_reduction_identity() {
+        let expr = parse_lambda("((\\x.(x)) ((\\y.(y)) a))").unwrap();
+        let result1 = beta_reduction(&expr);
+        let result2 = beta_reduction(&result1);
+        assert_eq!(result2, LambdaExpr::Var("a".to_string()));
+    }
+
+    #[test]
+    fn test_beta_reduction_no_reduction_possible() {
+        let expr = parse_lambda("(x y)").unwrap();
+        let result = beta_reduction(&expr);
+        assert_eq!(
+            result,
+            LambdaExpr::App(vec![
+                LambdaExpr::Var("x".to_string()),
+                LambdaExpr::Var("y".to_string())
+            ])
+        );
+    }
+
+    #[test]
+    fn test_beta_reduction_nested_abstractions() {
+        let expr = parse_lambda("((\\x.(\\y.(x y))) a)").unwrap();
+        let result = beta_reduction(&expr);
+        assert_eq!(
+            result,
+            LambdaExpr::Abs(
+                vec!["y".to_string()],
+                Box::new(LambdaExpr::App(vec![
+                    LambdaExpr::Var("a".to_string()),
+                    LambdaExpr::Var("y".to_string())
+                ]))
+            )
+        );
+    }
+}

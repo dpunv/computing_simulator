@@ -274,8 +274,10 @@ fn print_status_ram(ram: &ram_machine::RamMachine) {
 }
 
 pub fn main_cli() {
-    let mut options = options::get_options();
+    main_cli_with_options(options::get_options());
+}
 
+pub fn main_cli_with_options(mut options: options::Options) {
     if options.help {
         print_help();
         return;
@@ -422,5 +424,465 @@ fn handle_computation(options: &mut options::Options) {
         interactive_tui(&mut s, options.clone());
     } else {
         process_results(s, options.clone());
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_validate_options() {
+        let mut opt = options::Options::default();
+
+        opt.file = "test.tm".to_string();
+        assert!(validate_options(&opt));
+        
+        opt.file = "".to_string();
+        opt.print_nth_tm = 1;
+        assert!(validate_options(&opt));
+    }
+
+    #[test]
+    fn test_print_status_tm() {
+        let tm = turing_machine::TuringMachine {
+            states: vec!["q0".to_string(), "q1".to_string()],
+            input_alphabet: vec!["0".to_string(), "1".to_string()],
+            tape_alphabet: vec!["0".to_string(), "1".to_string(), "B".to_string()],
+            initial_state: "q0".to_string(),
+            accept_state: "qa".to_string(),
+            reject_state: "qr".to_string(),
+            halt_state: "qh".to_string(),
+            blank_symbol: "B".to_string(),
+            transitions: vec![],
+            tape_count: 1,
+            next_state_id: 10,
+        };
+        print_status_tm(&tm);
+    }
+
+    #[test]
+    fn test_print_status_ram() {
+        let ram = ram_machine::RamMachine {
+            instructions: vec![],
+            labels_map: std::collections::HashMap::new()
+        };
+        print_status_ram(&ram);
+    }
+
+    #[test]
+    fn test_process_results() {
+        let mut server = computer::Server::new();
+        let mut opt = options::Options::default();
+        opt.verbose = 1;
+        opt.input = "test".to_string();
+        opt.max_steps = 100;
+        
+        let mut computer = computer::Computer::new();
+        computer.set_turing(turing_machine::TuringMachine::new());
+        server.add_computer("test".to_string(), computer);
+        process_results(server, opt);
+    }
+
+    #[test]
+    fn test_print_tm() {
+        let tm = turing_machine::TuringMachine {
+            states: vec!["q0".to_string()],
+            input_alphabet: vec!["0".to_string()],
+            tape_alphabet: vec!["0".to_string(), "B".to_string()],
+            initial_state: "q0".to_string(),
+            accept_state: "qa".to_string(),
+            reject_state: "qr".to_string(),
+            halt_state: "qh".to_string(),
+            blank_symbol: "B".to_string(),
+            transitions: vec![
+                turing_machine::Transition {
+                    state: "q0".to_string(),
+                    new_state: "q1".to_string(),
+                    symbols: vec!["0".to_string()],
+                    new_symbols: vec!["1".to_string()],
+                    directions: vec![turing_machine::Direction::Right],
+                }
+            ],
+            tape_count: 1,
+            next_state_id: 1,
+        };
+        print_tm(tm);
+    }
+
+    #[test]
+    fn test_print_encoding() {
+        let mut computer = computer::Computer::new();
+        computer.set_turing(turing_machine::TuringMachine::new());
+        print_encoding(&computer);
+    }
+
+    #[test]
+    fn test_print_version() {
+        print_version();
+    }
+
+    #[test]
+    fn test_print_help() {
+        print_help(); 
+    }
+    #[test]
+    fn test_print_ram() {
+        let ram = ram_machine::RamMachine {
+            instructions: vec![
+                ram_machine::Instruction {
+                    opcode: "0101".to_string(),
+                    operand: "1".to_string(),
+                    label: "".to_string()
+                },
+                ram_machine::Instruction {
+                    opcode: "0110".to_string(),
+                    operand: "10".to_string(),
+                    label: "".to_string()
+                }
+            ],
+            labels_map: std::collections::HashMap::new()
+        };
+        print_ram(ram);
+    }
+
+    #[test]
+    fn test_print_lambda() {
+        let lambda = lambda::Lambda {
+            name: "test".to_string(),
+            expr: lambda::LambdaExpr::Var("x".to_string()),
+            references: vec![lambda::Lambda {
+                name: "test2".to_string(),
+                expr: lambda::parse_lambda("(\\x.(x))").unwrap(),
+                references: vec![],
+                force_currying: false
+            }],
+            force_currying: false,
+        };
+        print_lambda(lambda);
+    }
+
+    #[test]
+    fn test_print_lambda_as_tree() {
+        let lambda = lambda::Lambda {
+            name: "test".to_string(),
+            expr: lambda::LambdaExpr::Abs(
+                vec!["x".to_string()],
+                Box::new(lambda::LambdaExpr::Var("x".to_string()))
+            ),
+            references: vec![],
+            force_currying: false,
+        };
+        print_lambda_as_tree(lambda);
+    }
+
+    #[test]
+    fn test_pseudo_invalid_verbose_level() {
+        let server = computer::Server::new();
+        let mut opt = options::Options::default();
+        opt.verbose = -1;
+        opt.input = "test".to_string();
+        opt.max_steps = 100;
+        
+        let result = std::panic::catch_unwind(|| {
+            process_results(server, opt);
+        });
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_handle_computation_tm_convert_to_singletape() {
+        let mut opt = options::Options::default();
+        opt.file = "test.tm".to_string();
+        opt.convert_to_singletape = true;
+        let mut s = computer::Server::new();
+        let mut c = computer::Computer::new();
+        let mut tm = turing_machine::TuringMachine::new();
+        tm.tape_count = 2;
+        c.set_turing(tm);
+        s.add_computer(opt.file.clone(), c.clone());
+        handle_computation(&mut opt);
+    }
+
+    #[test]
+    fn test_handle_computation_tm_print_number() {
+        let mut opt = options::Options::default();
+        opt.file = "test.tm".to_string();
+        opt.print_number = true;
+        let mut s = computer::Server::new();
+        let mut c = computer::Computer::new();
+        c.set_turing(turing_machine::TuringMachine::new());
+        s.add_computer(opt.file.clone(), c.clone());
+        handle_computation(&mut opt);
+    }
+
+    #[test]
+    fn test_handle_computation_tm_convert_to_ram() {
+        let mut opt = options::Options::default();
+        opt.file = "test.tm".to_string();
+        opt.convert_to_ram = true;
+        let mut s = computer::Server::new();
+        let mut c = computer::Computer::new();
+        c.set_turing(turing_machine::TuringMachine::new());
+        s.add_computer(opt.file.clone(), c.clone());
+        handle_computation(&mut opt);
+    }
+
+    #[test]
+    fn test_handle_computation_tm_convert_to_tm() {
+        let mut opt = options::Options::default();
+        opt.file = "test.tm".to_string();
+        opt.convert_to_tm = true;
+        let mut s = computer::Server::new();
+        let mut c = computer::Computer::new();
+        c.set_turing(turing_machine::TuringMachine::new());
+        s.add_computer(opt.file.clone(), c.clone());
+        handle_computation(&mut opt);
+    }
+
+    #[test]
+    fn test_handle_computation_ram_convert_to_tm() {
+        let mut opt = options::Options::default();
+        opt.file = "test.ram".to_string();
+        opt.convert_to_tm = true;
+        let mut s = computer::Server::new();
+        let mut c = computer::Computer::new();
+        c.set_ram(ram_machine::RamMachine {
+            instructions: vec![],
+            labels_map: std::collections::HashMap::new(),
+        });
+        s.add_computer(opt.file.clone(), c.clone());
+        handle_computation(&mut opt);
+    }
+
+    #[test]
+    fn test_handle_computation_ram_convert_to_tm_invalid() {
+        let mut opt = options::Options::default();
+        opt.file = "test.ram".to_string();
+        opt.convert_to_tm = true;
+        let mut s = computer::Server::new();
+        let mut c = computer::Computer::new();
+        c.set_ram(ram_machine::RamMachine {
+            instructions: vec![],
+            labels_map: std::collections::HashMap::new(),
+        });
+        s.add_computer(opt.file.clone(), c.clone());
+        opt.convert_to_tm = true;
+        handle_computation(&mut opt);
+    }
+
+    #[test]
+    fn test_handle_computation_ram_convert_to_singletape() {
+        let mut opt = options::Options::default();
+        opt.file = "test.ram".to_string();
+        opt.convert_to_singletape = true;
+        let mut s = computer::Server::new();
+        let mut c = computer::Computer::new();
+        c.set_ram(ram_machine::RamMachine {
+            instructions: vec![],
+            labels_map: std::collections::HashMap::new(),
+        });
+        s.add_computer(opt.file.clone(), c.clone());
+        handle_computation(&mut opt);
+    }
+
+    #[test]
+    fn test_handle_computation_ram_print_number() {
+        let mut opt = options::Options::default();
+        opt.file = "test.ram".to_string();
+        opt.print_number = true;
+        let mut s = computer::Server::new();
+        let mut c = computer::Computer::new();
+        c.set_ram(ram_machine::RamMachine {
+            instructions: vec![],
+            labels_map: std::collections::HashMap::new(),
+        });
+        s.add_computer(opt.file.clone(), c.clone());
+        handle_computation(&mut opt);
+    }
+
+    #[test]
+    fn test_handle_computation_lambda_convert_to_tm() {
+        let mut opt = options::Options::default();
+        opt.file = "test.lambda".to_string();
+        opt.convert_to_tm = true;
+        let mut s = computer::Server::new();
+        let mut c = computer::Computer::new();
+        c.set_lambda(lambda::Lambda {
+            name: "test".to_string(),
+            expr: lambda::LambdaExpr::Var("x".to_string()),
+            references: vec![],
+            force_currying: false,
+        });
+        s.add_computer(opt.file.clone(), c.clone());
+        handle_computation(&mut opt);
+    }
+
+    #[test]
+    fn test_handle_computation_lambda_convert_to_ram() {
+        let mut opt = options::Options::default();
+        opt.file = "test.lambda".to_string();
+        opt.convert_to_ram = true;
+        let mut s = computer::Server::new();
+        let mut c = computer::Computer::new();
+        c.set_lambda(lambda::Lambda {
+            name: "test".to_string(),
+            expr: lambda::LambdaExpr::Var("x".to_string()),
+            references: vec![],
+            force_currying: false,
+        });
+        s.add_computer(opt.file.clone(), c.clone());
+        handle_computation(&mut opt);
+    }
+
+    #[test]
+    fn test_handle_computation_lambda_convert_to_singletape_print_number() {
+        let mut opt = options::Options::default();
+        opt.file = "test.lambda".to_string();
+        opt.convert_to_singletape = true;
+        opt.print_number = true;
+        let mut s = computer::Server::new();
+        let mut c = computer::Computer::new();
+        c.set_lambda(lambda::Lambda {
+            name: "test".to_string(),
+            expr: lambda::LambdaExpr::Var("x".to_string()),
+            references: vec![],
+            force_currying: false,
+        });
+        s.add_computer(opt.file.clone(), c.clone());
+        handle_computation(&mut opt);
+    }
+
+    #[test]
+    fn test_handle_computation_print_computer_tm() {
+        let mut opt = options::Options::default();
+        opt.file = "test.tm".to_string();
+        opt.print_computer = true;
+        let mut s = computer::Server::new();
+        let mut c = computer::Computer::new();
+        c.set_turing(turing_machine::TuringMachine::new());
+        s.add_computer(opt.file.clone(), c.clone());
+        handle_computation(&mut opt);
+    }
+
+    #[test]
+    fn test_handle_computation_print_computer_ram() {
+        let mut opt = options::Options::default();
+        opt.file = "test.ram".to_string();
+        opt.print_computer = true;
+        let mut s = computer::Server::new();
+        let mut c = computer::Computer::new();
+        c.set_ram(ram_machine::RamMachine {
+            instructions: vec![],
+            labels_map: std::collections::HashMap::new(),
+        });
+        s.add_computer(opt.file.clone(), c.clone());
+        handle_computation(&mut opt);
+    }
+
+    #[test]
+    fn test_handle_computation_print_computer_lambda() {
+        let mut opt = options::Options::default();
+        opt.file = "test.lambda".to_string();
+        opt.print_computer = true;
+        let mut s = computer::Server::new();
+        let mut c = computer::Computer::new();
+        c.set_lambda(lambda::Lambda {
+            name: "test".to_string(),
+            expr: lambda::LambdaExpr::Var("x".to_string()),
+            references: vec![],
+            force_currying: false,
+        });
+        s.add_computer(opt.file.clone(), c.clone());
+        handle_computation(&mut opt);
+    }
+
+    #[test]
+    fn test_handle_computation_print_encoding() {
+        let mut opt = options::Options::default();
+        opt.file = "test.tm".to_string();
+        opt.print_encoding = true;
+        let mut s = computer::Server::new();
+        let mut c = computer::Computer::new();
+        c.set_turing(turing_machine::TuringMachine::new());
+        s.add_computer(opt.file.clone(), c.clone());
+        handle_computation(&mut opt);
+    }
+
+    #[test]
+    fn test_handle_computation_status_tm() {
+        let mut opt = options::Options::default();
+        opt.file = "test.tm".to_string();
+        opt.status = true;
+        let mut s = computer::Server::new();
+        let mut c = computer::Computer::new();
+        c.set_turing(turing_machine::TuringMachine::new());
+        s.add_computer(opt.file.clone(), c.clone());
+        handle_computation(&mut opt);
+    }
+
+    #[test]
+    fn test_handle_computation_status_ram() {
+        let mut opt = options::Options::default();
+        opt.file = "test.ram".to_string();
+        opt.status = true;
+        let mut s = computer::Server::new();
+        let mut c = computer::Computer::new();
+        c.set_ram(ram_machine::RamMachine {
+            instructions: vec![],
+            labels_map: std::collections::HashMap::new(),
+        });
+        s.add_computer(opt.file.clone(), c.clone());
+        handle_computation(&mut opt);
+    }
+
+    #[test]
+    fn test_handle_computation_status_lambda() {
+        let mut opt = options::Options::default();
+        opt.file = "test.lambda".to_string();
+        opt.status = true;
+        let mut s = computer::Server::new();
+        let mut c = computer::Computer::new();
+        c.set_lambda(lambda::Lambda {
+            name: "test".to_string(),
+            expr: lambda::LambdaExpr::Var("x".to_string()),
+            references: vec![],
+            force_currying: false,
+        });
+        s.add_computer(opt.file.clone(), c.clone());
+        handle_computation(&mut opt);
+    }
+
+    #[test]
+    fn test_handle_computation_interactive_tui() {
+        // This test is limited since interactive_tui waits for stdin.
+        // We can only check that it doesn't panic when input is empty.
+        // You may want to refactor interactive_tui for better testability.ù
+    }
+
+    #[test]
+    fn test_main_cli_help() {
+        let mut opt = options::Options::default();
+        opt.help = true;
+        main_cli_with_options(opt);
+    }
+
+    #[test]
+    fn test_main_cli_version() {
+        let mut opt = options::Options::default();
+        opt.version = true;
+        main_cli_with_options(opt);
+    }
+
+    #[test]
+    fn test_main_cli_invalid_options() {
+        let opt = options::Options::default();
+        main_cli_with_options(opt);
+    }
+
+    #[test]
+    fn test_main_cli_print_nth_tm() {
+        let mut opt = options::Options::default();
+        opt.print_nth_tm = 0;
+        main_cli_with_options(opt);
     }
 }

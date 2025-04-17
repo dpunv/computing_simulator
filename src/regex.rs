@@ -6,7 +6,7 @@ use crate::turing_machine;
 use std::iter::Peekable;
 use std::str::Chars;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Operation {
     Concat,
     Or,
@@ -397,5 +397,99 @@ fn build_fsa(
 
             Ok((start, end))
         }
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_simple_regex() {
+        let result = build_regex_tree("abc").unwrap();
+        assert_eq!(result.operation, Operation::Concat);
+    }
+
+    #[test]
+    fn test_alternation() {
+        let result = build_regex_tree("a|b").unwrap();
+        assert_eq!(result.operation, Operation::Or);
+    }
+
+    #[test]
+    fn test_kleene_star() {
+        let result = build_regex_tree("a*").unwrap();
+        assert_eq!(result.operation, Operation::KleeneStar);
+    }
+
+    #[test]
+    fn test_kleene_plus() {
+        let result = build_regex_tree("a+").unwrap();
+        assert_eq!(result.operation, Operation::KleneePlus);
+    }
+
+    #[test]
+    fn test_optional() {
+        let result = build_regex_tree("a?").unwrap();
+        assert_eq!(result.operation, Operation::Optional);
+    }
+
+    #[test]
+    fn test_nested_expressions() {
+        let result = build_regex_tree("(a|b)*c").unwrap();
+        assert_eq!(result.operation, Operation::Concat);
+    }
+
+    #[test]
+    fn test_invalid_regex() {
+        assert!(build_regex_tree(")").is_err());
+        assert!(build_regex_tree("(").is_err());
+        assert!(build_regex_tree("*").is_err());
+    }
+
+    #[test]
+    fn test_escaped_characters() {
+        let result = build_regex_tree("\\*").unwrap();
+        assert_eq!(result.operation, Operation::Symbol);
+        assert_eq!(result.symbol, "\\*");
+    }
+    #[test]
+    fn test_complex_regex() {
+        let result = build_regex_tree("(a|b)+(c|d)*").unwrap();
+        assert_eq!(result.operation, Operation::Concat);
+    }
+
+    #[test]
+    fn test_multiple_alternations() {
+        let result = build_regex_tree("a|b|c|d").unwrap();
+        assert_eq!(result.operation, Operation::Or);
+    }
+
+    #[test]
+    fn test_nested_parentheses() {
+        let result = build_regex_tree("((a|b)|c)").unwrap();
+        assert_eq!(result.operation, Operation::Or);
+    }
+
+    #[test]
+    fn test_regex_to_fsa_simple() {
+        let regex = build_regex_tree("ab").unwrap();
+        let fsa = regex_to_fsa(&regex).unwrap();
+        assert!(fsa.input_alphabet.contains(&"a".to_string()));
+        assert!(fsa.input_alphabet.contains(&"b".to_string()));
+    }
+
+    #[test]
+    fn test_regex_to_fsa_alternation() {
+        let regex = build_regex_tree("a|b").unwrap();
+        let fsa = regex_to_fsa(&regex).unwrap();
+        assert!(fsa.input_alphabet.contains(&"a".to_string()));
+        assert!(fsa.input_alphabet.contains(&"b".to_string()));
+    }
+
+    #[test]
+    fn test_regex_to_fsa_kleene_star() {
+        let regex = build_regex_tree("a*").unwrap();
+        let fsa = regex_to_fsa(&regex).unwrap();
+        assert!(fsa.input_alphabet.contains(&"a".to_string()));
     }
 }
