@@ -1874,4 +1874,23 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_regex_integration() {
+        let mut opt: options::Options = options::Options::default();
+        opt.file = "examples/regex.reg".to_string(); 
+        opt.input = "abbbcddce".to_string();
+        
+        let mut server = Server::new();
+        let computer = file_handler::handle_file_reads(opt.file.clone(), &mut server).unwrap();
+        server.add_computer(opt.file.clone(), computer);
+        server.set_computation_order_at(0, opt.file.clone());
+        
+        let result: Result<(String, usize, String, usize, Vec<String>), String> = server.execute(opt.input, 1000);
+        assert!(result.is_ok());
+        if let Ok((state, _, output, _, _)) = result {
+            assert_eq!(state, "accept");
+            assert_eq!(output, "");
+        }
+    }
+
 }
