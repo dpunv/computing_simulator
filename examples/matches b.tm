@@ -5,15 +5,25 @@
 // given a string made of a number of a's, it maches the number of b's that follow
 // if the number of b's is greater or equal to the number of a's, it accepts
 tm
+// initial state
 1
+// accept state
 
+//reject state
 
+// halt state
 h
+// blank symbol
 B
+// states
 1 2 3 4 5 h
+// input alphabet
 a b
+// tape alphabet
 a b B $ #
+// number of tapes
 1
+// transitions
 1 2 B B R
 2 h B B L
 2 3 a $ R

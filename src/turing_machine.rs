@@ -1,4 +1,4 @@
-// file: automaton.rs
+// file: turing_machine.rs
 // Project: Computing Simulator
 // author: dp
 

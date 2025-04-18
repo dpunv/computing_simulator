@@ -531,6 +531,7 @@ pub fn read_ram_program(
     computer.set_ram(ram_machine::RamMachine {
         instructions: instr,
         labels_map,
+        translation_map: std::collections::HashMap::new()
     });
     Ok(computer.clone())
 }
@@ -562,6 +563,7 @@ pub fn read_ram_program_from_encoding(
     computer.set_ram(ram_machine::RamMachine {
         instructions: instr,
         labels_map: std::collections::HashMap::new(),
+        translation_map: std::collections::HashMap::new()
     });
     Ok(computer.clone())
 }

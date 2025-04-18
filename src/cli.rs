@@ -261,6 +261,12 @@ pub fn print_ram(ram: ram_machine::RamMachine) {
         print!("ARGUMENTS: {} ", instruction.operand);
         println!();
     }
+    if !ram.translation_map.is_empty() {
+        println!("translations: ");
+        for (k, v) in ram.translation_map {
+            println!("  {} --> {}", k, v);
+        } 
+    }
 }
 
 pub fn print_lambda(l: lambda::Lambda) {
@@ -465,6 +471,7 @@ mod tests {
         let ram = ram_machine::RamMachine {
             instructions: vec![],
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new(),
         };
         print_status_ram(&ram);
     }
@@ -539,6 +546,7 @@ mod tests {
                 },
             ],
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new(),
         };
         print_ram(ram);
     }
@@ -647,6 +655,7 @@ mod tests {
         c.set_ram(ram_machine::RamMachine {
             instructions: vec![],
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new(),
         });
         s.add_computer(opt.file.clone(), c.clone());
         handle_computation(&mut opt);
@@ -662,6 +671,7 @@ mod tests {
         c.set_ram(ram_machine::RamMachine {
             instructions: vec![],
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new(),
         });
         s.add_computer(opt.file.clone(), c.clone());
         opt.convert_to_tm = true;
@@ -678,6 +688,7 @@ mod tests {
         c.set_ram(ram_machine::RamMachine {
             instructions: vec![],
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new(),
         });
         s.add_computer(opt.file.clone(), c.clone());
         handle_computation(&mut opt);
@@ -693,6 +704,7 @@ mod tests {
         c.set_ram(ram_machine::RamMachine {
             instructions: vec![],
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new(),
         });
         s.add_computer(opt.file.clone(), c.clone());
         handle_computation(&mut opt);
@@ -772,6 +784,7 @@ mod tests {
         c.set_ram(ram_machine::RamMachine {
             instructions: vec![],
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new(),
         });
         s.add_computer(opt.file.clone(), c.clone());
         handle_computation(&mut opt);
@@ -828,6 +841,7 @@ mod tests {
         c.set_ram(ram_machine::RamMachine {
             instructions: vec![],
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new(),
         });
         s.add_computer(opt.file.clone(), c.clone());
         handle_computation(&mut opt);

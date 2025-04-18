@@ -513,12 +513,13 @@ impl Computer {
                         (state.clone(), utils::int2bin(index as i32, symbol_size))
                     })
                     .collect();
-                states_map
+                let mut translation_map: std::collections::HashMap<String, String> = states_map
                     .iter()
-                    .for_each(|(k, v)| println!("STATE {} -> {}", k, v));
-                symbols_map
+                    .map(|(k, v)| (format!("state {}", k), v.to_string()))
+                    .collect();
+                translation_map.extend(symbols_map
                     .iter()
-                    .for_each(|(k, v)| println!("SYMBOL {} -> {}", k, v));
+                    .map(|(k, v)| (format!("symbol {}", k), v.to_string())));
                 options.input = "1".to_string()
                     + &symbols_map
                         .get(&m.blank_symbol)
@@ -621,6 +622,7 @@ impl Computer {
                                 })?
                                 .to_owned(),
                         );
+                        ram.translation_map = translation_map;
                         self.element = ComputingElem::Ram(ram.clone());
                         Ok(self.clone())
                     }
@@ -742,6 +744,7 @@ mod tests {
         computer.set_ram(ram_machine::RamMachine {
             instructions: Vec::new(),
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new()
         });
         assert!(computer.is_ram());
     }
@@ -791,6 +794,7 @@ mod tests {
         let ram = ram_machine::RamMachine {
             instructions: Vec::new(),
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new()
         };
         computer.set_ram(ram);
         assert!(computer.is_ram());
@@ -949,6 +953,7 @@ mod tests {
         let ram = ram_machine::RamMachine {
             instructions: vec![],
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new()
         };
         computer.set_ram(ram);
 
@@ -1015,6 +1020,7 @@ mod tests {
                 },
             ],
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new()
         };
         computer.set_ram(ram);
 
@@ -1085,6 +1091,7 @@ mod tests {
                 },
             ],
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new()
         };
         computer.set_ram(ram);
 
@@ -1140,6 +1147,7 @@ mod tests {
                 label: "".to_string(),
             }],
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new()
         };
         computer.set_ram(ram);
 
@@ -1379,6 +1387,7 @@ mod tests {
         let ram = ram_machine::RamMachine {
             instructions: vec![],
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new()
         };
         computer.set_ram(ram);
 
@@ -1686,4 +1695,5 @@ mod tests {
         let result = computer.simulate("test".to_string(), 100, outer_server, 0);
         assert!(result.is_ok());
     }
+
 }

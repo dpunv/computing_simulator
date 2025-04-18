@@ -50,6 +50,7 @@ mod tests {
             let _ram = ram_machine::RamMachine {
                 instructions: Vec::new(),
                 labels_map: std::collections::HashMap::new(),
+                translation_map: std::collections::HashMap::new()
             };
             let _turing = turing_machine::TuringMachine::new();
         })

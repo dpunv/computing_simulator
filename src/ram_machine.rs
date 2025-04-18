@@ -9,6 +9,7 @@ use crate::utils;
 pub struct RamMachine {
     pub instructions: Vec<Instruction>,
     pub labels_map: std::collections::HashMap<String, String>,
+    pub translation_map: std::collections::HashMap<String, String>
 }
 
 #[derive(Clone)]
@@ -295,6 +296,7 @@ mod tests {
         let ram = RamMachine {
             instructions: Vec::new(),
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new()
         };
         assert!(ram.instructions.is_empty());
         assert!(ram.labels_map.is_empty());
@@ -362,6 +364,7 @@ mod tests {
         let ram1 = RamMachine {
             instructions: Vec::new(),
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new()
         };
         let ram2 = ram1.clone();
         assert!(ram2.instructions.is_empty());
@@ -389,6 +392,7 @@ mod tests {
                 },
             ],
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new()
         };
 
         let computer = computer::Computer {
@@ -430,6 +434,7 @@ mod tests {
                 },
             ],
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new()
         };
 
         let computer = computer::Computer {
@@ -479,6 +484,7 @@ mod tests {
                 },
             ],
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new()
         };
 
         let computer = computer::Computer {
@@ -537,6 +543,7 @@ mod tests {
                 },
             ],
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new()
         };
 
         let computer = computer::Computer {
@@ -606,6 +613,7 @@ mod tests {
                 },
             ],
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new()
         };
         let computer = computer::Computer {
             element: computer::ComputingElem::Ram(ram.clone()),
@@ -664,6 +672,7 @@ mod tests {
                 },
             ],
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new()
         };
         let computer = computer::Computer {
             element: computer::ComputingElem::Ram(ram.clone()),
@@ -702,6 +711,7 @@ mod tests {
                 },
             ],
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new()
         };
 
         let computer = computer::Computer {
@@ -756,6 +766,7 @@ mod tests {
                 },
             ],
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new()
         };
 
         let computer = computer::Computer {
@@ -794,6 +805,7 @@ mod tests {
                 },
             ],
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new()
         };
 
         let result = ram.to_encoding();
@@ -814,6 +826,7 @@ mod tests {
                 label: "LOOP".to_string(),
             }],
             labels_map: labels,
+            translation_map: std::collections::HashMap::new()
         };
 
         let computer = computer::Computer {
@@ -839,6 +852,7 @@ mod tests {
                 label: "".to_string(),
             }],
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new()
         };
 
         let computer = computer::Computer {
@@ -878,6 +892,7 @@ mod tests {
                 },
             ],
             labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new()
         };
 
         let computer = computer::Computer {
