@@ -2306,4 +2306,66 @@ mod tests {
         assert_eq!(multi_result.0, single_result.0);
         assert_eq!(multi_result.0, "accept");
     }
+    #[test]
+    fn test_is_ok() {
+        // Test valid TM
+        let mut tm = TuringMachine::new();
+        tm.blank_symbol = "B".to_string();
+        tm.initial_state = "q0".to_string();
+        tm.accept_state = "qa".to_string();
+        tm.reject_state = "qr".to_string();
+        tm.states = vec![
+            "q0".to_string(), 
+            "qa".to_string(),
+            "qr".to_string()
+        ];
+        tm.input_alphabet = vec!["0".to_string(), "1".to_string()];
+        tm.tape_alphabet = vec!["0".to_string(), "1".to_string(), "B".to_string()];
+        
+        tm.add_transition(
+            "q0".to_string(),
+            vec!["0".to_string()],
+            "qa".to_string(), 
+            vec!["0".to_string()],
+            vec![Direction::Right],
+        );
+
+        assert!(tm.is_ok());
+
+        // Test invalid input alphabet (not subset of tape alphabet)
+        let mut tm2 = tm.clone();
+        tm2.input_alphabet.push("2".to_string());
+        assert!(!tm2.is_ok());
+
+        // Test missing blank symbol from tape alphabet
+        let mut tm3 = tm.clone();
+        tm3.tape_alphabet.retain(|x| x != "B");
+        assert!(!tm3.is_ok());
+
+        // Test blank symbol in input alphabet
+        let mut tm4 = tm.clone();
+        tm4.input_alphabet.push("B".to_string());
+        assert!(!tm4.is_ok());
+
+        // Test invalid transition (symbol not in tape alphabet)
+        let mut tm5 = tm.clone();
+        tm5.add_transition(
+            "q0".to_string(),
+            vec!["2".to_string()],
+            "qa".to_string(),
+            vec!["2".to_string()],
+            vec![Direction::Right],
+        );
+        assert!(!tm5.is_ok());
+
+        // Test invalid final states (not in states list)
+        let mut tm6 = tm.clone();
+        tm6.accept_state = "qx".to_string();
+        assert!(!tm6.is_ok());
+
+        // Test invalid initial state (not in states list)
+        let mut tm7 = tm.clone();
+        tm7.initial_state = "qx".to_string(); 
+        assert!(!tm7.is_ok());
+    }
 }

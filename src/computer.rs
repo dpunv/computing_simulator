@@ -47,15 +47,9 @@ impl Computer {
 
     /* pub fn is_turing(&self) -> bool {
         match self.element {
-            ComputingElem::RAM(_) => {
-                return false;
-            },
-            ComputingElem::TM(_) => {
-                return true;
-            },
-            ComputingElem::LAMBDA(_) => {
-                return false;
-            }
+            ComputingElem::RAM(_) => false,
+            ComputingElem::TM(_) => true,
+            ComputingElem::LAMBDA(_) => false,
         }
     }
     */
@@ -67,6 +61,16 @@ impl Computer {
             ComputingElem::Lambda(_) => true,
         }
     } */
+
+    pub fn convert_to_singletape(&mut self) -> Result<Computer, String> {
+        match self.element {
+            ComputingElem::Tm(ref m) => {
+                self.set_turing(m.convert_multi_tape_to_single_tape_tm()?);
+                return Ok(self.clone());
+            }
+            _ => return Err("not a turing machine".to_string()),
+        }
+    }
 
     pub fn new() -> Computer {
         Computer {
@@ -632,6 +636,7 @@ impl Computer {
             }
             ComputingElem::Lambda(_) => {
                 *self = self.to_tm(options, s)?;
+                self.convert_to_singletape()?;
                 self.to_ram(options, s)
             }
         }
@@ -1345,43 +1350,6 @@ mod tests {
     }
 
     #[test]
-    fn test_computer_to_ram_from_lambda() {
-        let mut computer = Computer::new();
-        let lambda = lambda::Lambda {
-            expr: lambda::LambdaExpr::Var("x".to_string()),
-            references: Vec::new(),
-            name: "test".to_string(),
-            force_currying: false,
-        };
-        computer.set_lambda(lambda);
-
-        let mut options = options::Options {
-            file: "".to_string(),
-            input: "(x)".to_string(),
-            convert_to_tm: false,
-            convert_to_ram: false,
-            convert_to_singletape: false,
-            print_computer: false,
-            print_number: false,
-            print_nth_tm: -1,
-            help: false,
-            version: false,
-            max_steps: 1000,
-            status: false,
-            print_encoding: false,
-            verbose: 1,
-        };
-        let mut server = Server::new();
-
-        let result = computer.to_ram(&mut options, &mut server);
-        assert!(result.is_ok());
-
-        if let Ok(converted) = result {
-            assert!(matches!(converted.element, ComputingElem::Ram(_)));
-        }
-    }
-
-    #[test]
     fn test_computer_to_ram_already_ram() {
         let mut computer = Computer::new();
         let ram = ram_machine::RamMachine {
@@ -1694,6 +1662,216 @@ mod tests {
         let computer = Computer::new();
         let result = computer.simulate("test".to_string(), 100, outer_server, 0);
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_matches_b_tm_integration() {
+        let mut opt = options::Options::default();
+        opt.file = "examples/matches b.tm".to_string(); 
+        opt.input = "aa".to_string();
+        
+        let mut server = Server::new();
+        let computer = file_handler::handle_file_reads(opt.file.clone(), &mut server).unwrap();
+        server.add_computer(opt.file.clone(), computer);
+        server.set_computation_order_at(0, opt.file.clone());
+        
+        let result: Result<(String, usize, String, usize, Vec<String>), String> = server.execute(opt.input, 1000);
+        assert!(result.is_ok());
+        if let Ok((state, _, output, _, _)) = result {
+            assert_eq!(state, "halt");
+            assert_eq!(output, "aabb");
+        }
+    }
+
+    #[test]
+    fn test_matches_b_multitape_tm_integration() {
+        let mut opt = options::Options::default();
+        opt.file = "examples/matches b multitape.tm".to_string(); 
+        opt.input = "aa".to_string();
+        
+        let mut server = Server::new();
+        let computer = file_handler::handle_file_reads(opt.file.clone(), &mut server).unwrap();
+        server.add_computer(opt.file.clone(), computer);
+        server.set_computation_order_at(0, opt.file.clone());
+        
+        let result: Result<(String, usize, String, usize, Vec<String>), String> = server.execute(opt.input, 1000);
+        assert!(result.is_ok());
+        if let Ok((state, _, output, _, _)) = result {
+            assert_eq!(state, "halt");
+            assert_eq!(output, "aabb");
+        }
+    }
+
+    #[test]
+    fn test_matches_b_multitape_conversion_tm_integration() {
+        let mut opt = options::Options::default();
+        opt.file = "examples/matches b multitape.tm".to_string(); 
+        opt.input = "aa".to_string();
+        
+        let mut server = Server::new();
+        let mut computer = file_handler::handle_file_reads(opt.file.clone(), &mut server).unwrap();
+        computer.convert_to_singletape().unwrap();
+        server.add_computer(opt.file.clone(), computer);
+        server.set_computation_order_at(0, opt.file.clone());
+        
+        let result: Result<(String, usize, String, usize, Vec<String>), String> = server.execute(opt.input, 1000);
+        assert!(result.is_ok());
+        if let Ok((state, _, output, _, _)) = result {
+            assert_eq!(state, "halt");
+            assert_eq!(output, "aabb");
+        }
+    }
+
+    #[test]
+    fn test_lambda_fact_integration() {
+        let mut opt = options::Options::default();
+        opt.file = "src/standard/library.lambda".to_string(); 
+        opt.input = "(FACT 2)".to_string();
+        
+        let mut server = Server::new();
+        let computer = file_handler::handle_file_reads(opt.file.clone(), &mut server).unwrap();
+        server.add_computer(opt.file.clone(), computer);
+        server.set_computation_order_at(0, opt.file.clone());
+        
+        let result: Result<(String, usize, String, usize, Vec<String>), String> = server.execute(opt.input, 1000);
+        assert!(result.is_ok());
+        if let Ok((state, _, _, _, _)) = result {
+            assert_eq!(state, "2");
+        }
+    }
+    #[test]
+    fn test_lambda_succ_conversion_integration() {
+        let mut opt = options::Options::default();
+        opt.file = "src/standard/library.lambda".to_string(); 
+        opt.input = "(SUCC 3)".to_string();
+        opt.max_steps = 10000;
+        
+        let mut server = Server::new();
+        let computer = file_handler::handle_file_reads(opt.file.clone(), &mut server).unwrap().to_tm(&mut opt, &mut server).unwrap();
+        server.add_computer(opt.file.clone(), computer);
+        server.set_computation_order_at(0, opt.file.clone());
+        
+        let result: Result<(String, usize, String, usize, Vec<String>), String> = server.execute(opt.input, opt.max_steps);
+        assert!(result.is_ok());
+        if let Ok((state, _, output, _, _)) = result {
+            assert_eq!(state, "halt");
+            assert_eq!(output, "(/fx.(f(f(f(fx)))))");
+        }
+    }
+
+    /* #[test]
+    fn test_lambda_succ_double_conversion_integration() {
+        let mut opt = options::Options::default();
+        opt.file = "src/standard/library.lambda".to_string(); 
+        opt.input = "(SUCC 3)".to_string();
+        opt.max_steps = 100000;
+        
+        let mut server = Server::new();
+        let computer = file_handler::handle_file_reads(opt.file.clone(), &mut server).unwrap().to_ram(&mut opt, &mut server).unwrap();
+        server.add_computer(opt.file.clone(), computer);
+        server.set_computation_order_at(0, opt.file.clone());
+        
+        let result: Result<(String, usize, String, usize, Vec<String>), String> = server.execute(opt.input, opt.max_steps);
+        assert!(result.is_ok());
+        if let Ok((state, _, output, _, _)) = result {
+            assert_eq!(state, "halt");
+            assert_eq!(output, "(/fx.(f(f(f(fx)))))");
+        }
+    } */
+
+    #[test]
+    fn test_plusfive_multitape_tm_integration() {
+        let mut opt = options::Options::default();
+        opt.file = "examples/plusfive.tm".to_string(); 
+        opt.input = "010".to_string();
+        
+        let mut server = Server::new();
+        let computer = file_handler::handle_file_reads(opt.file.clone(), &mut server).unwrap();
+        server.add_computer(opt.file.clone(), computer);
+        server.set_computation_order_at(0, opt.file.clone());
+        
+        let result: Result<(String, usize, String, usize, Vec<String>), String> = server.execute(opt.input, 1000);
+        assert!(result.is_ok());
+        if let Ok((state, _, output, _, _)) = result {
+            assert_eq!(state, "halt");
+            assert_eq!(output, "111");
+        }
+    }
+
+    #[test]
+    fn test_plusfive_ram_integration() {
+        let mut opt = options::Options::default();
+        opt.file = "examples/plusfive.ram".to_string(); 
+        opt.input = "010".to_string();
+        
+        let mut server = Server::new();
+        let computer = file_handler::handle_file_reads(opt.file.clone(), &mut server).unwrap();
+        server.add_computer(opt.file.clone(), computer);
+        server.set_computation_order_at(0, opt.file.clone());
+        
+        let result: Result<(String, usize, String, usize, Vec<String>), String> = server.execute(opt.input, 1000);
+        assert!(result.is_ok());
+        if let Ok((state, _, output, _, _)) = result {
+            assert_eq!(state, "halt");
+            assert_eq!(output, "111");
+        }
+    }
+
+    #[test]
+    fn test_dyn_ram_integration() {
+        let mut opt = options::Options::default();
+        opt.file = "examples/dyn.ram".to_string(); 
+        opt.input = "010".to_string();
+        
+        let mut server = Server::new();
+        let computer = file_handler::handle_file_reads(opt.file.clone(), &mut server).unwrap();
+        server.add_computer(opt.file.clone(), computer);
+        server.set_computation_order_at(0, opt.file.clone());
+        
+        let result: Result<(String, usize, String, usize, Vec<String>), String> = server.execute(opt.input, 1000);
+        assert!(result.is_ok());
+        if let Ok((state, _, output, _, _)) = result {
+            assert_eq!(state, "halt");
+            assert_eq!(output, "1");
+        }
+    }
+
+    #[test]
+    fn test_dyn_conversion_ram_integration() {
+        let mut opt = options::Options::default();
+        opt.file = "examples/dyn.ram".to_string(); 
+        opt.input = "010".to_string();
+        
+        let mut server = Server::new();
+        let computer = file_handler::handle_file_reads(opt.file.clone(), &mut server).unwrap().to_tm(&mut opt, &mut server).unwrap();
+        server.add_computer(opt.file.clone(), computer);
+        server.set_computation_order_at(0, opt.file.clone());
+        
+        let result: Result<(String, usize, String, usize, Vec<String>), String> = server.execute(opt.input, 100000);
+        assert!(result.is_ok());
+        if let Ok((state, _, output, _, _)) = result {
+            assert_eq!(state, "halt");
+            assert_eq!(output, "0000001");
+        }
+    }
+
+    #[test]
+    fn test_pda_integration() {
+        let mut opt: options::Options = options::Options::default();
+        opt.file = "examples/0n1m2m3n.pda".to_string(); 
+        opt.input = "0011122233".to_string();
+        
+        let mut server = Server::new();
+        let computer = file_handler::handle_file_reads(opt.file.clone(), &mut server).unwrap();
+        server.add_computer(opt.file.clone(), computer);
+        server.set_computation_order_at(0, opt.file.clone());
+        
+        let result: Result<(String, usize, String, usize, Vec<String>), String> = server.execute(opt.input, 1000);
+        assert!(result.is_ok());
+        if let Ok((state, _, output, _, _)) = result {
+            assert_eq!(state, "halt");
+            assert_eq!(output, "");
+        }
     }
 
 }

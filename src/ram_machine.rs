@@ -94,6 +94,17 @@ impl RamMachine {
         let mut computation = Vec::new();
         let mut steps = 0;
         while steps < max_steps {
+            /* println!("Memory: {}", memory.len());
+            let mut mem_: Vec<(i32, String)> = memory
+                .clone()
+                .iter()
+                .map(|(i, j)| (utils::bin2int(i.to_string()).unwrap(), j.to_string()))
+                .collect();
+            mem_.sort_by_key(|k| k.0);
+            for (i, j) in mem_ {
+                println!("{} -> {}", i, j);
+            } */
+            // print!("STEP: {} -- ", steps);
             steps += 1;
             ir = memory
                 .get(&pc)
@@ -110,6 +121,7 @@ impl RamMachine {
                 .push("ram;".to_string() + &ir.clone() + ";" + &ar.clone() + ";" + &acc.clone());
             match ir.as_str() {
                 "0000" => {
+                    // println!("R: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // R: Read [operands] bit from input
                     let end = input_head + (utils::bin2int(ar)? as usize);
                     if input.len() < end {
@@ -123,10 +135,12 @@ impl RamMachine {
                     }
                 }
                 "0001" => {
+                    // println!("MIR: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // MIR: move input head [operands] bits to the right
                     input_head += utils::bin2int(ar)? as usize;
                 }
                 "0010" => {
+                    // println!("MIL: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // MIL: move input head [operands] bits to the left
                     let to_sub = utils::bin2int(ar)? as usize;
                     if input_head >= to_sub {
@@ -138,10 +152,12 @@ impl RamMachine {
                     }
                 }
                 "0011" => {
+                    // println!("W: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // W: Write ACC to output
                     out = out + &acc.clone();
                 }
                 "0100" => {
+                    // println!("L: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // L: Load AR to ACC
                     if !memory.contains_key(&ar) {
                         memory.insert(ar.clone(), "0".to_string());
@@ -152,6 +168,7 @@ impl RamMachine {
                         .clone();
                 }
                 "0101" => {
+                    // println!("A: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // A: Add AR to ACC
                     acc = utils::int2bin(
                         utils::bin2int(acc)?
@@ -165,6 +182,7 @@ impl RamMachine {
                     );
                 }
                 "0110" => {
+                    // println!("S: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // S: Subtract AR from ACC
                     acc = utils::int2bin(
                         utils::bin2int(acc)?
@@ -178,28 +196,34 @@ impl RamMachine {
                     );
                 }
                 "0111" => {
+                    // println!("INIT: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // INIT: Initialize ACC to [operands]
                     acc = ar.clone();
                 }
                 "1000" => {
+                    // println!("ST: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // ST: Store ACC to AR
                     memory.insert(ar.clone(), acc.clone());
                 }
                 "1001" => {
+                    // println!("JUMP: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // JUMP: Jump to AR
                     pc = ar.clone();
                 }
                 "1010" => {
+                    // println!("CJUMP: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // CJUMP: Conditional jump to AR if ACC is 0000
                     if !acc.contains("1") {
                         pc = ar.clone();
                     }
                 }
                 "1011" => {
+                    // println!("HALT: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // HALT: Halt
                     break;
                 }
                 "1100" => {
+                    // println!("CALL: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // CALL: call a subroutine
                     let mapping_key = (utils::bin2int(ar.clone())?).to_string();
                     let mapping = this_computer_object
@@ -238,10 +262,12 @@ impl RamMachine {
                     }
                 }
                 "1101" => {
+                    // println!("MOV: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // MOV: copy the value of acc to the mov register
                     mov = acc.clone();
                 }
                 "1110" => {
+                    // println!("LD: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // LD: load the memory at address in MOV
                     if !memory.contains_key(&mov) {
                         memory.insert(mov.clone(), "0".to_string());
@@ -252,6 +278,7 @@ impl RamMachine {
                         .clone();
                 }
                 "1111" => {
+                    // println!("STD: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // STD: store the memory at address in MOV
                     memory.insert(mov.clone(), acc.clone());
                 }

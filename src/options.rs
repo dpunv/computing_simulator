@@ -74,7 +74,12 @@ pub fn get_options() -> Options {
                 "--version" => version = true,
                 "--status" => status = true,
                 "--print-encoding" => print_encoding = true,
-                _ => {}
+                _ => {
+                    file = arg.clone();
+                    if file.starts_with('"') && file.ends_with('"') {
+                        file = file[1..file.len() - 1].to_string();
+                    }
+                }
             }
         }
     }
@@ -154,5 +159,72 @@ mod tests {
         assert!(options.print_computer);
         assert!(options.status);
         assert!(options.print_encoding);
+    }
+
+    #[test]
+    fn test_file_option() {
+        ARGS.with(|args| {
+            *args.borrow_mut() = vec![
+                "program".to_string(),
+                "--file=\"prova.file\"".to_string(),
+            ];
+        });
+
+        let options = get_options();
+        assert_eq!(options.file, "prova.file");
+    }
+
+    #[test]
+    fn test_nth_machine() {
+        ARGS.with(|args| {
+            *args.borrow_mut() = vec![
+                "program".to_string(),
+                "--print-nth-tm=10".to_string(),
+            ];
+        });
+
+        let options = get_options();
+        assert_eq!(options.print_nth_tm, 10);
+    }
+    #[test]
+    fn test_all_flags() {
+        ARGS.with(|args| {
+            *args.borrow_mut() = vec![
+                "program".to_string(),
+                "--convert-to-tm".to_string(),
+                "--convert-to-ram".to_string(),
+                "--convert-to-singletape".to_string(),
+                "--print-computer".to_string(),
+                "--print-number".to_string(),
+                "--help".to_string(),
+                "--version".to_string(),
+                "--status".to_string(),
+                "--print-encoding".to_string(),
+            ];
+        });
+
+        let options = get_options();
+        assert!(options.convert_to_tm);
+        assert!(options.convert_to_ram);
+        assert!(options.convert_to_singletape);
+        assert!(options.print_computer);
+        assert!(options.print_number);
+        assert!(options.help);
+        assert!(options.version);
+        assert!(options.status);
+        assert!(options.print_encoding);
+    }
+
+    #[test]
+    fn test_random_string() {
+        ARGS.with(|args| {
+            *args.borrow_mut() = vec![
+                "program".to_string(),
+                "\"testfile.tm\"".to_string(),
+            ];
+        });
+
+        let options = get_options();
+        assert_eq!(options.file, "testfile.tm");
     }
 }

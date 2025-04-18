@@ -5,11 +5,11 @@
 // where n,m >= 1
 // initial state:
 pda
-1
+0
 // accept state:
 5
 // states:
-1 2 3 4 5
+0 0a 1 2 3 4 5
 // input symbols:
 0 1 2 3
 // stack symbols:
@@ -17,6 +17,8 @@ pda
 // blank symbol:
 B
 // transitions:
+0 B B 0a B B
+0a B B 1 B
 1 0 B 1 0
 1 0 0 1 0 0
 1 1 0 2 0 1

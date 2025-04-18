@@ -332,10 +332,8 @@ fn handle_computation(options: &mut options::Options) {
     match c.element.clone() {
         computer::ComputingElem::Tm(m) => {
             if options.convert_to_singletape {
-                match m.convert_multi_tape_to_single_tape_tm() {
-                    Ok(m_st) => {
-                        c.set_turing(m_st);
-                    }
+                match c.convert_to_singletape() {
+                    Ok(_) => {}
                     Err(error) => println!("error: {}", error),
                 }
             }

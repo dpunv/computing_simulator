@@ -103,9 +103,9 @@ impl LambdaExpr {
             LambdaExpr::Abs(params, body) => {
                 "(\\".to_string()
                     + &params.join("")
-                    + "."
+                    + ".("
                     + &(*body).to_string(dict.clone(), force_currying)
-                    + ")"
+                    + "))"
             }
             LambdaExpr::App(exprs) => {
                 let mut s = "(".to_string();
@@ -553,5 +553,55 @@ mod tests {
                 ]))
             )
         );
+    }
+    #[test]
+    fn test_lambda_expr_to_string() {
+        let expr = parse_lambda("(\\x.(x))").unwrap();
+        assert_eq!(expr.to_string(vec![], false), "(\\x.(x))");
+    }
+
+    #[test]
+    fn test_lambda_expr_to_string_with_application() {
+        let expr = parse_lambda("((\\x.(x)) y)").unwrap();
+        assert_eq!(expr.to_string(vec![], false), "((\\x.(x)) y)");
+    }
+
+    #[test]
+    fn test_lambda_expr_to_tokens_simple() {
+        let expr = parse_lambda("(\\x.(x))").unwrap();
+        assert_eq!(
+            expr.to_tokens(),
+            vec!["(", "/", "x", ".", "x", ")"]
+        );
+    }
+
+    #[test]
+    fn test_lambda_expr_to_tokens_application() {
+        let expr = parse_lambda("(x y)").unwrap();
+        assert_eq!(
+            expr.to_tokens(),
+            vec!["(", "x", "y", ")"]
+        );
+    }
+
+    #[test]
+    fn test_lambda_expr_to_tokens_complex() {
+        let expr = parse_lambda("(\\x y.(x y))").unwrap();
+        assert_eq!(
+            expr.to_tokens(),
+            vec!["(", "/", "x", "y", ".", "(", "x", "y", ")", ")"]
+        );
+    }
+
+    #[test]
+    fn test_lambda_to_string_with_references() {
+        let expr = parse_lambda("(\\x.(x))").unwrap();
+        let reference = Lambda {
+            expr: expr.clone(),
+            references: vec![],
+            name: "ID".to_string(),
+            force_currying: false
+        };
+        assert_eq!(expr.to_string(vec![reference], false), "ID");
     }
 }
