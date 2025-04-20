@@ -1,27 +1,88 @@
-# Turing machine simulator
+# Computing Simulator
 
-Program to simulate a (Non-Deterministic) (Multi-tape) Turing Machine with a tape of infinite length to the right and left and a finite set of states
-The program also accept a description for (Non-Deterministic) Finite State Automaton and (Non-Deterministic Pushdown automata).
+A program to simulate computational models execution. In particular, the supported models are:
 
-## Description file of a Turing Machine
+- Turing machine (singletape, multitape, deterministic, non-deterministic)
+- Finite states automata (deterministic, non-deterministic, epsilon)
+- Pushdown automata (deterministic, non-deterministic, epsilon)
+- RAM machine
+- lambda calculus
 
-The description of the Turing Machine is a text file with the following format:
+## Description of the input files
 
-1. The first line contains the initial state of the Turing Machine (name is without spaces)
-2. The second line contains the acceptance state of the Turing Machine (name is without spaces)
-3. The third line contains the acceptance state of the Turing Machine (name is without spaces)
-4. The fourth line contains the final states of the Turing Machine (names are without spaces), separated by spaces
-5. The fifth line contains the blank symbol of the Turing Machine (symbol is without spaces) (omitted for Finite State Automaton)
-6. The sixth line contains the set of states of the Turing Machine (names are without spaces), separated by spaces
-7. The seventh line contains the input alphabet of the Turing Machine (symbols are without spaces), separated by spaces
-8. The eight line contains the tape alphabet of the Turing Machine (symbols are without spaces), separated by spaces (omitted for Finite State Automaton)
-9. The tenth line contains the number of tapes
-10. From the tenth line to the end of the file, each line contains the description of a transition of the Turing Machine. The description of a transition is a string with the following format: \<state> <new_state> \<symbols_list> <new_symbol_lists> \<directions_list> where:
+The input files are in text format. Each line that starts with // is a comment and is ignored. The first line of the file is the name of the model:
 
-- \<state> is the name of the state of the Turing Machine
-- <new_state> is the name of the new state of the Turing Machine
-- \<symbols_list> is the symbols read by the Turing Machine on the tapes
-- <new_symbols_list> is the symbol written by the Turing Machine on the tapes
-- \<directions_list> is the direction in which the Turing Machine moves the heads on the tapes (L for left, R for right, S for stay)
+- `tm` for Turing Machine
+- `fsm` for Finite States Automata
+- `pda` for Pushdown Automata
+- `ram` for RAM Machine
+- `lambda` for lambda calculus
+- `tm_e` for Turing Machine encoding
+- `ram_e` for RAM Machine encoding
 
-11. Lines starting with // are considered comments and are ignored.
+Then there are parameters specific for each model, on each line.
+More details on the parameters and what they mean can be found in the documentation.
+
+## Example of a Turing Machine input file
+
+```text
+// This is a comment
+tm
+// initial state
+q0
+// accept state
+q1
+// reject state
+q2
+// halt state
+q3
+// blank symbol
+_
+// states
+q0 q1 q2 q3
+// input symbols
+a b c
+// tape symbols
+a b c _
+// transitions
+q0 a q1 b R
+q1 b q2 c L
+q2 c q3 a R
+q3 _ q1 _ R
+```
+
+## How to run the program
+
+To run the program, you need to have cargo installed. More infromation on rust, cargo and how to install them can be found [here](https://www.rust-lang.org).
+
+First, clone the repository:
+
+```bash
+git clone https://github.com/dpunv/computing_simulator.git
+cd computing_simulator
+```
+
+Then, build the project:
+
+```bash
+cargo build --release
+```
+
+This will create an executable file in the `target/release` directory.
+To run the program, you need to pass the input file, the input string and other optional parameters. To check the parameters, and how to use the program, run:
+
+```bash
+./target/release/computing_simulator --help
+```
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Contributing
+
+If you want to contribute to the project, feel free to open an issue or a pull request. Any help is welcome.
+
+## Authors
+
+- dp
