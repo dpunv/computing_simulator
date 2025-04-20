@@ -37,9 +37,9 @@
 //! ## Author
 //!
 //! - dp
-//! 
+//!
 //! # License
-//! 
+//!
 //! This project is licensed under the MIT License. See the LICENSE file for details.
 
 use std::ops::Deref;
@@ -88,10 +88,10 @@ impl PartialEq for Lambda {
 /// Implementation of Lambda Calculus expression operations
 impl LambdaExpr {
     /// Converts the lambda expression into a vector of tokens
-    /// 
+    ///
     /// Returns a vector of strings representing the tokenized lambda expression
     /// where each token is a separate string in the vector.
-    /// 
+    ///
     /// # Examples
     /// For abstraction: `(λx.x)` becomes `["(", "/", "x", ".", "x", ")"]`
     /// For variable: `x` becomes `["x"]`
@@ -120,10 +120,10 @@ impl LambdaExpr {
     }
 
     /// Transforms the lambda expression into its curried form
-    /// 
+    ///
     /// Transforms a series of nested abstractions into a single
     /// abstraction with multiple variables
-    /// 
+    ///
     /// Returns a new LambdaExpr in curried form
     pub fn curry(self) -> LambdaExpr {
         match self.clone() {
@@ -146,17 +146,17 @@ impl LambdaExpr {
     }
 
     /// Converts the lambda expression to a string representation
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `dict` - A vector of Lambda definitions that may be used for name substitution
     /// * `force_currying` - A boolean flag indicating whether to force currying before comparison
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// A string representation of the lambda expression, potentially using named
     /// expressions from the dictionary if matches are found
-    /// 
+    ///
     /// If `force_currying` is true, expressions are compared in their curried form
     pub fn to_string(&self, dict: Vec<Lambda>, force_currying: bool) -> String {
         for dict_expr in dict.clone() {
@@ -193,7 +193,6 @@ impl LambdaExpr {
             }
         }
     }
-
 }
 
 /// Implementation block for Lambda struct providing core lambda calculus operations
@@ -216,10 +215,10 @@ impl Lambda {
     }
 
     /// Simulates the evaluation of a lambda expression using beta reduction.
-    /// 
+    ///
     /// # Arguments
     /// * `max_steps` - The maximum number of reduction steps to perform.
-    /// 
+    ///
     /// # Returns
     /// - `Ok(SimulationResult)` containing:
     ///   - The final reduced expression as a string
@@ -257,7 +256,7 @@ impl Lambda {
     }
 
     /// Converts the lambda expression into a vector of tokens.
-    /// 
+    ///
     /// # Returns
     /// A vector of strings representing the tokenized lambda expression
     pub fn to_tokens(&self) -> Vec<String> {
@@ -689,19 +688,13 @@ mod tests {
     #[test]
     fn test_lambda_expr_to_tokens_simple() {
         let expr = parse_lambda("(\\x.(x))").unwrap();
-        assert_eq!(
-            expr.to_tokens(),
-            vec!["(", "/", "x", ".", "x", ")"]
-        );
+        assert_eq!(expr.to_tokens(), vec!["(", "/", "x", ".", "x", ")"]);
     }
 
     #[test]
     fn test_lambda_expr_to_tokens_application() {
         let expr = parse_lambda("(x y)").unwrap();
-        assert_eq!(
-            expr.to_tokens(),
-            vec!["(", "x", "y", ")"]
-        );
+        assert_eq!(expr.to_tokens(), vec!["(", "x", "y", ")"]);
     }
 
     #[test]
@@ -720,7 +713,7 @@ mod tests {
             expr: expr.clone(),
             references: vec![],
             name: "ID".to_string(),
-            force_currying: false
+            force_currying: false,
         };
         assert_eq!(expr.to_string(vec![reference], false), "ID");
     }

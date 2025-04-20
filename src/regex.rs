@@ -1,49 +1,49 @@
 //! # Regex Module
-//! 
+//!
 //! This module provides functionality for parsing regular expressions and converting them into finite state automata (FSA).
 //! It includes a recursive descent parser for building a syntax tree representation of a regular expression and a function
 //! to convert this syntax tree into a Turing Machine representation of an FSA.
-//! 
+//!
 //! ## Features
-//! 
-//! - **Regex Parsing**: Supports parsing of regular expressions with operations such as concatenation, alternation (`|`), 
+//!
+//! - **Regex Parsing**: Supports parsing of regular expressions with operations such as concatenation, alternation (`|`),
 //!   Kleene star (`*`), Kleene plus (`+`), and optional (`?`).
 //! - **Regex Syntax Tree**: Represents a regular expression as a tree structure using the `Regex` struct and `Operation` enum.
 //! - **Regex to FSA Conversion**: Converts a parsed regular expression into a finite state automaton represented as a Turing Machine.
-//! 
+//!
 //! ## Supported Operations
-//! 
+//!
 //! - **Concatenation**: Combines two expressions sequentially (e.g., `ab`).
 //! - **Alternation**: Matches either of two expressions (e.g., `a|b`).
 //! - **Kleene Star**: Matches zero or more repetitions of an expression (e.g., `a*`).
 //! - **Kleene Plus**: Matches one or more repetitions of an expression (e.g., `a+`).
 //! - **Optional**: Matches zero or one occurrence of an expression (e.g., `a?`).
 //! - **Symbols**: Matches individual characters or escaped characters.
-//! 
+//!
 //! ## Public API
-//! 
+//!
 //! - `build_regex_tree(input: &str) -> Result<Regex, String>`: Parses a regular expression string and constructs a syntax tree.
 //! - `regex_to_fsa(regex: &Regex) -> Result<turing_machine::TuringMachine, String>`: Converts a `Regex` syntax tree into a Turing Machine representation of an FSA.
-//! 
+//!
 //! ## Internal Parsing Functions
-//! 
+//!
 //! - `parse_regex(chars: &mut Peekable<Chars>)`: Parses alternation (`|`) operations.
 //! - `parse_concat(chars: &mut Peekable<Chars>)`: Parses concatenation operations.
 //! - `parse_unary(chars: &mut Peekable<Chars>)`: Parses unary operations like `*`, `+`, and `?`.
 //! - `parse_primary(chars: &mut Peekable<Chars>)`: Parses primary expressions such as symbols and grouped expressions.
-//! 
+//!
 //! ## Testing
-//! 
+//!
 //! The module includes a comprehensive set of unit tests to verify the correctness of regex parsing and FSA conversion.
 //! These tests cover various scenarios, including simple regexes, nested expressions, invalid inputs, and escaped characters.
-//! 
-//! 
+//!
+//!
 //! ## Author
 //!
 //! - dp
-//! 
+//!
 //! # License
-//! 
+//!
 //! This project is licensed under the MIT License. See the LICENSE file for details.
 
 use crate::turing_machine;
@@ -96,7 +96,7 @@ impl PartialEq for Operation {
 ///
 /// # Fields
 ///
-/// - `operation`: The operation represented by this node in the syntax tree. 
+/// - `operation`: The operation represented by this node in the syntax tree.
 ///   It is defined by the `Operation` enum and can represent operations like
 ///   concatenation, alternation, or unary operations.
 /// - `left`: An optional boxed `Regex` representing the left child of the current node.
@@ -301,7 +301,7 @@ fn parse_concat(chars: &mut Peekable<Chars>) -> Result<Regex, String> {
 ///
 /// # See Also
 /// - [`parse_concat`] for parsing concatenation expressions.
-/// 
+///
 fn parse_unary(chars: &mut Peekable<Chars>) -> Result<Regex, String> {
     let mut expr = parse_primary(chars)?;
 
@@ -347,9 +347,9 @@ fn parse_unary(chars: &mut Peekable<Chars>) -> Result<Regex, String> {
 /// Returns an error if a unary expression cannot be parsed or if the input contains invalid syntax.
 ///
 /// # See Also
-/// 
+///
 /// - [`parse_unary`] for parsing unary expressions.
-/// 
+///
 fn parse_primary(chars: &mut Peekable<Chars>) -> Result<Regex, String> {
     match chars.peek() {
         Some('(') => {
@@ -381,12 +381,12 @@ fn parse_primary(chars: &mut Peekable<Chars>) -> Result<Regex, String> {
 
 /// Converts a parsed regular expression syntax tree into a finite state automaton (FSA)
 /// represented as a Turing Machine.
-/// 
+///
 /// This function takes a reference to a `Regex` syntax tree and constructs a corresponding
 /// Turing Machine that recognizes the same language as the regular expression.
 /// The resulting Turing Machine uses the input alphabet derived from the symbols in the regex
 /// and creates states and transitions according to the structure of the regex tree.
-/// 
+///
 /// The conversion supports the following regex operations:
 /// - Concatenation
 /// - Alternation (`|`)
@@ -394,24 +394,23 @@ fn parse_primary(chars: &mut Peekable<Chars>) -> Result<Regex, String> {
 /// - Kleene plus (`+`)
 /// - Optional (`?`)
 /// - Symbols (including escaped characters)
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `regex` - A reference to a `Regex` syntax tree representing the regular expression to convert.
-/// 
+///
 /// # Returns
-/// 
-/// * `Ok(turing_machine::TuringMachine)` - If the conversion is successful, returns a Turing Machine
-///  that acts as a finite state automaton for the given regex.
+///
+/// * `Ok(turing_machine::TuringMachine)` - If the conversion is successful, returns a Turing Machine that acts as a finite state automaton for the given regex.
 /// * `Err(String)` - If the regex tree is malformed or contains unsupported constructs, returns an error message.
-/// 
+///
 /// # Errors
 ///
 /// Returns an error if the regex tree is invalid or if required operands for operations are missing.
 /// # See Also
 /// - [`build_regex_tree`] for parsing a regex string into a syntax tree.
 /// - [`turing_machine::TuringMachine`] for the FSA representation.
-/// 
+///
 pub fn regex_to_fsa(regex: &Regex) -> Result<turing_machine::TuringMachine, String> {
     let mut fsa = turing_machine::TuringMachine::new();
     fsa.blank_symbol = " ".to_string();
@@ -460,30 +459,30 @@ pub fn regex_to_fsa(regex: &Regex) -> Result<turing_machine::TuringMachine, Stri
 }
 
 /// Recursively builds a finite state automaton (FSA) from a regular expression syntax tree.
-/// 
+///
 /// This function takes a mutable reference to a `TuringMachine` and a `Regex` syntax tree,
 /// and constructs the corresponding FSA by adding states and transitions based on the
 /// operations defined in the regex tree.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `fsa` - A mutable reference to a `TuringMachine` instance that will be modified to represent the FSA.
 /// * `regex` - A reference to a `Regex` syntax tree representing the regular expression to convert.
-/// 
+///
 /// # Returns
-/// 
+///
 /// * `Ok((String, String))` - If the conversion is successful, returns a tuple containing the start and end states of the FSA.
 /// * `Err(String)` - If the regex tree is malformed or contains unsupported constructs, returns an error message.
-/// 
+///
 /// # Errors
-/// 
+///
 /// Returns an error if the regex tree is invalid or if required operands for operations are missing.
-/// 
+///
 /// # See Also
-/// 
+///
 /// - [`build_regex_tree`] for parsing a regex string into a syntax tree.
 /// - [`turing_machine::TuringMachine`] for the FSA representation.
-/// 
+///
 fn build_fsa(
     fsa: &mut turing_machine::TuringMachine,
     regex: &Regex,

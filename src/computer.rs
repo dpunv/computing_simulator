@@ -1,5 +1,5 @@
 //! # Computing Simulator
-//! 
+//!
 //! This module provides core functionality for simulating various types of computing machines
 //! and managing their interactions. It implements a unified interface for different computational
 //! models including RAM machines, Turing machines, and Lambda calculus.
@@ -30,7 +30,7 @@
 //!
 //! ### Computer
 //! Represents a single computing machine with its associated mappings and state.
-//! 
+//!
 //! ### Server
 //! Manages multiple computers and their execution order, providing a framework
 //! for complex computations involving multiple machines.
@@ -51,9 +51,9 @@
 //! ## Author
 //!
 //! - dp
-//! 
+//!
 //! # License
-//! 
+//!
 //! This project is licensed under the MIT License. See the LICENSE file for details.
 
 use crate::file_handler;
@@ -211,7 +211,7 @@ impl Computer {
     }
     */
 
-    /* 
+    /*
     /// Checks if the computer's element is a Lambda calculus.
     ///
     /// # Returns
@@ -229,7 +229,7 @@ impl Computer {
 
     /// Converts a multi-tape Turing machine to a single-tape Turing machine.
     ///
-    /// This method only applies to Turing machine elements. It performs the conversion 
+    /// This method only applies to Turing machine elements. It performs the conversion
     /// by implementing the standard construction that simulates a multi-tape Turing machine
     /// using a single tape. The conversion preserves the computational behavior of the
     /// original machine.
@@ -251,9 +251,9 @@ impl Computer {
         match self.element {
             ComputingElem::Tm(ref m) => {
                 self.set_turing(m.convert_multitape_to_singletape_tm()?);
-                return Ok(self.clone());
+                Ok(self.clone())
             }
-            _ => return Err("not a turing machine".to_string()),
+            _ => Err("not a turing machine".to_string()),
         }
     }
 
@@ -344,7 +344,7 @@ impl Computer {
 
     /// Simulates the execution of the current computing element with the given input.
     ///
-    /// This method runs the simulation of the computer's computing element (RAM machine, 
+    /// This method runs the simulation of the computer's computing element (RAM machine,
     /// Turing machine, or Lambda calculus) with the specified parameters.
     ///
     /// # Arguments
@@ -888,9 +888,11 @@ impl Computer {
                     .iter()
                     .map(|(k, v)| (format!("state {}", k), v.to_string()))
                     .collect();
-                translation_map.extend(symbols_map
-                    .iter()
-                    .map(|(k, v)| (format!("symbol {}", k), v.to_string())));
+                translation_map.extend(
+                    symbols_map
+                        .iter()
+                        .map(|(k, v)| (format!("symbol {}", k), v.to_string())),
+                );
                 options.input = "1".to_string()
                     + &symbols_map
                         .get(&m.blank_symbol)
@@ -1159,7 +1161,7 @@ mod tests {
         computer.set_ram(ram_machine::RamMachine {
             instructions: Vec::new(),
             labels_map: std::collections::HashMap::new(),
-            translation_map: std::collections::HashMap::new()
+            translation_map: std::collections::HashMap::new(),
         });
         assert!(computer.is_ram());
     }
@@ -1209,7 +1211,7 @@ mod tests {
         let ram = ram_machine::RamMachine {
             instructions: Vec::new(),
             labels_map: std::collections::HashMap::new(),
-            translation_map: std::collections::HashMap::new()
+            translation_map: std::collections::HashMap::new(),
         };
         computer.set_ram(ram);
         assert!(computer.is_ram());
@@ -1368,7 +1370,7 @@ mod tests {
         let ram = ram_machine::RamMachine {
             instructions: vec![],
             labels_map: std::collections::HashMap::new(),
-            translation_map: std::collections::HashMap::new()
+            translation_map: std::collections::HashMap::new(),
         };
         computer.set_ram(ram);
 
@@ -1435,7 +1437,7 @@ mod tests {
                 },
             ],
             labels_map: std::collections::HashMap::new(),
-            translation_map: std::collections::HashMap::new()
+            translation_map: std::collections::HashMap::new(),
         };
         computer.set_ram(ram);
 
@@ -1506,7 +1508,7 @@ mod tests {
                 },
             ],
             labels_map: std::collections::HashMap::new(),
-            translation_map: std::collections::HashMap::new()
+            translation_map: std::collections::HashMap::new(),
         };
         computer.set_ram(ram);
 
@@ -1562,7 +1564,7 @@ mod tests {
                 label: "".to_string(),
             }],
             labels_map: std::collections::HashMap::new(),
-            translation_map: std::collections::HashMap::new()
+            translation_map: std::collections::HashMap::new(),
         };
         computer.set_ram(ram);
 
@@ -1765,7 +1767,7 @@ mod tests {
         let ram = ram_machine::RamMachine {
             instructions: vec![],
             labels_map: std::collections::HashMap::new(),
-            translation_map: std::collections::HashMap::new()
+            translation_map: std::collections::HashMap::new(),
         };
         computer.set_ram(ram);
 
@@ -2077,15 +2079,16 @@ mod tests {
     #[test]
     fn test_matches_b_tm_integration() {
         let mut opt = options::Options::default();
-        opt.file = "examples/matches b.tm".to_string(); 
+        opt.file = "examples/matches b.tm".to_string();
         opt.input = "aa".to_string();
-        
+
         let mut server = Server::new();
         let computer = file_handler::handle_file_reads(opt.file.clone(), &mut server).unwrap();
         server.add_computer(opt.file.clone(), computer);
         server.set_computation_order_at(0, opt.file.clone());
-        
-        let result: Result<(String, usize, String, usize, Vec<String>), String> = server.execute(opt.input, 1000);
+
+        let result: Result<(String, usize, String, usize, Vec<String>), String> =
+            server.execute(opt.input, 1000);
         assert!(result.is_ok());
         if let Ok((state, _, output, _, _)) = result {
             assert_eq!(state, "halt");
@@ -2096,15 +2099,16 @@ mod tests {
     #[test]
     fn test_matches_b_multitape_tm_integration() {
         let mut opt = options::Options::default();
-        opt.file = "examples/matches b multitape.tm".to_string(); 
+        opt.file = "examples/matches b multitape.tm".to_string();
         opt.input = "aa".to_string();
-        
+
         let mut server = Server::new();
         let computer = file_handler::handle_file_reads(opt.file.clone(), &mut server).unwrap();
         server.add_computer(opt.file.clone(), computer);
         server.set_computation_order_at(0, opt.file.clone());
-        
-        let result: Result<(String, usize, String, usize, Vec<String>), String> = server.execute(opt.input, 1000);
+
+        let result: Result<(String, usize, String, usize, Vec<String>), String> =
+            server.execute(opt.input, 1000);
         assert!(result.is_ok());
         if let Ok((state, _, output, _, _)) = result {
             assert_eq!(state, "halt");
@@ -2115,16 +2119,17 @@ mod tests {
     #[test]
     fn test_matches_b_multitape_conversion_tm_integration() {
         let mut opt = options::Options::default();
-        opt.file = "examples/matches b multitape.tm".to_string(); 
+        opt.file = "examples/matches b multitape.tm".to_string();
         opt.input = "aa".to_string();
-        
+
         let mut server = Server::new();
         let mut computer = file_handler::handle_file_reads(opt.file.clone(), &mut server).unwrap();
         computer.convert_to_singletape().unwrap();
         server.add_computer(opt.file.clone(), computer);
         server.set_computation_order_at(0, opt.file.clone());
-        
-        let result: Result<(String, usize, String, usize, Vec<String>), String> = server.execute(opt.input, 1000);
+
+        let result: Result<(String, usize, String, usize, Vec<String>), String> =
+            server.execute(opt.input, 1000);
         assert!(result.is_ok());
         if let Ok((state, _, output, _, _)) = result {
             assert_eq!(state, "halt");
@@ -2135,15 +2140,16 @@ mod tests {
     #[test]
     fn test_lambda_fact_integration() {
         let mut opt = options::Options::default();
-        opt.file = "src/standard/library.lambda".to_string(); 
+        opt.file = "src/standard/library.lambda".to_string();
         opt.input = "(FACT 2)".to_string();
-        
+
         let mut server = Server::new();
         let computer = file_handler::handle_file_reads(opt.file.clone(), &mut server).unwrap();
         server.add_computer(opt.file.clone(), computer);
         server.set_computation_order_at(0, opt.file.clone());
-        
-        let result: Result<(String, usize, String, usize, Vec<String>), String> = server.execute(opt.input, 1000);
+
+        let result: Result<(String, usize, String, usize, Vec<String>), String> =
+            server.execute(opt.input, 1000);
         assert!(result.is_ok());
         if let Ok((state, _, _, _, _)) = result {
             assert_eq!(state, "2");
@@ -2152,16 +2158,20 @@ mod tests {
     #[test]
     fn test_lambda_succ_conversion_integration() {
         let mut opt = options::Options::default();
-        opt.file = "src/standard/library.lambda".to_string(); 
+        opt.file = "src/standard/library.lambda".to_string();
         opt.input = "(SUCC 3)".to_string();
         opt.max_steps = 10000;
-        
+
         let mut server = Server::new();
-        let computer = file_handler::handle_file_reads(opt.file.clone(), &mut server).unwrap().to_tm(&mut opt, &mut server).unwrap();
+        let computer = file_handler::handle_file_reads(opt.file.clone(), &mut server)
+            .unwrap()
+            .to_tm(&mut opt, &mut server)
+            .unwrap();
         server.add_computer(opt.file.clone(), computer);
         server.set_computation_order_at(0, opt.file.clone());
-        
-        let result: Result<(String, usize, String, usize, Vec<String>), String> = server.execute(opt.input, opt.max_steps);
+
+        let result: Result<(String, usize, String, usize, Vec<String>), String> =
+            server.execute(opt.input, opt.max_steps);
         assert!(result.is_ok());
         if let Ok((state, _, output, _, _)) = result {
             assert_eq!(state, "halt");
@@ -2172,15 +2182,15 @@ mod tests {
     /* #[test]
     fn test_lambda_succ_double_conversion_integration() {
         let mut opt = options::Options::default();
-        opt.file = "src/standard/library.lambda".to_string(); 
+        opt.file = "src/standard/library.lambda".to_string();
         opt.input = "(SUCC 3)".to_string();
         opt.max_steps = 100000;
-        
+
         let mut server = Server::new();
         let computer = file_handler::handle_file_reads(opt.file.clone(), &mut server).unwrap().to_ram(&mut opt, &mut server).unwrap();
         server.add_computer(opt.file.clone(), computer);
         server.set_computation_order_at(0, opt.file.clone());
-        
+
         let result: Result<(String, usize, String, usize, Vec<String>), String> = server.execute(opt.input, opt.max_steps);
         assert!(result.is_ok());
         if let Ok((state, _, output, _, _)) = result {
@@ -2192,15 +2202,16 @@ mod tests {
     #[test]
     fn test_plusfive_multitape_tm_integration() {
         let mut opt = options::Options::default();
-        opt.file = "examples/plusfive.tm".to_string(); 
+        opt.file = "examples/plusfive.tm".to_string();
         opt.input = "010".to_string();
-        
+
         let mut server = Server::new();
         let computer = file_handler::handle_file_reads(opt.file.clone(), &mut server).unwrap();
         server.add_computer(opt.file.clone(), computer);
         server.set_computation_order_at(0, opt.file.clone());
-        
-        let result: Result<(String, usize, String, usize, Vec<String>), String> = server.execute(opt.input, 1000);
+
+        let result: Result<(String, usize, String, usize, Vec<String>), String> =
+            server.execute(opt.input, 1000);
         assert!(result.is_ok());
         if let Ok((state, _, output, _, _)) = result {
             assert_eq!(state, "halt");
@@ -2211,15 +2222,16 @@ mod tests {
     #[test]
     fn test_plusfive_ram_integration() {
         let mut opt = options::Options::default();
-        opt.file = "examples/plusfive.ram".to_string(); 
+        opt.file = "examples/plusfive.ram".to_string();
         opt.input = "010".to_string();
-        
+
         let mut server = Server::new();
         let computer = file_handler::handle_file_reads(opt.file.clone(), &mut server).unwrap();
         server.add_computer(opt.file.clone(), computer);
         server.set_computation_order_at(0, opt.file.clone());
-        
-        let result: Result<(String, usize, String, usize, Vec<String>), String> = server.execute(opt.input, 1000);
+
+        let result: Result<(String, usize, String, usize, Vec<String>), String> =
+            server.execute(opt.input, 1000);
         assert!(result.is_ok());
         if let Ok((state, _, output, _, _)) = result {
             assert_eq!(state, "halt");
@@ -2230,15 +2242,16 @@ mod tests {
     #[test]
     fn test_dyn_ram_integration() {
         let mut opt = options::Options::default();
-        opt.file = "examples/dyn.ram".to_string(); 
+        opt.file = "examples/dyn.ram".to_string();
         opt.input = "010".to_string();
-        
+
         let mut server = Server::new();
         let computer = file_handler::handle_file_reads(opt.file.clone(), &mut server).unwrap();
         server.add_computer(opt.file.clone(), computer);
         server.set_computation_order_at(0, opt.file.clone());
-        
-        let result: Result<(String, usize, String, usize, Vec<String>), String> = server.execute(opt.input, 1000);
+
+        let result: Result<(String, usize, String, usize, Vec<String>), String> =
+            server.execute(opt.input, 1000);
         assert!(result.is_ok());
         if let Ok((state, _, output, _, _)) = result {
             assert_eq!(state, "halt");
@@ -2249,15 +2262,19 @@ mod tests {
     #[test]
     fn test_dyn_conversion_ram_integration() {
         let mut opt = options::Options::default();
-        opt.file = "examples/dyn.ram".to_string(); 
+        opt.file = "examples/dyn.ram".to_string();
         opt.input = "010".to_string();
-        
+
         let mut server = Server::new();
-        let computer = file_handler::handle_file_reads(opt.file.clone(), &mut server).unwrap().to_tm(&mut opt, &mut server).unwrap();
+        let computer = file_handler::handle_file_reads(opt.file.clone(), &mut server)
+            .unwrap()
+            .to_tm(&mut opt, &mut server)
+            .unwrap();
         server.add_computer(opt.file.clone(), computer);
         server.set_computation_order_at(0, opt.file.clone());
-        
-        let result: Result<(String, usize, String, usize, Vec<String>), String> = server.execute(opt.input, 100000);
+
+        let result: Result<(String, usize, String, usize, Vec<String>), String> =
+            server.execute(opt.input, 100000);
         assert!(result.is_ok());
         if let Ok((state, _, output, _, _)) = result {
             assert_eq!(state, "halt");
@@ -2268,15 +2285,16 @@ mod tests {
     #[test]
     fn test_pda_integration() {
         let mut opt: options::Options = options::Options::default();
-        opt.file = "examples/0n1m2m3n.pda".to_string(); 
+        opt.file = "examples/0n1m2m3n.pda".to_string();
         opt.input = "0011122233".to_string();
-        
+
         let mut server = Server::new();
         let computer = file_handler::handle_file_reads(opt.file.clone(), &mut server).unwrap();
         server.add_computer(opt.file.clone(), computer);
         server.set_computation_order_at(0, opt.file.clone());
-        
-        let result: Result<(String, usize, String, usize, Vec<String>), String> = server.execute(opt.input, 1000);
+
+        let result: Result<(String, usize, String, usize, Vec<String>), String> =
+            server.execute(opt.input, 1000);
         assert!(result.is_ok());
         if let Ok((state, _, output, _, _)) = result {
             assert_eq!(state, "halt");
@@ -2287,20 +2305,20 @@ mod tests {
     #[test]
     fn test_regex_integration() {
         let mut opt: options::Options = options::Options::default();
-        opt.file = "examples/regex.reg".to_string(); 
+        opt.file = "examples/regex.reg".to_string();
         opt.input = "abbbcddce".to_string();
-        
+
         let mut server = Server::new();
         let computer = file_handler::handle_file_reads(opt.file.clone(), &mut server).unwrap();
         server.add_computer(opt.file.clone(), computer);
         server.set_computation_order_at(0, opt.file.clone());
-        
-        let result: Result<(String, usize, String, usize, Vec<String>), String> = server.execute(opt.input, 1000);
+
+        let result: Result<(String, usize, String, usize, Vec<String>), String> =
+            server.execute(opt.input, 1000);
         assert!(result.is_ok());
         if let Ok((state, _, output, _, _)) = result {
             assert_eq!(state, "accept");
             assert_eq!(output, "");
         }
     }
-
 }

@@ -1,9 +1,8 @@
-
 //! # Utilities Module
 //!
-//! This module provides a collection of utility functions for string manipulation, 
-//! binary conversions, and custom alphabet-based encoding. These functions are 
-//! designed to be reusable and cover a variety of common operations in computing 
+//! This module provides a collection of utility functions for string manipulation,
+//! binary conversions, and custom alphabet-based encoding. These functions are
+//! designed to be reusable and cover a variety of common operations in computing
 //! simulations and data processing.
 //!
 //! ## Functions
@@ -17,22 +16,22 @@
 //!
 //! ## Error Handling
 //!
-//! Functions that involve conversions or custom alphabets return `Result` types 
-//! to handle errors gracefully. For instance, invalid binary strings or empty 
+//! Functions that involve conversions or custom alphabets return `Result` types
+//! to handle errors gracefully. For instance, invalid binary strings or empty
 //! alphabets will result in descriptive error messages.
 //!
 //! ## Testing
 //!
-//! The module includes a robust set of unit tests to ensure correctness and 
-//! reliability. These tests cover normal usage, edge cases, and invalid inputs 
+//! The module includes a robust set of unit tests to ensure correctness and
+//! reliability. These tests cover normal usage, edge cases, and invalid inputs
 //! to verify the behavior of each function.
-//! 
+//!
 //! ## Author
 //!
 //! - dp
-//! 
+//!
 //! # License
-//! 
+//!
 //! This project is licensed under the MIT License. See the LICENSE file for details.
 
 /// Converts an input string into a vector of strings based on the provided input alphabet.

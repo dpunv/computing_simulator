@@ -1,11 +1,11 @@
 //! CLI module for Computing Simulator
-//! 
+//!
 //! This module provides the command-line interface functionality for the Computing Simulator,
 //! allowing users to interact with various computing models including Turing Machines,
 //! RAM Machines, and Lambda expressions.
 //!
 //! # Features
-//! 
+//!
 //! - Convert between different computation models (TM, RAM, Lambda)
 //! - Interactive TUI mode for multiple executions on the same machine with different inputs
 //! - Print status and details of computing machines
@@ -15,7 +15,7 @@
 //! - Generate and print machine encodings
 //!
 //! # Main Components
-//! 
+//!
 //! - `main_cli()`: Entry point for the CLI application
 //! - `print_help()`: Displays usage information and available options
 //! - `process_results()`: Handles computation results with various verbosity levels
@@ -23,7 +23,7 @@
 //! - `handle_computation()`: Manages different computation models and their conversions
 //!
 //! # Options
-//! 
+//!
 //! The CLI supports various options including:
 //! - File input/output
 //! - Conversion between computation models
@@ -33,7 +33,7 @@
 //! - Encoding generation and printing
 //!
 //! # Example Usage
-//! 
+//!
 //! ```bash
 //! computing_simulator --file input.tm --verbose 2 --max-steps 1000
 //! computing_simulator --convert-to-tm --file input.ram
@@ -43,9 +43,9 @@
 //! ## Author
 //!
 //! - dp
-//! 
+//!
 //! # License
-//! 
+//!
 //! This project is licensed under the MIT License. See the LICENSE file for details.
 
 use crate::lambda;
@@ -125,9 +125,9 @@ fn print_version() {
 
 /// Prints the status of a Turing Machine, including whether it's deterministic,
 /// valid, and has total transitions
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `tm` - Reference to a TuringMachine instance
 pub fn print_status_tm(tm: &turing_machine::TuringMachine) {
     println!("Deterministic: {}", tm.is_deterministic());
@@ -136,9 +136,9 @@ pub fn print_status_tm(tm: &turing_machine::TuringMachine) {
 }
 
 /// Processes and displays computation results based on verbosity level
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `server` - The computation server instance
 /// * `opt` - Options containing verbosity and other settings
 fn process_results(server: computer::Server, opt: options::Options) {
@@ -169,9 +169,9 @@ fn process_results(server: computer::Server, opt: options::Options) {
 }
 
 /// Provides an interactive Terminal User Interface for the computing simulator
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `server` - Mutable reference to the computation server
 /// * `opt` - Options for the computation
 fn interactive_tui(server: &mut computer::Server, opt: options::Options) {
@@ -216,9 +216,9 @@ fn interactive_tui(server: &mut computer::Server, opt: options::Options) {
 }
 
 /// Prints the encoding of a computer (TM, RAM, or Lambda)
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `c` - Reference to a Computer instance
 pub fn print_encoding(c: &computer::Computer) {
     let encoded: (
@@ -270,9 +270,9 @@ pub fn print_computation(
  */
 
 /// Prints a lambda expression as a tree structure
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `l` - Lambda expression to print
 pub fn print_lambda_as_tree(l: &lambda::Lambda) {
     println!("NAME: {}", l.name);
@@ -296,9 +296,9 @@ pub fn print_lambda_as_tree(l: &lambda::Lambda) {
 }
 
 /// Prints the definition of a Turing Machine
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `tm` - TuringMachine instance to print
 pub fn print_tm(tm: turing_machine::TuringMachine) {
     println!("{}", tm.initial_state);
@@ -337,9 +337,9 @@ pub fn print_tm(tm: turing_machine::TuringMachine) {
 }
 
 /// Prints the instructions and translations symbols (if available) of a RAM Machine
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `ram` - RAM Machine instance to print
 pub fn print_ram(ram: ram_machine::RamMachine) {
     for instruction in ram.instructions.iter() {
@@ -351,14 +351,14 @@ pub fn print_ram(ram: ram_machine::RamMachine) {
         println!("translations: ");
         for (k, v) in ram.translation_map {
             println!("  {} --> {}", k, v);
-        } 
+        }
     }
 }
 
 /// Prints a lambda expression and its references
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `l` - Lambda expression to print
 pub fn print_lambda(l: &lambda::Lambda) {
     for lambda in &l.references {
@@ -367,9 +367,9 @@ pub fn print_lambda(l: &lambda::Lambda) {
 }
 
 /// Prints status information about a RAM Machine
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `ram` - Reference to a RAM Machine instance
 fn print_status_ram(ram: &ram_machine::RamMachine) {
     println!("Number of instructions: {}", ram.instructions.len());
@@ -381,9 +381,9 @@ pub fn main_cli() {
 }
 
 /// Main CLI function that processes given options
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `options` - Options instance containing CLI parameters
 pub fn main_cli_with_options(mut options: options::Options) {
     if options.help {
@@ -416,22 +416,22 @@ pub fn main_cli_with_options(mut options: options::Options) {
 }
 
 /// Validates that the provided options are valid
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `options` - Reference to Options instance to validate
-/// 
+///
 /// # Returns
-/// 
+///
 /// * `bool` - True if options are valid, false otherwise
 fn validate_options(options: &options::Options) -> bool {
     !options.file.is_empty() || options.print_nth_tm != -1
 }
 
 /// Handles the computation based on the provided options
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `options` - Mutable reference to Options instance
 fn handle_computation(options: &mut options::Options) {
     let mut s = computer::Server::new();

@@ -38,9 +38,9 @@
 //! ## Author
 //!
 //! - dp
-//! 
+//!
 //! # License
-//! 
+//!
 //! This project is licensed under the MIT License. See the LICENSE file for details.
 
 /// Represents the set of configurable command-line options for the Computing Simulator.
@@ -259,10 +259,7 @@ mod tests {
     #[test]
     fn test_file_option() {
         ARGS.with(|args| {
-            *args.borrow_mut() = vec![
-                "program".to_string(),
-                "--file=\"prova.file\"".to_string(),
-            ];
+            *args.borrow_mut() = vec!["program".to_string(), "--file=\"prova.file\"".to_string()];
         });
 
         let options = get_options();
@@ -272,10 +269,7 @@ mod tests {
     #[test]
     fn test_nth_machine() {
         ARGS.with(|args| {
-            *args.borrow_mut() = vec![
-                "program".to_string(),
-                "--print-nth-tm=10".to_string(),
-            ];
+            *args.borrow_mut() = vec!["program".to_string(), "--print-nth-tm=10".to_string()];
         });
 
         let options = get_options();
@@ -313,10 +307,7 @@ mod tests {
     #[test]
     fn test_random_string() {
         ARGS.with(|args| {
-            *args.borrow_mut() = vec![
-                "program".to_string(),
-                "\"testfile.tm\"".to_string(),
-            ];
+            *args.borrow_mut() = vec!["program".to_string(), "\"testfile.tm\"".to_string()];
         });
 
         let options = get_options();

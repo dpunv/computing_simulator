@@ -75,6 +75,12 @@ To run the program, you need to pass the input file, the input string and other 
 ./target/release/computing_simulator --help
 ```
 
+To build the documentation, run:
+
+```bash
+cargo doc --open
+```
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

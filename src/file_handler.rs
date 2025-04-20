@@ -52,9 +52,9 @@
 //! ## Author
 //!
 //! - dp
-//! 
+//!
 //! # License
-//! 
+//!
 //! This project is licensed under the MIT License. See the LICENSE file for details.
 
 use crate::computer;
@@ -244,7 +244,6 @@ pub fn read_turing_machine(
     Ok(computer.clone())
 }
 
-
 /// Reads and processes a Finite State Machine definition from a vector of strings.
 ///
 /// # Arguments
@@ -262,8 +261,7 @@ pub fn read_turing_machine(
 /// 2. Space-separated list of final states
 /// 3. Space-separated list of states
 /// 4. Space-separated input alphabet
-/// 5. Transitions in format: current_state input_symbol next_state
-///     or epsilon transitions as: current_state next_state. One transition per line until EOF
+/// 5. Transitions in format: current_state input_symbol next_state or epsilon transitions as: current_state next_state. One transition per line until EOF
 pub fn read_finite_state_machine(
     lines: Vec<String>,
     computer: &mut computer::Computer,
@@ -362,8 +360,7 @@ pub fn read_finite_state_machine(
 /// 4. Space-separated input alphabet
 /// 5. Space-separated stack alphabet
 /// 6. Blank symbol
-/// 7. Transitions in format: current_state input stack_symbol new_state new_stack_top
-///     or with two stack symbols: current_state input stack_symbol new_state new_top1 new_top2. One transition per line until EOF
+/// 7. Transitions in format: current_state input stack_symbol new_state new_stack_top or with two stack symbols: current_state input stack_symbol new_state new_top1 new_top2. One transition per line until EOF
 pub fn read_pushdown_automaton(
     lines: Vec<String>,
     computer: &mut computer::Computer,
@@ -718,7 +715,7 @@ pub fn read_ram_program(
     computer.set_ram(ram_machine::RamMachine {
         instructions: instr,
         labels_map,
-        translation_map: std::collections::HashMap::new()
+        translation_map: std::collections::HashMap::new(),
     });
     Ok(computer.clone())
 }
@@ -766,7 +763,7 @@ pub fn read_ram_program_from_encoding(
     computer.set_ram(ram_machine::RamMachine {
         instructions: instr,
         labels_map: std::collections::HashMap::new(),
-        translation_map: std::collections::HashMap::new()
+        translation_map: std::collections::HashMap::new(),
     });
     Ok(computer.clone())
 }

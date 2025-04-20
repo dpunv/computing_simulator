@@ -44,9 +44,9 @@
 //! ## Author
 //!
 //! - dp
-//! 
+//!
 //! # License
-//! 
+//!
 //! This project is licensed under the MIT License. See the LICENSE file for details.
 
 use crate::computer;
@@ -86,7 +86,7 @@ use crate::utils;
 /// - States can be generated automatically using `add_state()`
 /// - The machine can be converted between multi-tape and single-tape variants
 /// - Supports standard Turing machine encodings for theoretical analysis
-/// 
+///
 #[derive(Clone)]
 pub struct TuringMachine {
     pub initial_state: String,
@@ -117,7 +117,7 @@ pub struct TuringMachine {
 /// - The tape is automatically extended with blank symbols when the head moves beyond the current bounds
 /// - Symbols on the tape must be from the Turing machine's tape alphabet
 /// - The head position is zero-based and must always point to a valid position on the tape
-/// 
+///
 #[derive(Clone)]
 pub struct Tape {
     pub tape: Vec<String>,
@@ -125,22 +125,22 @@ pub struct Tape {
 }
 
 /// Represents a transition rule in a Turing machine.
-/// 
+///
 /// # Fields
-/// 
+///
 /// * `state` - The current state of the Turing machine.
 /// * `symbols` - The symbols being read from the tapes.
 /// * `new_state` - The new state to transition to.
 /// * `new_symbols` - The symbols to write on the tapes.
 /// * `directions` - The directions to move the tape heads (left, right, or stay).
-/// 
+///
 /// # Notes
-/// 
+///
 /// - The `symbols` and `new_symbols` vectors must match the number of tapes in the Turing machine.
 /// - The `directions` vector must also match the number of tapes.
 /// - The transition is valid if the current state and symbols match the machine's configuration.
 /// - The transition can be used to update the machine's state and tape contents during simulation.
-/// 
+///
 #[derive(Clone, Debug)]
 pub struct Transition {
     pub state: String,
@@ -187,17 +187,17 @@ impl PartialEq for Transition {
 }
 
 /// Represents the direction of head movement in a Turing machine.
-/// 
+///
 /// The direction can be either left, right, or stay in the current position.
 /// This is used in transitions to specify how the tape head should move
 /// after writing a symbol.
-/// 
+///
 /// # Variants
-/// 
+///
 /// * `Left` - Move the tape head one position to the left
 /// * `Right` - Move the tape head one position to the right
 /// * `Stay` - Keep the tape head in its current position
-/// 
+///
 /// The direction is used in transitions of the Turing machine to determine
 /// how the head should move after writing a symbol to the tape. The `Stay`
 /// variant is particularly useful for implementing machines that need to
@@ -257,7 +257,7 @@ impl PartialEq for Direction {
 /// - Implements `PartialEq` based on tape contents and state for cycle detection
 /// - The computation history can be used to reconstruct the machine's execution path
 /// - Supports both single-tape and multi-tape configurations
-/// 
+///
 #[derive(Clone)]
 struct TreeElement {
     state: String,
@@ -286,9 +286,9 @@ impl PartialEq for TreeElement {
 
 impl TuringMachine {
     /// Creates a new empty `TuringMachine` instance with default values.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// Returns a `TuringMachine` with:
     /// - Empty initial, accept, reject and halt states
     /// - Empty blank symbol
@@ -313,12 +313,12 @@ impl TuringMachine {
         }
     }
     /// Adds a new state to the Turing machine and returns its name.
-    /// 
+    ///
     /// The state name is generated using a counter, resulting in names like "state 0", "state 1", etc.
     /// The counter is automatically incremented after each state creation.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// Returns a `String` containing the name of the newly created state.
     pub fn add_state(&mut self) -> String {
         let state = format!("state {}", self.next_state_id);
@@ -341,37 +341,37 @@ impl TuringMachine {
     }
 
     /// Returns a vector containing all final states (accept, reject, and halt states) of the Turing machine.
-    /// 
+    ///
     /// The final states are cloned and returned in the following order:
     /// 1. Accept state
     /// 2. Reject state
     /// 3. Halt state
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// A `Vec<String>` containing clones of all final states. If any final state is empty (not set),
     /// it will not be included in the vector.
     pub fn final_states(&self) -> Vec<String> {
         let mut v = Vec::new();
-        if self.accept_state != "" {
+        if !self.accept_state.is_empty() {
             v.push(self.accept_state.clone());
         }
-        if self.reject_state != "" {
+        if !self.reject_state.is_empty() {
             v.push(self.reject_state.clone());
         }
-        if self.halt_state != "" {
+        if !self.halt_state.is_empty() {
             v.push(self.halt_state.clone());
         }
         v
     }
 
     /// Adds a new transition to the Turing machine.
-    /// 
+    ///
     /// This function adds a new transition rule to the Turing machine's transition function.
     /// If the transition already exists, it will not be added again.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `state` - The current state from which the transition starts
     /// * `symbols` - A vector of symbols, one for each tape, that must be read for this transition
     /// * `new_state` - The state to transition to
@@ -398,17 +398,17 @@ impl TuringMachine {
     }
 
     /// Simulates the execution of the Turing machine on a given input.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `input` - A vector of strings representing the input symbols on the first tape
     /// * `max_steps` - Maximum number of steps the simulation should run before stopping
     /// * `this_computer_object` - A Computer object that contains mappings for subroutine calls
     /// * `context` - A Server object that provides access to other computers for subroutine execution
     /// * `prev_head` - The initial position of the tape head
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// Returns a `Result` containing either:
     /// - Ok with a `SimulationResult` tuple containing:
     ///   - Final state type ("accept", "reject", "halt", or current state)
@@ -417,9 +417,9 @@ impl TuringMachine {
     ///   - Number of steps executed
     ///   - Vector of computation history
     /// - Err with an error message if simulation fails
-    /// 
+    ///
     /// # Notes
-    /// 
+    ///
     /// - The simulation supports both deterministic and non-deterministic Turing machines
     /// - Supports multi-tape configurations through the internal tape_count property
     /// - Can execute subroutines by mapping states to other computers in the context
@@ -644,32 +644,32 @@ impl TuringMachine {
     }
 
     /// Converts the Turing machine into an encoded format for standardized representation.
-    /// 
+    ///
     /// This function creates a binary encoding of states and tape symbols, and generates
     /// a string representation of the Turing machine's transitions. The encoding follows
     /// specific prefix conventions:
-    /// 
+    ///
     /// State prefixes:
     /// - 'h' for halt states
     /// - 'y' for accept states
     /// - 'n' for reject states
     /// - 'i' for initial states
     /// - 'q' for other states
-    /// 
+    ///
     /// Symbol prefixes:
     /// - 'a' for input alphabet symbols
     /// - 'b' for blank symbols
     /// - 't' for tape alphabet symbols (non-input)
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// Returns a `Result` containing an `EncodingResult` tuple with:
     /// - A string representing the encoded transitions
     /// - A HashMap mapping tape symbols to their encoded representations
     /// - A HashMap mapping states to their encoded representations
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Returns an error if:
     /// - Required states or symbols are not found in the machine's configuration
     /// - State or symbol encoding fails
@@ -783,23 +783,23 @@ impl TuringMachine {
         Ok((transitions_encoding, tape_encoding, state_encoding))
     }
 
-/// Returns the index of this Turing machine in the enumeration of all possible Turing machines.
-/// 
-/// This function calculates the position of the current Turing machine in a standardized enumeration
-/// by converting it to an encoded format and counting how many valid Turing machine encodings precede it.
-/// 
-/// # Returns
-/// 
-/// * `Ok(i32)` - The index of this Turing machine in the enumeration
-/// * `Err(String)` - If there's an error during the encoding process
-/// 
-/// # Notes
-/// 
-/// - The enumeration uses a standardized encoding scheme for states and symbols
-/// - Only valid Turing machine encodings are counted in the enumeration
-/// - The index starts from 1 (not zero-based)
-/// - The function may be computationally intensive for complex Turing machines
-/// - This function is higly inefficent and experimental and should not be used in production code.
+    /// Returns the index of this Turing machine in the enumeration of all possible Turing machines.
+    ///
+    /// This function calculates the position of the current Turing machine in a standardized enumeration
+    /// by converting it to an encoded format and counting how many valid Turing machine encodings precede it.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(i32)` - The index of this Turing machine in the enumeration
+    /// * `Err(String)` - If there's an error during the encoding process
+    ///
+    /// # Notes
+    ///
+    /// - The enumeration uses a standardized encoding scheme for states and symbols
+    /// - Only valid Turing machine encodings are counted in the enumeration
+    /// - The index starts from 1 (not zero-based)
+    /// - The function may be computationally intensive for complex Turing machines
+    /// - This function is higly inefficent and experimental and should not be used in production code.
     pub fn number(&self) -> Result<i32, String> {
         let alphabet = vec![
             "0".to_string(),
@@ -833,19 +833,19 @@ impl TuringMachine {
     }
 
     /// Converts the Turing machine's transitions into a hashmap for efficient lookup.
-    /// 
+    ///
     /// Creates a mapping from state-symbol combinations to their possible transitions.
     /// The key is formed by concatenating the current state with the symbols to be read,
     /// and the value is a vector of all possible transitions from that state-symbol combination.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// Returns a `HashMap<String, Vec<Transition>>` where:
     /// - Key: A string concatenating the current state and input symbols
     /// - Value: A vector of possible transitions from that state-symbol combination
     ///
     /// # Notes
-    /// 
+    ///
     /// - For deterministic Turing machines, each key will map to a vector with exactly one transition
     /// - For non-deterministic Turing machines, keys may map to vectors with multiple transitions
     /// - The key format is: state + symbol1 + symbol2 + ... + symbolN (for N tapes)
@@ -870,9 +870,9 @@ impl TuringMachine {
     }
 
     /// Validates whether the Turing machine is properly configured according to formal requirements.
-    /// 
+    ///
     /// This function checks several conditions that must be satisfied for a valid Turing machine:
-    /// 
+    ///
     /// 1. Input alphabet must be a subset of tape alphabet
     /// 2. Blank symbol must be in the tape alphabet
     /// 3. Blank symbol must not be in the input alphabet
@@ -880,9 +880,9 @@ impl TuringMachine {
     /// 5. All final states (accept, reject, halt) must be in the states set
     /// 6. Initial state must be in the states set
     /// 7. All transition states must be in the states set
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// Returns `true` if all conditions are satisfied, `false` otherwise.
     pub fn is_ok(&self) -> bool {
         let mut is_input_subset_of_tape = true;
@@ -950,13 +950,13 @@ impl TuringMachine {
     }
 
     /// Checks if the Turing machine is deterministic.
-    /// 
+    ///
     /// A Turing machine is deterministic if for each state and input symbol combination,
     /// there is at most one possible transition. This function verifies this property
     /// by examining the transition map.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `true` - If the Turing machine is deterministic
     /// * `false` - If the Turing machine is non-deterministic (has multiple possible transitions
     ///   for any state-symbol combination)
@@ -975,14 +975,14 @@ impl TuringMachine {
     /// A transition function is total if there exists at least one transition for every possible
     /// combination of state (excluding final states) and input symbol. This means the machine has a defined behavior
     /// for every possible configuration it might encounter.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `true` - If the transition function is total
     /// * `false` - If there exists at least one state-symbol combination without a defined transition
-    /// 
+    ///
     /// # Notes
-    /// 
+    ///
     /// - For a machine with n states and k tape symbols, a total transition function
     ///   requires n * k transitions
     /// - The function checks transitions for all tapes in multi-tape configurations
@@ -1007,32 +1007,32 @@ impl TuringMachine {
     }
 
     /// Converts a multi-tape Turing machine into an equivalent single-tape Turing machine.
-    /// 
+    ///
     /// This function implements the standard construction for simulating a k-tape Turing machine
     /// using a single tape. The resulting machine uses special symbols and state transitions to
     /// track multiple virtual tapes on a single physical tape.
-    /// 
+    ///
     /// The conversion follows these principles:
     /// - Uses tape separators (#) to divide virtual tapes
     /// - Marks head positions with special symbols (^ for current head position, _ for other positions)
     /// - Creates additional states and transitions to simulate multi-tape operations
     /// - Preserves the semantics of the original machine
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Ok(TuringMachine)` - A new single-tape Turing machine equivalent to the original multi-tape machine
     /// * `Err(String)` - If the conversion fails, returns an error message
-    /// 
+    ///
     /// # Notes
-    /// 
+    ///
     /// - The resulting machine will be significantly more complex than the original
     /// - The conversion preserves the language recognized by the machine
     /// - The simulation is slower than the original (polynomial time overhead)
     /// - The tape alphabet will be expanded with new symbols for head tracking
     /// - State names will be modified to handle the simulation logic
-    /// 
+    ///
     /// # State Naming Conventions
-    /// 
+    ///
     /// The converted machine uses states with special suffixes:
     /// - FAKE - to indicate a fake initial state
     /// - INIT_TPn_START - to indicate the start of a tape initialization
@@ -1876,24 +1876,24 @@ impl TuringMachine {
     }
 
     /// Converts an encoded Turing machine back to its original form using provided mappings.
-    /// 
+    ///
     /// This function takes an encoded Turing machine representation and two hash maps that define
     /// the mappings between encoded and original symbols/states, and reconstructs the original
     /// Turing machine configuration.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `encoding` - A string containing the encoded representation of the Turing machine
     /// * `orig_alphabet_encoding` - A HashMap mapping encoded tape symbols to their original forms
     /// * `orig_state_encoding` - A HashMap mapping encoded states to their original names
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Ok(TuringMachine)` - A new TuringMachine instance with original state and symbol names
     /// * `Err(String)` - If the decoding process fails due to missing mappings or invalid encoding
-    /// 
+    ///
     /// # Notes
-    /// 
+    ///
     /// - The function expects complete mappings for all symbols and states used in the encoding
     /// - State mappings should include all types of states (initial, accept, reject, halt)
     /// - Symbol mappings should cover both input alphabet and tape alphabet symbols
@@ -2022,23 +2022,23 @@ impl TuringMachine {
     }
 
     /// Returns the nth valid Turing machine encoding in the standardized enumeration.
-    /// 
+    ///
     /// This function generates string encodings of Turing machines in a systematic way and
     /// returns the nth valid encoding found. It uses a standardized encoding scheme where
     /// machines are ordered by their string representation length and lexicographical order.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `nth` - The index of the Turing machine to find (1-based indexing)
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Ok(String)` - The string encoding of the nth Turing machine
     /// * `Err(String)` - If the calculation fails or nth is invalid
-    /// 
-    /// 
+    ///
+    ///
     /// # Notes
-    /// 
+    ///
     /// - The function uses a predefined alphabet for encodings including:
     ///   - Binary digits (0,1)
     ///   - Special characters (;,(,))
@@ -2048,9 +2048,9 @@ impl TuringMachine {
     /// - Only valid machine encodings are counted in the enumeration
     /// - The function may be computationally intensive for large n
     /// - This is primarily used for theoretical purposes and may not be practical for large indices
-    /// 
+    ///
     /// # Warning
-    /// 
+    ///
     /// This function is experimental and may be computationally expensive. It should not be used
     /// in production code or for large values of n.
     pub fn nth_turing_machine(nth: u128) -> Result<String, String> {
@@ -2085,10 +2085,10 @@ impl TuringMachine {
     }
 
     /// Validates whether a string represents a valid Turing machine encoding.
-    /// 
+    ///
     /// This function checks if a given string follows the standard encoding format for Turing machines.
     /// The encoding must satisfy these requirements:
-    /// 
+    ///
     /// - Minimum length of 15 characters
     /// - Contains properly formatted transitions in the form `(state;symbol;new_state;new_symbol;direction)`
     /// - Each transition must be enclosed in parentheses
@@ -2105,13 +2105,13 @@ impl TuringMachine {
     ///   - 't' for tape alphabet symbols
     /// - After prefixes, states and symbols must contain only binary digits (0,1)
     /// - Directions must be one of: 'L' (left), 'R' (right), 'S' (stay)
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `encoding` - A string to validate as a Turing machine encoding
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Ok(true)` - If the encoding is valid
     /// * `Ok(false)` - If the encoding is invalid
     /// * `Err(String)` - If there are errors during validation process
@@ -2832,18 +2832,14 @@ mod tests {
         tm.initial_state = "q0".to_string();
         tm.accept_state = "qa".to_string();
         tm.reject_state = "qr".to_string();
-        tm.states = vec![
-            "q0".to_string(), 
-            "qa".to_string(),
-            "qr".to_string()
-        ];
+        tm.states = vec!["q0".to_string(), "qa".to_string(), "qr".to_string()];
         tm.input_alphabet = vec!["0".to_string(), "1".to_string()];
         tm.tape_alphabet = vec!["0".to_string(), "1".to_string(), "B".to_string()];
-        
+
         tm.add_transition(
             "q0".to_string(),
             vec!["0".to_string()],
-            "qa".to_string(), 
+            "qa".to_string(),
             vec!["0".to_string()],
             vec![Direction::Right],
         );
@@ -2883,7 +2879,7 @@ mod tests {
 
         // Test invalid initial state (not in states list)
         let mut tm7 = tm.clone();
-        tm7.initial_state = "qx".to_string(); 
+        tm7.initial_state = "qx".to_string();
         assert!(!tm7.is_ok());
     }
 }

@@ -1,5 +1,5 @@
 //! RAM (Random Access Machine) Implementation Module
-//! 
+//!
 //! This module provides a simulation of a Random Access Machine, which is a computational model
 //! consisting of an accumulator (ACC), program counter (PC), input/output mechanisms, and random
 //! access memory.
@@ -34,7 +34,7 @@
 //! * `STD (1111)`: Store to memory address in MOV
 //!
 //! # Structures
-//! 
+//!
 //! ## RamMachine
 //! Main structure representing the RAM machine, containing:
 //! * instructions: Vector of machine instructions
@@ -56,9 +56,9 @@
 //! ## Author
 //!
 //! - dp
-//! 
+//!
 //! # License
-//! 
+//!
 //! This project is licensed under the MIT License. See the LICENSE file for details.
 
 use crate::computer;
@@ -93,7 +93,7 @@ use crate::utils;
 pub struct RamMachine {
     pub instructions: Vec<Instruction>,
     pub labels_map: std::collections::HashMap<String, String>,
-    pub translation_map: std::collections::HashMap<String, String>
+    pub translation_map: std::collections::HashMap<String, String>,
 }
 
 /// A structure representing a single instruction in the RAM machine.
@@ -103,7 +103,6 @@ pub struct RamMachine {
 /// * `opcode` - String representing a 4-bit binary representing the operation code
 /// * `operand` - String representing the instruction's operand (if any) in binary format
 /// * `label` - String representing an optional symbolic label to be substituted to an operand value at runtime
-
 ///
 /// # Notes
 ///
@@ -453,7 +452,7 @@ mod tests {
         let ram = RamMachine {
             instructions: Vec::new(),
             labels_map: std::collections::HashMap::new(),
-            translation_map: std::collections::HashMap::new()
+            translation_map: std::collections::HashMap::new(),
         };
         assert!(ram.instructions.is_empty());
         assert!(ram.labels_map.is_empty());
@@ -521,7 +520,7 @@ mod tests {
         let ram1 = RamMachine {
             instructions: Vec::new(),
             labels_map: std::collections::HashMap::new(),
-            translation_map: std::collections::HashMap::new()
+            translation_map: std::collections::HashMap::new(),
         };
         let ram2 = ram1.clone();
         assert!(ram2.instructions.is_empty());
@@ -549,7 +548,7 @@ mod tests {
                 },
             ],
             labels_map: std::collections::HashMap::new(),
-            translation_map: std::collections::HashMap::new()
+            translation_map: std::collections::HashMap::new(),
         };
 
         let computer = computer::Computer {
@@ -591,7 +590,7 @@ mod tests {
                 },
             ],
             labels_map: std::collections::HashMap::new(),
-            translation_map: std::collections::HashMap::new()
+            translation_map: std::collections::HashMap::new(),
         };
 
         let computer = computer::Computer {
@@ -641,7 +640,7 @@ mod tests {
                 },
             ],
             labels_map: std::collections::HashMap::new(),
-            translation_map: std::collections::HashMap::new()
+            translation_map: std::collections::HashMap::new(),
         };
 
         let computer = computer::Computer {
@@ -700,7 +699,7 @@ mod tests {
                 },
             ],
             labels_map: std::collections::HashMap::new(),
-            translation_map: std::collections::HashMap::new()
+            translation_map: std::collections::HashMap::new(),
         };
 
         let computer = computer::Computer {
@@ -770,7 +769,7 @@ mod tests {
                 },
             ],
             labels_map: std::collections::HashMap::new(),
-            translation_map: std::collections::HashMap::new()
+            translation_map: std::collections::HashMap::new(),
         };
         let computer = computer::Computer {
             element: computer::ComputingElem::Ram(Box::new(ram.clone())),
@@ -829,7 +828,7 @@ mod tests {
                 },
             ],
             labels_map: std::collections::HashMap::new(),
-            translation_map: std::collections::HashMap::new()
+            translation_map: std::collections::HashMap::new(),
         };
         let computer = computer::Computer {
             element: computer::ComputingElem::Ram(Box::new(ram.clone())),
@@ -868,7 +867,7 @@ mod tests {
                 },
             ],
             labels_map: std::collections::HashMap::new(),
-            translation_map: std::collections::HashMap::new()
+            translation_map: std::collections::HashMap::new(),
         };
 
         let computer = computer::Computer {
@@ -923,7 +922,7 @@ mod tests {
                 },
             ],
             labels_map: std::collections::HashMap::new(),
-            translation_map: std::collections::HashMap::new()
+            translation_map: std::collections::HashMap::new(),
         };
 
         let computer = computer::Computer {
@@ -962,7 +961,7 @@ mod tests {
                 },
             ],
             labels_map: std::collections::HashMap::new(),
-            translation_map: std::collections::HashMap::new()
+            translation_map: std::collections::HashMap::new(),
         };
 
         let result = ram.to_encoding();
@@ -983,7 +982,7 @@ mod tests {
                 label: "LOOP".to_string(),
             }],
             labels_map: labels,
-            translation_map: std::collections::HashMap::new()
+            translation_map: std::collections::HashMap::new(),
         };
 
         let computer = computer::Computer {
@@ -1009,7 +1008,7 @@ mod tests {
                 label: "".to_string(),
             }],
             labels_map: std::collections::HashMap::new(),
-            translation_map: std::collections::HashMap::new()
+            translation_map: std::collections::HashMap::new(),
         };
 
         let computer = computer::Computer {
@@ -1049,7 +1048,7 @@ mod tests {
                 },
             ],
             labels_map: std::collections::HashMap::new(),
-            translation_map: std::collections::HashMap::new()
+            translation_map: std::collections::HashMap::new(),
         };
 
         let computer = computer::Computer {

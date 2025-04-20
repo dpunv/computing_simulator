@@ -24,9 +24,9 @@
 //! ## Author
 //!
 //! - dp
-//! 
+//!
 //! # License
-//! 
+//!
 //! This project is licensed under the MIT License. See the LICENSE file for details.
 
 mod cli;
@@ -39,19 +39,18 @@ mod regex;
 mod turing_machine;
 mod utils;
 
-
 /// The main function serves as the entry point for the application.
 /// It initializes the command-line interface (CLI) for the Computing Simulator.
 /// The CLI allows users to interact with the simulator, providing options
 /// for different computing models and configurations.
 /// The function is designed to be run in a terminal environment.
-/// 
+///
 /// # Example Usage
 /// ```bash
 /// cargo run --bin computing_simulator
 /// ```
 /// This will start the CLI, allowing users to input commands and options.
-/// 
+///
 fn main() {
     cli::main_cli();
 }
@@ -84,7 +83,7 @@ mod tests {
             let _ram = ram_machine::RamMachine {
                 instructions: Vec::new(),
                 labels_map: std::collections::HashMap::new(),
-                translation_map: std::collections::HashMap::new()
+                translation_map: std::collections::HashMap::new(),
             };
             let _turing = turing_machine::TuringMachine::new();
         })
