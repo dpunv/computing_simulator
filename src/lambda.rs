@@ -1,6 +1,46 @@
-// file: lambda.rs
-// Project: Computing Simulator
-// author: dp
+//! # Lambda Calculus Module
+//!
+//! This module provides data structures and functions for representing, parsing, manipulating, and simulating lambda calculus expressions.
+//! It supports lambda expressions with multiple parameters, application, abstraction, currying, substitution, and beta reduction.
+//!
+//! ## Main Types
+//!
+//! - `LambdaExpr`: Enum representing a lambda calculus expression. Variants:
+//!     - `Var(String)`: A variable.
+//!     - `Abs(Vec<String>, Box<LambdaExpr>)`: An abstraction (lambda function) with one or more parameters and a body.
+//!     - `App(Vec<LambdaExpr>)`: An application of one or more expressions.
+//!
+//! - `Lambda`: Struct representing a named lambda expression, with optional references to other named expressions and a flag for forced currying.
+//!
+//! ## Key Functions
+//!
+//! - `parse_lambda(input: &str) -> Result<LambdaExpr, String>`: Parses a string into a `LambdaExpr`.
+//! - `substitute(expr: &mut LambdaExpr, sub: LambdaExpr, var: String) -> LambdaExpr`: Substitutes all occurrences of a variable in an expression with another expression.
+//! - `beta_reduction(expr: &LambdaExpr) -> LambdaExpr`: Performs a single step of beta reduction on a lambda expression.
+//!
+//! ## LambdaExpr Methods
+//!
+//! - `to_tokens(&self) -> Vec<String>`: Converts the expression into a vector of tokens for further processing or display.
+//! - `curry(self) -> LambdaExpr`: Converts a multi-parameter abstraction into curried form.
+//! - `to_string(&self, dict: Vec<Lambda>, force_currying: bool) -> String`: Converts the expression to a string, optionally using a dictionary of named expressions and currying.
+//!
+//! ## Lambda Methods
+//!
+//! - `substitute_names(&mut self)`: Substitutes all named references in the expression with their definitions.
+//! - `simulate(&mut self) -> Result<computer::SimulationResult, String>`: Simulates the reduction of the lambda expression, returning the result and computation steps.
+//! - `to_tokens(&self) -> Vec<String>`: Converts the contained expression to tokens.
+//!
+//! ## Testing
+//!
+//! The module includes comprehensive unit tests for parsing, substitution, beta reduction, currying, and string/token conversion.
+//!
+//! ## Author
+//!
+//! - dp
+//! 
+//! # License
+//! 
+//! This project is licensed under the MIT License. See the LICENSE file for details.
 
 use std::ops::Deref;
 
@@ -45,7 +85,17 @@ impl PartialEq for Lambda {
     }
 }
 
+/// Implementation of Lambda Calculus expression operations
 impl LambdaExpr {
+    /// Converts the lambda expression into a vector of tokens
+    /// 
+    /// Returns a vector of strings representing the tokenized lambda expression
+    /// where each token is a separate string in the vector.
+    /// 
+    /// # Examples
+    /// For abstraction: `(λx.x)` becomes `["(", "/", "x", ".", "x", ")"]`
+    /// For variable: `x` becomes `["x"]`
+    /// For application: `(f x)` becomes `["(", "f", "x", ")"]`
     pub fn to_tokens(&self) -> Vec<String> {
         match self {
             LambdaExpr::Abs(vars, arg) => [
@@ -68,6 +118,13 @@ impl LambdaExpr {
             .concat(),
         }
     }
+
+    /// Transforms the lambda expression into its curried form
+    /// 
+    /// Transforms a series of nested abstractions into a single
+    /// abstraction with multiple variables
+    /// 
+    /// Returns a new LambdaExpr in curried form
     pub fn curry(self) -> LambdaExpr {
         match self.clone() {
             LambdaExpr::Var(_) => self,
@@ -88,6 +145,19 @@ impl LambdaExpr {
         }
     }
 
+    /// Converts the lambda expression to a string representation
+    /// 
+    /// # Arguments
+    /// 
+    /// * `dict` - A vector of Lambda definitions that may be used for name substitution
+    /// * `force_currying` - A boolean flag indicating whether to force currying before comparison
+    /// 
+    /// # Returns
+    /// 
+    /// A string representation of the lambda expression, potentially using named
+    /// expressions from the dictionary if matches are found
+    /// 
+    /// If `force_currying` is true, expressions are compared in their curried form
     pub fn to_string(&self, dict: Vec<Lambda>, force_currying: bool) -> String {
         for dict_expr in dict.clone() {
             if force_currying {
@@ -123,9 +193,15 @@ impl LambdaExpr {
             }
         }
     }
+
 }
 
+/// Implementation block for Lambda struct providing core lambda calculus operations
 impl Lambda {
+    /// Recursively substitutes named references in the lambda expression
+    /// with their corresponding expressions until no further substitutions are possible.
+    /// This process continues until the expression reaches a fixed point where no more
+    /// substitutions change the overall expression.
     pub fn substitute_names(&mut self) {
         let mut self_clone = self.clone();
         for r in self.references.clone() {
@@ -139,7 +215,20 @@ impl Lambda {
         }
     }
 
-    pub fn simulate(&mut self) -> Result<computer::SimulationResult, String> {
+    /// Simulates the evaluation of a lambda expression using beta reduction.
+    /// 
+    /// # Arguments
+    /// * `max_steps` - The maximum number of reduction steps to perform.
+    /// 
+    /// # Returns
+    /// - `Ok(SimulationResult)` containing:
+    ///   - The final reduced expression as a string
+    ///   - Number of registers used (always 0 for lambda calculus)
+    ///   - Vector of memory operations (empty for lambda calculus)
+    ///   - Number of reduction steps performed
+    ///   - Vector of intermediate expressions showing the reduction process
+    /// - `Err(String)` if the simulation fails
+    pub fn simulate(&mut self, max_steps: usize) -> Result<computer::SimulationResult, String> {
         let mut computation = Vec::new();
         self.substitute_names();
         let mut result = self.clone();
@@ -152,7 +241,7 @@ impl Lambda {
         };
         computation.push(new_result.to_string());
         let mut steps = 1;
-        while result != new_result.clone() {
+        while result != new_result.clone() || steps < max_steps {
             result = new_result.clone();
             new_result = Lambda {
                 expr: beta_reduction(&new_result.clone().expr),
@@ -167,6 +256,10 @@ impl Lambda {
         Ok((new_result.to_string(), 0, Vec::new(), steps, computation))
     }
 
+    /// Converts the lambda expression into a vector of tokens.
+    /// 
+    /// # Returns
+    /// A vector of strings representing the tokenized lambda expression
     pub fn to_tokens(&self) -> Vec<String> {
         self.expr.to_tokens()
     }
@@ -186,6 +279,16 @@ impl std::fmt::Display for Lambda {
     }
 }
 
+/// Parses a string into a `LambdaExpr`.
+///
+/// # Arguments
+///
+/// * `input` - A string slice representing the lambda calculus expression to parse.
+///
+/// # Returns
+///
+/// * `Ok(LambdaExpr)` if parsing is successful.
+/// * `Err(String)` if the input is not a valid lambda expression.
 pub fn parse_lambda(input: &str) -> Result<LambdaExpr, String> {
     let input_chars = input.chars().peekable();
     if input_chars.clone().next() != Some('(') || input_chars.clone().last() != Some(')') {
@@ -258,6 +361,17 @@ pub fn parse_lambda(input: &str) -> Result<LambdaExpr, String> {
     }
 }
 
+/// Substitutes all occurrences of a variable in a lambda expression with another expression.
+///
+/// # Arguments
+///
+/// * `expr` - The lambda expression in which to perform substitution.
+/// * `sub` - The expression to substitute in place of the variable.
+/// * `var` - The variable name to be replaced.
+///
+/// # Returns
+///
+/// * A new `LambdaExpr` with the substitution applied.
 pub fn substitute(expr: &mut LambdaExpr, sub: LambdaExpr, var: String) -> LambdaExpr {
     match expr {
         LambdaExpr::Var(x) => {
@@ -290,11 +404,16 @@ pub fn substitute(expr: &mut LambdaExpr, sub: LambdaExpr, var: String) -> Lambda
     }
 }
 
-/* fn alfa_conversion(expr: &mut LambdaExpr, orig: String, new: String) -> LambdaExpr {
-    return substitute(expr, LambdaExpr::Var(new), orig)
-} */
-
-fn beta_reduction(expr: &LambdaExpr) -> LambdaExpr {
+/// Performs a single step of beta reduction on a lambda expression.
+///
+/// # Arguments
+///
+/// * `expr` - A reference to the lambda expression to reduce.
+///
+/// # Returns
+///
+/// * A new `LambdaExpr` after applying one step of beta reduction.
+pub fn beta_reduction(expr: &LambdaExpr) -> LambdaExpr {
     match expr {
         LambdaExpr::Var(x) => LambdaExpr::Var(x.clone()),
         LambdaExpr::Abs(param, body) => {
@@ -357,6 +476,7 @@ fn beta_reduction(expr: &LambdaExpr) -> LambdaExpr {
         },
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,6 +1,61 @@
-// File: file_handler.rs
-// Project: Computing Simulator
-// author: dp
+//! File handling module for the Computing Simulator.
+//!
+//! This module provides functionality to read and parse different types of computational models
+//! from text files. It supports various formats including:
+//! - Turing Machines (TM)
+//! - Finite State Machines (FSM)
+//! - Pushdown Automata (PDA)
+//! - RAM Programs
+//! - Regular Expressions
+//! - Lambda Expressions
+//!
+//! # File Format Structure
+//! Each file should start with a type identifier on the first line:
+//! - "tm" for Turing Machines
+//! - "tm_e" for Turing Machines from encoding
+//! - "pda" for Pushdown Automata
+//! - "fsm" for Finite State Machines
+//! - "regex" for Regular Expressions
+//! - "ram" for RAM Programs
+//! - "ram_e" for RAM Programs from encoding
+//! - "lambda" for Lambda Expressions
+//!
+//! # Mappings
+//! Files can include mappings to other files using the syntax:
+//! ```text
+//! : name filepath
+//! ```
+//!
+//! # Error Handling
+//! All functions return Result types, with String error messages for detailed error reporting.
+//!
+//! # Examples
+//! A simple Turing Machine file structure:
+//! ```text
+//! tm
+//! q0
+//! qa
+//! qr
+//! qh
+//! _
+//! q0 qa qr qh
+//! 0 1
+//! 0 1 _
+//! 1
+//! q0 0 qa 1 R
+//! ```
+//!
+//! # Note
+//! - Comments in input files start with "//"
+//! - Empty lines in files are ignored
+//!
+//! ## Author
+//!
+//! - dp
+//! 
+//! # License
+//! 
+//! This project is licensed under the MIT License. See the LICENSE file for details.
 
 use crate::computer;
 use crate::lambda;
@@ -11,6 +66,40 @@ use crate::turing_machine;
 use crate::turing_machine::FromString;
 use crate::utils;
 
+/// Reads and processes a file containing computational model definitions.
+///
+/// # Arguments
+///
+/// * `file_name` - A String containing the path to the file to be read
+/// * `context` - A mutable reference to a `Server` object that stores the computational models
+///
+/// # Returns
+///
+/// * `Result<Computer, String>` - Returns either a `Computer` object containing the parsed computational
+///   model or a String containing an error message
+///
+/// # Description
+///
+/// This function reads a file and creates a computational model based on its contents. The first line
+/// of the file must contain one of the following type identifiers:
+/// - "tm" - Turing Machine
+/// - "tm_e" - Turing Machine from encoding
+/// - "pda" - Pushdown Automaton
+/// - "fsm" - Finite State Machine
+/// - "regex" - Regular Expression
+/// - "ram" - RAM Program
+/// - "ram_e" - RAM Program from encoding
+/// - "lambda" - Lambda Expression
+///
+/// The function also processes mappings to other files using the syntax ": name filepath".
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The file cannot be read
+/// - The type identifier is invalid
+/// - The file format is incorrect
+/// - The computational model cannot be parsed
 pub fn handle_file_reads(
     file_name: String,
     context: &mut computer::Server,
@@ -70,6 +159,29 @@ pub fn handle_file_reads(
     }
 }
 
+/// Reads and processes a Turing Machine definition from a vector of strings.
+///
+/// # Arguments
+///
+/// * `lines` - Vector of strings containing the Turing Machine definition
+/// * `computer` - Mutable reference to a Computer object to store the TM
+///
+/// # Returns
+///
+/// * `Result<Computer, String>` - Returns the computer with the TM or an error
+///
+/// # Format
+/// The lines should contain in order:
+/// 1. Initial state
+/// 2. Accept state
+/// 3. Reject state
+/// 4. Halt state
+/// 5. Blank symbol
+/// 6. Space-separated list of states
+/// 7. Space-separated input alphabet
+/// 8. Space-separated tape alphabet
+/// 9. Number of tapes
+/// 10. Transitions in format: current_state symbol new_state new_symbol direction. One transition per line until EOF.
 pub fn read_turing_machine(
     lines: Vec<String>,
     computer: &mut computer::Computer,
@@ -132,6 +244,26 @@ pub fn read_turing_machine(
     Ok(computer.clone())
 }
 
+
+/// Reads and processes a Finite State Machine definition from a vector of strings.
+///
+/// # Arguments
+///
+/// * `lines` - Vector of strings containing the FSM definition
+/// * `computer` - Mutable reference to a Computer object to store the FSM
+///
+/// # Returns
+///
+/// * `Result<Computer, String>` - Returns the computer with the FSM or an error
+///
+/// # Format
+/// The lines should contain in order:
+/// 1. Initial state
+/// 2. Space-separated list of final states
+/// 3. Space-separated list of states
+/// 4. Space-separated input alphabet
+/// 5. Transitions in format: current_state input_symbol next_state
+///     or epsilon transitions as: current_state next_state. One transition per line until EOF
 pub fn read_finite_state_machine(
     lines: Vec<String>,
     computer: &mut computer::Computer,
@@ -211,6 +343,27 @@ pub fn read_finite_state_machine(
     Ok(computer.clone())
 }
 
+/// Reads and processes a Pushdown Automaton definition from a vector of strings.
+///
+/// # Arguments
+///
+/// * `lines` - Vector of strings containing the PDA definition
+/// * `computer` - Mutable reference to a Computer object to store the PDA
+///
+/// # Returns
+///
+/// * `Result<Computer, String>` - Returns the computer with the PDA or an error
+///
+/// # Format
+/// The lines should contain in order:
+/// 1. Initial state
+/// 2. Space-separated list of final states
+/// 3. Space-separated list of states
+/// 4. Space-separated input alphabet
+/// 5. Space-separated stack alphabet
+/// 6. Blank symbol
+/// 7. Transitions in format: current_state input stack_symbol new_state new_stack_top
+///     or with two stack symbols: current_state input stack_symbol new_state new_top1 new_top2. One transition per line until EOF
 pub fn read_pushdown_automaton(
     lines: Vec<String>,
     computer: &mut computer::Computer,
@@ -394,6 +547,23 @@ pub fn read_pushdown_automaton(
     Ok(computer.clone())
 }
 
+/// Reads and processes a Turing Machine from its encoding.
+///
+/// # Arguments
+///
+/// * `lines` - Vector of strings containing the TM encoding and optional mappings
+/// * `computer` - Mutable reference to a Computer object to store the TM
+///
+/// # Returns
+///
+/// * `Result<Computer, String>` - Returns the computer with the decoded TM or an error
+///
+/// # Format
+/// First line must contain the TM encoding
+/// Optionally followed by:
+/// - Tape symbol mappings
+/// - Empty line
+/// - State mappings
 pub fn read_tm_from_encoding(
     lines: Vec<String>,
     computer: &mut computer::Computer,
@@ -434,6 +604,23 @@ pub fn read_tm_from_encoding(
     }
 }
 
+/// Reads and processes a RAM program from a vector of strings.
+///
+/// # Arguments
+///
+/// * `lines` - Vector of strings containing the RAM program
+/// * `computer` - Mutable reference to a Computer object to store the RAM program
+///
+/// # Returns
+///
+/// * `Result<Computer, String>` - Returns the computer with the RAM program or an error
+///
+/// # Format
+/// Each line contains one of:
+/// - Single instruction
+/// - Label followed by instruction
+/// - Instruction with operand or label
+/// - Label followed by instruction with operand or label
 pub fn read_ram_program(
     lines: Vec<String>,
     computer: &mut computer::Computer,
@@ -536,6 +723,22 @@ pub fn read_ram_program(
     Ok(computer.clone())
 }
 
+/// Reads and processes a RAM program from its encoding.
+///
+/// # Arguments
+///
+/// * `lines` - Vector of strings containing the RAM program encoding
+/// * `computer` - Mutable reference to a Computer object to store the RAM program
+///
+/// # Returns
+///
+/// * `Result<Computer, String>` - Returns the computer with the decoded RAM program or an error
+///
+/// # Format
+/// First line must contain the encoding in format:
+/// ```text
+/// #<index>,<opcode><operand>#<index>,<opcode><operand>#...#
+/// ```
 pub fn read_ram_program_from_encoding(
     lines: Vec<String>,
     computer: &mut computer::Computer,
@@ -568,6 +771,19 @@ pub fn read_ram_program_from_encoding(
     Ok(computer.clone())
 }
 
+/// Reads and processes a regular expression from a vector of strings.
+///
+/// # Arguments
+///
+/// * `lines` - Vector of strings containing the regex
+/// * `computer` - Mutable reference to a Computer object to store the regex
+///
+/// # Returns
+///
+/// * `Result<Computer, String>` - Returns the computer with the regex converted to FSA or an error
+///
+/// # Format
+/// First line must contain the regular expression using standard notation
 pub fn read_regex(
     lines: Vec<String>,
     computer: &mut computer::Computer,
@@ -576,7 +792,21 @@ pub fn read_regex(
     Ok(computer.clone())
 }
 
-fn read_lambda(
+/// Reads and processes lambda expressions from a vector of strings.
+///
+/// # Arguments
+///
+/// * `lines` - Vector of strings containing the lambda expressions
+/// * `computer` - Mutable reference to a Computer object to store the expressions
+///
+/// # Returns
+///
+/// * `Result<Computer, String>` - Returns the computer with the parsed lambda expressions or an error
+///
+/// # Format
+/// Each line contains: name: lambda_expression
+/// Where lambda_expression uses standard λ-calculus notation
+pub fn read_lambda(
     lines: Vec<String>,
     computer: &mut computer::Computer,
 ) -> Result<computer::Computer, String> {
@@ -607,6 +837,7 @@ fn read_lambda(
     computer.set_lambda(readed[0].clone());
     Ok(computer.clone())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

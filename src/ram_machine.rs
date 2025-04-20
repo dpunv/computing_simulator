@@ -1,10 +1,94 @@
-// file: automaton.rs
-// Project: Computing Simulator
-// author: dp
+//! RAM (Random Access Machine) Implementation Module
+//! 
+//! This module provides a simulation of a Random Access Machine, which is a computational model
+//! consisting of an accumulator (ACC), program counter (PC), input/output mechanisms, and random
+//! access memory.
+//!
+//! # Architecture
+//!
+//! The RAM machine implements the following components:
+//! * Program Counter (PC): Points to the next instruction to execute
+//! * Accumulator (ACC): Main register for arithmetic and logical operations
+//! * Memory: Random access storage indexed by binary strings
+//! * Input/Output: Handles binary string input/output operations
+//! * Move Register (MOV): Additional register for memory operations
+//!
+//! # Instruction Set
+//!
+//! The machine supports 16 instructions (4-bit opcodes):
+//! * `R (0000)`: Read from input
+//! * `MIR (0001)`: Move input head right
+//! * `MIL (0010)`: Move input head left
+//! * `W (0011)`: Write ACC to output
+//! * `L (0100)`: Load from memory to ACC
+//! * `A (0101)`: Add memory content to ACC
+//! * `S (0110)`: Subtract memory content from ACC
+//! * `INIT (0111)`: Initialize ACC with constant
+//! * `ST (1000)`: Store ACC to memory
+//! * `JUMP (1001)`: Unconditional jump
+//! * `CJUMP (1010)`: Conditional jump if ACC is zero
+//! * `H (1011)`: Halt execution
+//! * `CALL (1100)`: Call subroutine
+//! * `MOV (1101)`: Copy ACC to MOV register
+//! * `LD (1110)`: Load from memory address in MOV
+//! * `STD (1111)`: Store to memory address in MOV
+//!
+//! # Structures
+//! 
+//! ## RamMachine
+//! Main structure representing the RAM machine, containing:
+//! * instructions: Vector of machine instructions
+//! * labels_map: Mapping of symbolic labels to numeric values
+//! * translation_map: Mapping for optional output symbol translations
+//!
+//! ## Instruction
+//! Structure representing a single RAM machine instruction:
+//! * opcode: The operation code (4-bit binary string)
+//! * operand: The instruction's operand
+//! * label: Optional symbolic label
+//!
+//! # Notes
+//! - All memory addresses and values are represented as binary strings
+//! - The machine operates on discrete steps with a maximum step limit
+//! - Uninitialized memory locations return "0" by default
+//! - The simulation can be integrated with other computational models through the CALL instruction
+//!
+//! ## Author
+//!
+//! - dp
+//! 
+//! # License
+//! 
+//! This project is licensed under the MIT License. See the LICENSE file for details.
 
 use crate::computer;
 use crate::utils;
 
+/// A Random Access Machine (RAM) implementation representing a computational model.
+///
+/// The RAM machine consists of a set of instructions, label mappings, and translation mappings
+/// that allow for basic computational operations and control flow.
+///
+/// # Components
+///
+/// * Program Counter (PC): Points to the next instruction to execute
+/// * Accumulator (ACC): Main register for arithmetic and logical operations
+/// * Memory: Random access storage indexed by binary strings
+/// * Input/Output: Handles binary string input/output operations
+/// * Move Register (MOV): Additional register for memory operations
+///
+/// # Fields
+///
+/// * `instructions` - A vector containing all machine instructions to be executed
+/// * `labels_map` - A hashmap mapping symbolic labels to their corresponding values
+/// * `translation_map` - A hashmap storing mappings for optional output symbol translations
+///
+/// # Notes
+///
+/// - All memory values and addresses are represented as binary strings
+/// - Uninitialized memory locations return "0" by default
+/// - The machine operates on discrete steps with a configurable maximum step limit
+/// - Supports integration with other computational models through the CALL instruction
 #[derive(Clone)]
 pub struct RamMachine {
     pub instructions: Vec<Instruction>,
@@ -12,6 +96,20 @@ pub struct RamMachine {
     pub translation_map: std::collections::HashMap<String, String>
 }
 
+/// A structure representing a single instruction in the RAM machine.
+///
+/// # Fields
+///
+/// * `opcode` - String representing a 4-bit binary representing the operation code
+/// * `operand` - String representing the instruction's operand (if any) in binary format
+/// * `label` - String representing an optional symbolic label to be substituted to an operand value at runtime
+
+///
+/// # Notes
+///
+/// - The opcode should be one of the 16 valid RAM machine instructions
+/// - Labels are used for operand substitution and fixed memory addressing
+/// - Some instructions (like HALT and WRITE) don't require operands
 #[derive(Clone)]
 pub struct Instruction {
     pub opcode: String,
@@ -20,6 +118,15 @@ pub struct Instruction {
 }
 
 impl RamMachine {
+    /// Checks if a given instruction string is a valid RAM machine instruction.
+    ///
+    /// # Arguments
+    ///
+    /// * `instruction` - A string slice containing the instruction to validate
+    ///
+    /// # Returns
+    ///
+    /// Returns `true` if the instruction is valid, `false` otherwise.
     pub fn is_instruction(instruction: &str) -> bool {
         let instructions: Vec<&str> = vec![
             "R", "MIR", "MIL", "W", "L", "A", "S", "INIT", "ST", "JUMP", "CJUMP", "H", "CALL",
@@ -30,6 +137,17 @@ impl RamMachine {
         }
         false
     }
+
+    /// Converts a RAM machine instruction string to its corresponding 4-bit opcode.
+    ///
+    /// # Arguments
+    ///
+    /// * `instruction` - A String containing the instruction to convert
+    ///
+    /// # Returns
+    ///
+    /// Returns a String containing the 4-bit binary opcode.
+    ///
     pub fn ram_instruction_lookup(instruction: String) -> String {
         let opcode = match instruction.as_str() {
             "R" => "0000",
@@ -53,6 +171,31 @@ impl RamMachine {
         opcode.to_string()
     }
 
+    /// Simulates the execution of the RAM machine.
+    ///
+    /// # Arguments
+    ///
+    /// * `self` - The RAM machine instance
+    /// * `input` - Input string to process
+    /// * `max_steps` - Maximum number of simulation steps
+    /// * `this_computer_object` - Reference to the current computer object
+    /// * `context` - Server context for handling subroutine calls
+    ///
+    /// # Returns
+    ///
+    /// Returns a Result containing a tuple with:
+    /// * Final state ("halt" or "reject")
+    /// * Final position (always 0 for RAM machines)
+    /// * Output vector
+    /// * Number of steps executed
+    /// * Computation history vector
+    ///
+    /// # Errors
+    ///
+    /// Returns an error string if:
+    /// * Invalid memory access occurs
+    /// * Binary conversion fails
+    /// * Subroutine calls fail
     pub fn simulate(
         self,
         input: String,
@@ -94,17 +237,6 @@ impl RamMachine {
         let mut computation = Vec::new();
         let mut steps = 0;
         while steps < max_steps {
-            /* println!("Memory: {}", memory.len());
-            let mut mem_: Vec<(i32, String)> = memory
-                .clone()
-                .iter()
-                .map(|(i, j)| (utils::bin2int(i.to_string()).unwrap(), j.to_string()))
-                .collect();
-            mem_.sort_by_key(|k| k.0);
-            for (i, j) in mem_ {
-                println!("{} -> {}", i, j);
-            } */
-            // print!("STEP: {} -- ", steps);
             steps += 1;
             ir = memory
                 .get(&pc)
@@ -121,7 +253,6 @@ impl RamMachine {
                 .push("ram;".to_string() + &ir.clone() + ";" + &ar.clone() + ";" + &acc.clone());
             match ir.as_str() {
                 "0000" => {
-                    // println!("R: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // R: Read [operands] bit from input
                     let end = input_head + (utils::bin2int(ar)? as usize);
                     if input.len() < end {
@@ -135,12 +266,10 @@ impl RamMachine {
                     }
                 }
                 "0001" => {
-                    // println!("MIR: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // MIR: move input head [operands] bits to the right
                     input_head += utils::bin2int(ar)? as usize;
                 }
                 "0010" => {
-                    // println!("MIL: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // MIL: move input head [operands] bits to the left
                     let to_sub = utils::bin2int(ar)? as usize;
                     if input_head >= to_sub {
@@ -152,12 +281,10 @@ impl RamMachine {
                     }
                 }
                 "0011" => {
-                    // println!("W: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // W: Write ACC to output
                     out = out + &acc.clone();
                 }
                 "0100" => {
-                    // println!("L: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // L: Load AR to ACC
                     if !memory.contains_key(&ar) {
                         memory.insert(ar.clone(), "0".to_string());
@@ -168,7 +295,6 @@ impl RamMachine {
                         .clone();
                 }
                 "0101" => {
-                    // println!("A: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // A: Add AR to ACC
                     acc = utils::int2bin(
                         utils::bin2int(acc)?
@@ -182,7 +308,6 @@ impl RamMachine {
                     );
                 }
                 "0110" => {
-                    // println!("S: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // S: Subtract AR from ACC
                     acc = utils::int2bin(
                         utils::bin2int(acc)?
@@ -196,34 +321,28 @@ impl RamMachine {
                     );
                 }
                 "0111" => {
-                    // println!("INIT: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // INIT: Initialize ACC to [operands]
                     acc = ar.clone();
                 }
                 "1000" => {
-                    // println!("ST: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // ST: Store ACC to AR
                     memory.insert(ar.clone(), acc.clone());
                 }
                 "1001" => {
-                    // println!("JUMP: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // JUMP: Jump to AR
                     pc = ar.clone();
                 }
                 "1010" => {
-                    // println!("CJUMP: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // CJUMP: Conditional jump to AR if ACC is 0000
                     if !acc.contains("1") {
                         pc = ar.clone();
                     }
                 }
                 "1011" => {
-                    // println!("HALT: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // HALT: Halt
                     break;
                 }
                 "1100" => {
-                    // println!("CALL: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // CALL: call a subroutine
                     let mapping_key = (utils::bin2int(ar.clone())?).to_string();
                     let mapping = this_computer_object
@@ -262,12 +381,10 @@ impl RamMachine {
                     }
                 }
                 "1101" => {
-                    // println!("MOV: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // MOV: copy the value of acc to the mov register
                     mov = acc.clone();
                 }
                 "1110" => {
-                    // println!("LD: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // LD: load the memory at address in MOV
                     if !memory.contains_key(&mov) {
                         memory.insert(mov.clone(), "0".to_string());
@@ -278,7 +395,6 @@ impl RamMachine {
                         .clone();
                 }
                 "1111" => {
-                    // println!("STD: acc: {} -- mov: {} -- ir: {} -- ar: {}", acc.clone(), mov.clone(), ir.clone(), ar.clone());
                     // STD: store the memory at address in MOV
                     memory.insert(mov.clone(), acc.clone());
                 }
@@ -291,6 +407,19 @@ impl RamMachine {
         Ok(("halt".to_string(), 0, vec![out], steps, computation))
     }
 
+    /// Converts the RAM machine to its encoding representation.
+    ///
+    /// # Returns
+    ///
+    /// Returns a Result containing:
+    /// * A String representing the encoded RAM machine
+    /// * Two empty HashMaps for labels and translations
+    ///
+    /// The encoding format is: `#address,opcode[operand]#`
+    ///
+    /// # Errors
+    ///
+    /// Returns an error string if binary conversion fails.
     pub fn to_encoding(&self) -> Result<computer::EncodingResult, String> {
         let mut encoding = "#".to_string();
         for (counter, instr) in self.instructions.clone().into_iter().enumerate() {
@@ -314,6 +443,7 @@ impl RamMachine {
         ))
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -423,7 +553,7 @@ mod tests {
         };
 
         let computer = computer::Computer {
-            element: computer::ComputingElem::Ram(ram.clone()),
+            element: computer::ComputingElem::Ram(Box::new(ram.clone())),
             mapping: std::collections::HashMap::new(),
         };
 
@@ -465,7 +595,7 @@ mod tests {
         };
 
         let computer = computer::Computer {
-            element: computer::ComputingElem::Ram(ram.clone()),
+            element: computer::ComputingElem::Ram(Box::new(ram.clone())),
             mapping: std::collections::HashMap::new(),
         };
 
@@ -515,7 +645,7 @@ mod tests {
         };
 
         let computer = computer::Computer {
-            element: computer::ComputingElem::Ram(ram.clone()),
+            element: computer::ComputingElem::Ram(Box::new(ram.clone())),
             mapping: std::collections::HashMap::new(),
         };
 
@@ -574,7 +704,7 @@ mod tests {
         };
 
         let computer = computer::Computer {
-            element: computer::ComputingElem::Ram(ram.clone()),
+            element: computer::ComputingElem::Ram(Box::new(ram.clone())),
             mapping: std::collections::HashMap::new(),
         };
 
@@ -643,7 +773,7 @@ mod tests {
             translation_map: std::collections::HashMap::new()
         };
         let computer = computer::Computer {
-            element: computer::ComputingElem::Ram(ram.clone()),
+            element: computer::ComputingElem::Ram(Box::new(ram.clone())),
             mapping: std::collections::HashMap::new(),
         };
 
@@ -702,7 +832,7 @@ mod tests {
             translation_map: std::collections::HashMap::new()
         };
         let computer = computer::Computer {
-            element: computer::ComputingElem::Ram(ram.clone()),
+            element: computer::ComputingElem::Ram(Box::new(ram.clone())),
             mapping: std::collections::HashMap::new(),
         };
 
@@ -742,7 +872,7 @@ mod tests {
         };
 
         let computer = computer::Computer {
-            element: computer::ComputingElem::Ram(ram.clone()),
+            element: computer::ComputingElem::Ram(Box::new(ram.clone())),
             mapping: std::collections::HashMap::new(),
         };
 
@@ -797,7 +927,7 @@ mod tests {
         };
 
         let computer = computer::Computer {
-            element: computer::ComputingElem::Ram(ram.clone()),
+            element: computer::ComputingElem::Ram(Box::new(ram.clone())),
             mapping: std::collections::HashMap::new(),
         };
 
@@ -857,7 +987,7 @@ mod tests {
         };
 
         let computer = computer::Computer {
-            element: computer::ComputingElem::Ram(ram.clone()),
+            element: computer::ComputingElem::Ram(Box::new(ram.clone())),
             mapping: std::collections::HashMap::new(),
         };
 
@@ -883,7 +1013,7 @@ mod tests {
         };
 
         let computer = computer::Computer {
-            element: computer::ComputingElem::Ram(ram.clone()),
+            element: computer::ComputingElem::Ram(Box::new(ram.clone())),
             mapping: std::collections::HashMap::new(),
         };
 
@@ -923,7 +1053,7 @@ mod tests {
         };
 
         let computer = computer::Computer {
-            element: computer::ComputingElem::Ram(ram.clone()),
+            element: computer::ComputingElem::Ram(Box::new(ram.clone())),
             mapping: std::collections::HashMap::new(),
         };
 
@@ -935,6 +1065,6 @@ mod tests {
         let result = ram.simulate("".to_string(), 100, computer, context);
         assert!(result.is_ok());
         let (_, _, output, _, _) = result.unwrap();
-        assert_eq!(output[0], "0"); // Uninitialized memory should return 0
+        assert_eq!(output[0], "0");
     }
 }

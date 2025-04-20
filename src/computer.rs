@@ -1,6 +1,60 @@
-// file: computer.rs
-// Project: Computing Simulator
-// author: dp
+//! # Computing Simulator
+//! 
+//! This module provides core functionality for simulating various types of computing machines
+//! and managing their interactions. It implements a unified interface for different computational
+//! models including RAM machines, Turing machines, and Lambda calculus.
+//!
+//! ## Core Components
+//!
+//! * `Computer` - A wrapper structure that can contain different types of computing elements
+//! * `Server` - A management structure that handles multiple computers and their execution order
+//! * `ComputingElem` - An enum representing different types of computing machines
+//!
+//! ## Features
+//!
+//! * Supports multiple computation models:
+//!   - RAM machines
+//!   - Turing machines (single and multi-tape)
+//!   - Lambda calculus
+//! * Conversion between different computation models
+//! * Simulation of computations with step limits
+//! * Management of multiple computing machines
+//! * Input/output encoding and mapping
+//!
+//! ## Type Definitions
+//!
+//! * `EncodingResult` - Represents the result of encoding a computer
+//! * `SimulationResult` - Contains the results of a simulation including state, output, and steps
+//!
+//! ## Key Structures
+//!
+//! ### Computer
+//! Represents a single computing machine with its associated mappings and state.
+//! 
+//! ### Server
+//! Manages multiple computers and their execution order, providing a framework
+//! for complex computations involving multiple machines.
+//!
+//! ## Conversions
+//!
+//! The module supports conversions between different computation models:
+//! * Lambda calculus to Turing machine
+//! * RAM Machines to Turing machine
+//! * Turing machine to RAM machine
+//! * Multi-tape to single-tape Turing machine
+//!
+//! ## Error Handling
+//!
+//! Most methods return `Result` types to handle various error conditions that may arise
+//! during computation or conversion processes.
+//!
+//! ## Author
+//!
+//! - dp
+//! 
+//! # License
+//! 
+//! This project is licensed under the MIT License. See the LICENSE file for details.
 
 use crate::file_handler;
 use crate::lambda;
@@ -15,13 +69,59 @@ pub type EncodingResult = (
     std::collections::HashMap<String, String>,
 );
 
+/// Represents different types of computing machines that can be simulated.
+///
+/// This enum encapsulates various computational models supported by the simulator:
+/// * RAM machines - Basic register-based computational model
+/// * Turing machines - Standard and multi-tape variants
+/// * Lambda calculus - Functional computation model
+///
+/// Each variant contains the corresponding machine implementation:
+/// * `Ram` - Contains a boxed `RamMachine` instance
+/// * `Tm` - Contains a boxed `TuringMachine` instance
+/// * `Lambda` - Contains a boxed `Lambda` instance for lambda calculus computations
+///
+/// The enum implements `Clone` to allow duplication of computing elements when needed.
 #[derive(Clone)]
 pub enum ComputingElem {
-    Ram(ram_machine::RamMachine),
+    Ram(Box<ram_machine::RamMachine>),
     Tm(Box<turing_machine::TuringMachine>),
-    Lambda(lambda::Lambda),
+    Lambda(Box<lambda::Lambda>),
 }
 
+/// A structure representing a computing machine with its associated mappings and configuration.
+///
+/// The `Computer` struct serves as a container for different types of computing elements
+/// (RAM machines, Turing machines, or Lambda calculus) and maintains their associated mappings.
+/// It provides a unified interface for working with different computational models and
+/// managing their state and behavior.
+///
+/// # Fields
+///
+/// * `element` - The core computing element (RAM, Turing machine, or Lambda calculus)
+/// * `mapping` - A HashMap containing name-value pairs for subroutines calling, mapping internal names to computer names in the context
+///
+/// # Features
+///
+/// * Supports multiple computation models through the `ComputingElem` enum
+/// * Provides conversion between different computation models
+/// * Maintains configuration mappings
+/// * Supports simulation with step limits
+/// * Handles input/output encoding
+///
+/// # Conversions
+///
+/// The structure supports conversions between different computation models:
+/// * Lambda calculus to Turing machine
+/// * RAM machine to Turing machine
+/// * Turing machine to RAM machine
+/// * Multi-tape to single-tape Turing machine
+///
+/// # Note
+///
+/// The computer's behavior and capabilities depend on the type of computing element
+/// it contains. Different methods may behave differently based on the underlying
+/// computation model.
 #[derive(Clone)]
 pub struct Computer {
     pub element: ComputingElem,
@@ -30,6 +130,48 @@ pub struct Computer {
 
 pub type SimulationResult = (String, usize, Vec<String>, usize, Vec<String>);
 
+/// A management structure that coordinates multiple computing machines and their execution sequence.
+///
+/// The `Server` acts as an orchestrator for complex computations involving multiple computing
+/// elements. It maintains a registry of named computers and controls their execution order,
+/// enabling sequential processing of computations across different machines.
+///
+/// # Fields
+///
+/// * `map_computers` - A HashMap storing computing machines indexed by their names
+/// * `computation_order` - A vector defining the sequence of computer executions
+///
+/// # Features
+///
+/// * Manages multiple computing machines under unique identifiers
+/// * Controls execution order through a configurable sequence
+/// * Supports dynamic addition and retrieval of computers
+/// * Enables chained computation across multiple machines
+/// * Handles execution with customizable step limits
+/// * Provides detailed computation results including state, output, and steps
+///
+/// # Returns
+///
+/// The `execute` method returns a `Result` containing:
+/// * Final state of computation
+/// * Final head position
+/// * Output string
+/// * Total steps executed
+/// * Vector of computation log entries
+///
+/// # Error Handling
+///
+/// Operations may fail with descriptive error messages in cases such as:
+/// * Attempting to execute with an empty server
+/// * Referencing non-existent computers
+/// * Invalid computation order
+/// * Execution step limits exceeded
+///
+/// # Note
+///
+/// The server ensures proper isolation between different computing elements while
+/// maintaining their execution sequence. It's particularly useful for complex
+/// computations that require multiple stages or different computation models.
 #[derive(Clone)]
 pub struct Server {
     pub map_computers: std::collections::HashMap<String, Computer>,
@@ -37,6 +179,13 @@ pub struct Server {
 }
 
 impl Computer {
+    /// Checks if the computer's element is a RAM machine.
+    ///
+    /// # Returns
+    ///
+    /// * `true` - if the computer's element is a RAM machine
+    /// * `false` - if the computer's element is a Turing machine or Lambda calculus
+    ///
     pub fn is_ram(&self) -> bool {
         match self.element {
             ComputingElem::Ram(_) => true,
@@ -45,7 +194,15 @@ impl Computer {
         }
     }
 
-    /* pub fn is_turing(&self) -> bool {
+    /*
+    /// Checks if the computer's element is a Turing machine.
+    ///
+    /// # Returns
+    ///
+    /// * `true` - if the computer's element is a Turing machine
+    /// * `false` - if the computer's element is a RAM machine or Lambda calculus
+    ///
+    pub fn is_turing(&self) -> bool {
         match self.element {
             ComputingElem::RAM(_) => false,
             ComputingElem::TM(_) => true,
@@ -54,7 +211,15 @@ impl Computer {
     }
     */
 
-    /* pub fn is_lambda(&self) -> bool {
+    /* 
+    /// Checks if the computer's element is a Lambda calculus.
+    ///
+    /// # Returns
+    ///
+    /// * `true` - if the computer's element is a Lambda calculus
+    /// * `false` - if the computer's element is a Turing machine or RAM machine
+    ///
+    pub fn is_lambda(&self) -> bool {
         match self.element {
             ComputingElem::Ram(_) => false,
             ComputingElem::Tm(_) => false,
@@ -62,22 +227,71 @@ impl Computer {
         }
     } */
 
+    /// Converts a multi-tape Turing machine to a single-tape Turing machine.
+    ///
+    /// This method only applies to Turing machine elements. It performs the conversion 
+    /// by implementing the standard construction that simulates a multi-tape Turing machine
+    /// using a single tape. The conversion preserves the computational behavior of the
+    /// original machine.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(Computer)` - A new Computer instance containing the equivalent single-tape Turing machine
+    /// * `Err(String)` - An error message if the computer's element is not a Turing machine
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// * The computer's element is not a Turing machine
+    /// * The conversion process fails
+    ///
+    /// The method preserves all mappings and properties of the original computer while
+    /// transforming the internal Turing machine representation to use a single tape.
     pub fn convert_to_singletape(&mut self) -> Result<Computer, String> {
         match self.element {
             ComputingElem::Tm(ref m) => {
-                self.set_turing(m.convert_multi_tape_to_single_tape_tm()?);
+                self.set_turing(m.convert_multitape_to_singletape_tm()?);
                 return Ok(self.clone());
             }
             _ => return Err("not a turing machine".to_string()),
         }
     }
 
+    /// Creates a new Computer instance initialized with a default Turing machine.
+    ///
+    /// This constructor creates a new Computer with the following default settings:
+    /// - The computing element is set to a new, empty Turing machine
+    /// - The mapping hashmap is initialized as empty
+    ///
+    /// # Returns
+    ///
+    /// Returns a new `Computer` instance with default initialization.
+    ///
     pub fn new() -> Computer {
         Computer {
             element: ComputingElem::Tm(Box::new(turing_machine::TuringMachine::new())),
             mapping: std::collections::HashMap::new(),
         }
     }
+
+    /// Converts the current computing element to its string encoding representation.
+    ///
+    /// This method converts the computer's computing element (RAM machine, Turing machine, or Lambda calculus)
+    /// into a standardized string encoding format along with any associated mappings.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(EncodingResult)` - A tuple containing:
+    ///   - The string encoding of the computing element
+    ///   - Two HashMaps containing any necessary mapping information
+    /// * `Err(String)` - An error message if the encoding process fails
+    ///
+    /// # Note
+    ///
+    /// The exact format of the encoding depends on the type of computing element:
+    /// - For Turing machines: Uses the TM-specific encoding format
+    /// - For RAM machines: Uses the RAM-specific encoding format
+    /// - For Lambda calculus: Returns the string representation with empty mappings
     pub fn to_encoding(&self) -> Result<EncodingResult, String> {
         match self.element.clone() {
             ComputingElem::Tm(m) => m.to_encoding(),
@@ -90,18 +304,70 @@ impl Computer {
         }
     }
 
+    /// Sets the computer's computing element to a RAM machine.
+    ///
+    /// This method updates the computer's internal element to use the provided RAM machine,
+    /// replacing any existing computing element (Turing machine or Lambda calculus).
+    ///
+    /// # Arguments
+    ///
+    /// * `ram_machine` - A RAM machine instance to be set as the computer's computing element
     pub fn set_ram(&mut self, ram_machine: ram_machine::RamMachine) {
-        self.element = ComputingElem::Ram(ram_machine);
+        self.element = ComputingElem::Ram(Box::new(ram_machine));
     }
 
+    /// Sets the computer's computing element to a Turing machine.
+    ///
+    /// This method updates the computer's internal element to use the provided Turing machine,
+    /// replacing any existing computing element (RAM machine or Lambda calculus).
+    ///
+    /// # Arguments
+    ///
+    /// * `turing_machine` - A Turing machine instance to be set as the computer's computing element
+    ///
     pub fn set_turing(&mut self, turing_machine: turing_machine::TuringMachine) {
         self.element = ComputingElem::Tm(Box::new(turing_machine));
     }
 
+    /// Sets the computer's computing element to a Lambda calculus.
+    ///
+    /// This method updates the computer's internal element to use the provided Lambda calculus,
+    /// replacing any existing computing element (RAM machine or Turing machine).
+    ///
+    /// # Arguments
+    ///
+    /// * `lambda` - A Lambda calculus instance to be set as the computer's computing element
+    ///
     pub fn set_lambda(&mut self, lambda: lambda::Lambda) {
-        self.element = ComputingElem::Lambda(lambda);
+        self.element = ComputingElem::Lambda(Box::new(lambda));
     }
 
+    /// Simulates the execution of the current computing element with the given input.
+    ///
+    /// This method runs the simulation of the computer's computing element (RAM machine, 
+    /// Turing machine, or Lambda calculus) with the specified parameters.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - The input string to be processed by the computing element
+    /// * `max_steps` - The maximum number of steps the simulation should run before stopping
+    /// * `context` - The server context used for simulation tracking and control
+    /// * `head` - The initial head position (primarily used for Turing machines)
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(SimulationResult)` - The result of the simulation containing:
+    ///   - The final configuration
+    ///   - The execution history
+    ///   - Any additional simulation-specific data
+    /// * `Err(String)` - An error message if the simulation fails
+    ///
+    /// # Note
+    ///
+    /// The behavior varies depending on the type of computing element:
+    /// - For RAM machines: Processes the input as RAM instructions
+    /// - For Turing machines: Converts input to tape symbols and simulates TM execution
+    /// - For Lambda calculus: Evaluates the lambda expression
     pub fn simulate(
         self,
         input: String,
@@ -122,13 +388,36 @@ impl Computer {
                     name: "".to_string(),
                     force_currying: false,
                 };
-                l_new.simulate()
+                l_new.simulate(max_steps)
             }
         }
     }
+
+    /// Adds a new mapping entry to the computer's mapping collection.
+    ///
+    /// This method associates a name with a value in the computer's internal mapping hashmap.
+    /// If the name already exists, its value will be updated with the new value.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The key/name for the mapping entry
+    /// * `value` - The value to be associated with the name
+    ///
     pub fn add_mapping(&mut self, name: String, value: String) {
         self.mapping.insert(name, value);
     }
+
+    /// Retrieves the value associated with a given name from the computer's mapping collection.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The key/name whose value should be retrieved
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(String)` - The value associated with the name, or an empty string if the name doesn't exist
+    /// * `Err(String)` - An error message if the mapping retrieval fails
+    ///
     pub fn get_mapping(&self, name: String) -> Result<String, String> {
         if self.mapping.contains_key(&name) {
             self.mapping
@@ -139,6 +428,44 @@ impl Computer {
             Ok("".to_string())
         }
     }
+
+    /// Converts the current computing element to a Turing machine representation.
+    ///
+    /// This method transforms either a Lambda calculus expression or a RAM machine into an equivalent
+    /// Turing machine representation. The conversion process preserves the computational behavior
+    /// of the original element.
+    ///
+    /// # Arguments
+    ///
+    /// * `self` - A mutable reference to the Computer instance
+    /// * `options` - A mutable reference to Options containing configuration settings
+    /// * `s` - A mutable reference to the Server context
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(Computer)` - A new Computer instance containing the equivalent Turing machine
+    /// * `Err(String)` - An error message if the conversion fails
+    ///
+    /// # Behavior
+    ///
+    /// For Lambda calculus:
+    /// - Converts the lambda expression to tokens
+    /// - Uses a standard construction from "lambda over tm.tm"
+    /// - Preserves variable bindings and substitutions
+    ///
+    /// For RAM machines:
+    /// - Uses a standard construction from "ram over tm.tm"
+    /// - Preserves the original RAM program's behavior
+    /// - Maintains instruction mappings
+    ///
+    /// For Turing machines:
+    /// - Returns an error as conversion is unnecessary
+    ///
+    /// # Notes
+    ///
+    /// - The conversion maintains all mappings from the original computer
+    /// - The resulting Turing machine uses a modified alphabet to accommodate the source computation
+    /// - For Lambda calculus, variables and syntax tokens are encoded appropriately
     pub fn to_tm(
         self: &mut Computer,
         options: &mut options::Options,
@@ -492,6 +819,46 @@ impl Computer {
         }
     }
 
+    /// Converts the current computing element to a RAM machine representation.
+    ///
+    /// This method transforms either a Lambda calculus expression or a Turing machine into an equivalent
+    /// RAM machine representation. The conversion process preserves the computational behavior
+    /// of the original element.
+    ///
+    /// # Arguments
+    ///
+    /// * `self` - A mutable reference to the Computer instance
+    /// * `options` - A mutable reference to Options containing configuration settings
+    /// * `s` - A mutable reference to the Server context
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(Computer)` - A new Computer instance containing the equivalent RAM machine
+    /// * `Err(String)` - An error message if the conversion fails
+    ///
+    /// # Behavior
+    ///
+    /// For Turing machines:
+    /// - Converts states and symbols to binary representations
+    /// - Uses a standard construction from "tm over ram.ram"
+    /// - Preserves the transition function and tape behavior
+    /// - Note: The subroutine calling doesn't work yet
+    ///
+    /// For Lambda calculus:
+    /// - First converts to Turing machine
+    /// - Then converts the resulting TM to RAM
+    /// - Note: the feature is higly experimental and is inefficent. Use with caution.
+    ///
+    /// For RAM machines:
+    /// - Returns an error as conversion is unnecessary
+    ///
+    /// # Notes
+    ///
+    /// - The conversion maintains all mappings from the original computer
+    /// - States and symbols are encoded using binary strings
+    /// - Special states (initial, accept, reject, halt) are properly mapped
+    /// - Includes configuration for state size, symbol size, and blank character
+    /// - The resulting RAM machine simulates the original computation step by step
     pub fn to_ram(
         self: &mut Computer,
         options: &mut options::Options,
@@ -643,7 +1010,12 @@ impl Computer {
     }
 }
 
+/// Implementation of the Server struct which manages multiple computing elements
 impl Server {
+    /// Creates a new empty Server instance
+    ///
+    /// # Returns
+    /// * `Server` - A new Server with empty HashMaps and Vectors
     pub fn new() -> Server {
         Server {
             map_computers: std::collections::HashMap::new(),
@@ -651,30 +1023,53 @@ impl Server {
         }
     }
 
+    /// Adds a computer to the server's map of computers
+    ///
+    /// # Arguments
+    /// * `name` - String identifier for the computer
+    /// * `computer` - Computer instance to be added
     pub fn add_computer(&mut self, name: String, computer: Computer) {
         self.map_computers.insert(name, computer);
     }
 
+    /// Gets a mutable reference to a computer by name
+    ///
+    /// # Arguments
+    /// * `name` - String identifier of the computer to retrieve
+    ///
+    /// # Returns
+    /// * `Option<&mut Computer>` - Some(computer) if found, None if not present
     pub fn get_computer(&mut self, name: String) -> Option<&mut Computer> {
         self.map_computers.get_mut(&name)
     }
 
+    /// Checks if a computer with the given name exists in the server
+    ///
+    /// # Arguments
+    /// * `name` - String identifier to check
+    ///
+    /// # Returns
+    /// * `bool` - true if computer exists, false otherwise
     pub fn contains(&self, name: String) -> bool {
         self.map_computers.contains_key(&name)
     }
 
-    /* pub fn computation_order(&self) -> Vec<String> {
-        self.computation_order.clone()
-    } */
-
+    /// Gets the name of the computer at position n in the computation order
+    ///
+    /// # Arguments
+    /// * `n` - Index in the computation order
+    ///
+    /// # Returns
+    /// * `String` - Name of the computer at that position
     pub fn computes_at(&self, n: usize) -> String {
         self.computation_order[n].clone()
     }
 
-    /* pub fn set_computation_order(&mut self, order: Vec<String>) {
-        self.computation_order = order;
-    } */
-
+    /// Sets or adds a computer name at a specific position in the computation order
+    ///
+    /// # Arguments
+    /// * `n` - Position in the computation order
+    /// * `name` - Name of the computer to place at that position
     pub fn set_computation_order_at(&mut self, n: usize, name: String) {
         if n < self.computation_order.len() {
             self.computation_order[n] = name;
@@ -683,6 +1078,21 @@ impl Server {
         }
     }
 
+    /// Executes the computation chain on the given input
+    ///
+    /// # Arguments
+    /// * `input` - Input string to process
+    /// * `max_steps` - Maximum number of computation steps allowed
+    ///
+    /// # Returns
+    /// * `Result<(String, usize, String, usize, Vec<String>), String>` - On success returns
+    ///   (final_state, head_position, output, steps_taken, computation_trace)
+    ///   On error returns error message as string
+    ///
+    /// # Errors
+    /// * Returns error if server has no computers
+    /// * Returns error if computation order is empty
+    /// * Returns error if a computer in the computation chain cannot be found
     pub fn execute(
         &mut self,
         input: String,

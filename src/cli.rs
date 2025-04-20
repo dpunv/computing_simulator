@@ -1,6 +1,52 @@
-// file: cli.rs
-// Project: Computing Simulator
-// author: dp
+//! CLI module for Computing Simulator
+//! 
+//! This module provides the command-line interface functionality for the Computing Simulator,
+//! allowing users to interact with various computing models including Turing Machines,
+//! RAM Machines, and Lambda expressions.
+//!
+//! # Features
+//! 
+//! - Convert between different computation models (TM, RAM, Lambda)
+//! - Interactive TUI mode for multiple executions on the same machine with different inputs
+//! - Print status and details of computing machines
+//! - Execute computations with configurable parameters
+//! - Handle file I/O for machine definitions
+//! - Convert multi-tape TMs to single-tape TMs
+//! - Generate and print machine encodings
+//!
+//! # Main Components
+//! 
+//! - `main_cli()`: Entry point for the CLI application
+//! - `print_help()`: Displays usage information and available options
+//! - `process_results()`: Handles computation results with various verbosity levels
+//! - `interactive_tui()`: Provides an interactive terminal interface
+//! - `handle_computation()`: Manages different computation models and their conversions
+//!
+//! # Options
+//! 
+//! The CLI supports various options including:
+//! - File input/output
+//! - Conversion between computation models
+//! - Verbosity levels
+//! - Maximum computation steps
+//! - Machine status printing
+//! - Encoding generation and printing
+//!
+//! # Example Usage
+//! 
+//! ```bash
+//! computing_simulator --file input.tm --verbose 2 --max-steps 1000
+//! computing_simulator --convert-to-tm --file input.ram
+//! computing_simulator --print-encoding --file input.lambda
+//! ```
+//!
+//! ## Author
+//!
+//! - dp
+//! 
+//! # License
+//! 
+//! This project is licensed under the MIT License. See the LICENSE file for details.
 
 use crate::lambda;
 use crate::turing_machine;
@@ -11,6 +57,7 @@ use crate::options;
 use crate::ram_machine;
 use std::io::Write;
 
+/// Displays help information about the program's usage and available options
 fn print_help() {
     println!("Usage: turing_machine [OPTIONS] [FILE] [INPUT]");
     println!();
@@ -42,6 +89,7 @@ fn print_help() {
     println!();
 }
 
+/// Prints the current version of the Computing Simulator
 fn print_version() {
     println!("Turing Machine Simulator 0.1.0");
 }
@@ -75,12 +123,24 @@ fn print_version() {
 }
  */
 
+/// Prints the status of a Turing Machine, including whether it's deterministic,
+/// valid, and has total transitions
+/// 
+/// # Arguments
+/// 
+/// * `tm` - Reference to a TuringMachine instance
 pub fn print_status_tm(tm: &turing_machine::TuringMachine) {
     println!("Deterministic: {}", tm.is_deterministic());
     println!("Ok: {}", tm.is_ok());
     println!("Transition total: {}", tm.is_transition_total());
 }
 
+/// Processes and displays computation results based on verbosity level
+/// 
+/// # Arguments
+/// 
+/// * `server` - The computation server instance
+/// * `opt` - Options containing verbosity and other settings
 fn process_results(server: computer::Server, opt: options::Options) {
     let result = server.clone().execute(opt.input.clone(), opt.max_steps);
     match result {
@@ -108,6 +168,12 @@ fn process_results(server: computer::Server, opt: options::Options) {
     }
 }
 
+/// Provides an interactive Terminal User Interface for the computing simulator
+/// 
+/// # Arguments
+/// 
+/// * `server` - Mutable reference to the computation server
+/// * `opt` - Options for the computation
 fn interactive_tui(server: &mut computer::Server, opt: options::Options) {
     let mut input = String::new();
     loop {
@@ -149,6 +215,11 @@ fn interactive_tui(server: &mut computer::Server, opt: options::Options) {
     }
 }
 
+/// Prints the encoding of a computer (TM, RAM, or Lambda)
+/// 
+/// # Arguments
+/// 
+/// * `c` - Reference to a Computer instance
 pub fn print_encoding(c: &computer::Computer) {
     let encoded: (
         String,
@@ -198,7 +269,12 @@ pub fn print_computation(
 }
  */
 
-pub fn print_lambda_as_tree(l: lambda::Lambda) {
+/// Prints a lambda expression as a tree structure
+/// 
+/// # Arguments
+/// 
+/// * `l` - Lambda expression to print
+pub fn print_lambda_as_tree(l: &lambda::Lambda) {
     println!("NAME: {}", l.name);
     fn print_expr(expr: &lambda::LambdaExpr, indent: usize) {
         let padding = " ".repeat(indent);
@@ -219,6 +295,11 @@ pub fn print_lambda_as_tree(l: lambda::Lambda) {
     print_expr(&l.expr, 0);
 }
 
+/// Prints the definition of a Turing Machine
+/// 
+/// # Arguments
+/// 
+/// * `tm` - TuringMachine instance to print
 pub fn print_tm(tm: turing_machine::TuringMachine) {
     println!("{}", tm.initial_state);
     println!("{}", tm.accept_state);
@@ -255,6 +336,11 @@ pub fn print_tm(tm: turing_machine::TuringMachine) {
     }
 }
 
+/// Prints the instructions and translations symbols (if available) of a RAM Machine
+/// 
+/// # Arguments
+/// 
+/// * `ram` - RAM Machine instance to print
 pub fn print_ram(ram: ram_machine::RamMachine) {
     for instruction in ram.instructions.iter() {
         print!("OPCODE: {} ", instruction.opcode);
@@ -269,20 +355,36 @@ pub fn print_ram(ram: ram_machine::RamMachine) {
     }
 }
 
-pub fn print_lambda(l: lambda::Lambda) {
-    for lambda in l.references {
+/// Prints a lambda expression and its references
+/// 
+/// # Arguments
+/// 
+/// * `l` - Lambda expression to print
+pub fn print_lambda(l: &lambda::Lambda) {
+    for lambda in &l.references {
         println!("{}", lambda);
     }
 }
 
+/// Prints status information about a RAM Machine
+/// 
+/// # Arguments
+/// 
+/// * `ram` - Reference to a RAM Machine instance
 fn print_status_ram(ram: &ram_machine::RamMachine) {
     println!("Number of instructions: {}", ram.instructions.len());
 }
 
+/// Main entry point for the CLI application
 pub fn main_cli() {
     main_cli_with_options(options::get_options());
 }
 
+/// Main CLI function that processes given options
+/// 
+/// # Arguments
+/// 
+/// * `options` - Options instance containing CLI parameters
 pub fn main_cli_with_options(mut options: options::Options) {
     if options.help {
         print_help();
@@ -313,10 +415,24 @@ pub fn main_cli_with_options(mut options: options::Options) {
     handle_computation(&mut options);
 }
 
+/// Validates that the provided options are valid
+/// 
+/// # Arguments
+/// 
+/// * `options` - Reference to Options instance to validate
+/// 
+/// # Returns
+/// 
+/// * `bool` - True if options are valid, false otherwise
 fn validate_options(options: &options::Options) -> bool {
     !options.file.is_empty() || options.print_nth_tm != -1
 }
 
+/// Handles the computation based on the provided options
+/// 
+/// # Arguments
+/// 
+/// * `options` - Mutable reference to Options instance
 fn handle_computation(options: &mut options::Options) {
     let mut s = computer::Server::new();
     let mut c;
@@ -406,9 +522,9 @@ fn handle_computation(options: &mut options::Options) {
     s.set_computation_order_at(0, options.file.clone());
     if options.print_computer {
         match c.element {
-            computer::ComputingElem::Ram(m) => print_ram(m),
+            computer::ComputingElem::Ram(m) => print_ram(*m),
             computer::ComputingElem::Tm(m) => print_tm(*m),
-            computer::ComputingElem::Lambda(l) => print_lambda(l),
+            computer::ComputingElem::Lambda(l) => print_lambda(&l),
         }
         return;
     }
@@ -422,7 +538,7 @@ fn handle_computation(options: &mut options::Options) {
         match c.element.clone() {
             computer::ComputingElem::Tm(m) => print_status_tm(&m),
             computer::ComputingElem::Ram(m) => print_status_ram(&m),
-            computer::ComputingElem::Lambda(l) => print_lambda_as_tree(l),
+            computer::ComputingElem::Lambda(l) => print_lambda_as_tree(&l),
         }
     } else if options.clone().input.is_empty() {
         interactive_tui(&mut s, options.clone());
@@ -430,6 +546,7 @@ fn handle_computation(options: &mut options::Options) {
         process_results(s, options.clone());
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -562,7 +679,7 @@ mod tests {
             }],
             force_currying: false,
         };
-        print_lambda(lambda);
+        print_lambda(&lambda);
     }
 
     #[test]
@@ -576,7 +693,7 @@ mod tests {
             references: vec![],
             force_currying: false,
         };
-        print_lambda_as_tree(lambda);
+        print_lambda_as_tree(&lambda);
     }
 
     #[test]

@@ -1,7 +1,50 @@
-// file: utils.rs
-// Project: Computing Simulator
-// author: dp
 
+//! # Utilities Module
+//!
+//! This module provides a collection of utility functions for string manipulation, 
+//! binary conversions, and custom alphabet-based encoding. These functions are 
+//! designed to be reusable and cover a variety of common operations in computing 
+//! simulations and data processing.
+//!
+//! ## Functions
+//!
+//! - `input_string_to_vec`: Converts an input string into a vector of strings based on a provided input alphabet.
+//! - `int2bin`: Converts an integer to its binary representation as a string, with optional zero-padding.
+//! - `bin2int`: Converts a binary string to an integer, returning a `Result` to handle invalid inputs.
+//! - `uint2str`: Converts an unsigned integer to a string representation using a custom alphabet.
+//! - `bin2alphabet`: Converts a binary string to a string representation using a custom alphabet.
+//! - `is_numeric`: Checks if a string contains only numeric characters.
+//!
+//! ## Error Handling
+//!
+//! Functions that involve conversions or custom alphabets return `Result` types 
+//! to handle errors gracefully. For instance, invalid binary strings or empty 
+//! alphabets will result in descriptive error messages.
+//!
+//! ## Testing
+//!
+//! The module includes a robust set of unit tests to ensure correctness and 
+//! reliability. These tests cover normal usage, edge cases, and invalid inputs 
+//! to verify the behavior of each function.
+//! 
+//! ## Author
+//!
+//! - dp
+//! 
+//! # License
+//! 
+//! This project is licensed under the MIT License. See the LICENSE file for details.
+
+/// Converts an input string into a vector of strings based on the provided input alphabet.
+///
+/// # Arguments
+///
+/// * `input_alphabet` - A vector of strings representing the valid symbols.
+/// * `input` - The input string to be converted.
+///
+/// # Returns
+///
+/// A vector of strings where each element is a symbol from the input alphabet.
 pub fn input_string_to_vec(input_alphabet: Vec<String>, input: String) -> Vec<String> {
     let mut vec = Vec::new();
     let mut current_symbol = String::new();
@@ -15,6 +58,16 @@ pub fn input_string_to_vec(input_alphabet: Vec<String>, input: String) -> Vec<St
     vec
 }
 
+/// Converts an integer to its binary representation as a string, with optional zero-padding.
+///
+/// # Arguments
+///
+/// * `n` - The integer to convert.
+/// * `bitnum` - The number of bits to pad the binary representation to. If 0, no padding is applied.
+///
+/// # Returns
+///
+/// A string representing the binary representation of the integer.
 pub fn int2bin(n: i32, bitnum: usize) -> String {
     if bitnum > 0 {
         let s = format!("{:0>width$b}", n, width = bitnum);
@@ -24,6 +77,15 @@ pub fn int2bin(n: i32, bitnum: usize) -> String {
     }
 }
 
+/// Converts a binary string to an integer.
+///
+/// # Arguments
+///
+/// * `s` - A string representing a binary number.
+///
+/// # Returns
+///
+/// A `Result` containing the integer value if successful, or an error message if the input is invalid.
 pub fn bin2int(s: String) -> Result<i32, String> {
     if s.is_empty() || s.starts_with('-') {
         return Err(format!("invalid input string: {}", s));
@@ -31,14 +93,16 @@ pub fn bin2int(s: String) -> Result<i32, String> {
     i32::from_str_radix(s.as_str(), 2).map_err(|e| e.to_string())
 }
 
-/* pub fn invert_hashmap<K, V>(hashmap: &std::collections::HashMap<K, V>) -> std::collections::HashMap<V, K>
-where
-    K: Eq + std::hash::Hash + Clone,
-    V: Eq + std::hash::Hash + Clone,
-{
-    hashmap.iter().map(|(k, v)| (v.clone(), k.clone())).collect()
-} */
-
+/// Converts an unsigned integer to a string representation using a custom alphabet.
+///
+/// # Arguments
+///
+/// * `n` - The unsigned integer to convert.
+/// * `alphabet` - A vector of strings representing the custom alphabet.
+///
+/// # Returns
+///
+/// A `Result` containing the string representation if successful, or an error message if the alphabet is empty.
 pub fn uint2str(n: usize, alphabet: Vec<String>) -> Result<String, String> {
     if alphabet.is_empty() {
         return Err("void alphabet, cannot convert int2str".to_string());
@@ -67,8 +131,17 @@ pub fn uint2str(n: usize, alphabet: Vec<String>) -> Result<String, String> {
     Ok(u)
 }
 
+/// Converts a binary string to a string representation using a custom alphabet.
+///
+/// # Arguments
+///
+/// * `s` - A binary string to convert.
+/// * `alphabet` - A vector of strings representing the custom alphabet.
+///
+/// # Returns
+///
+/// A `Result` containing the string representation if successful, or an error message if the input is invalid.
 pub fn bin2alphabet(s: String, alphabet: Vec<String>) -> Result<String, String> {
-    // number of bit needed to encode the alphabet
     let bitnum: usize = (alphabet.len() as f64).log2().ceil() as usize;
     if s.is_empty() || (s.len() % bitnum != 0) {
         return Err(format!("wrong input string length: {}", s.len()));
@@ -85,12 +158,15 @@ pub fn bin2alphabet(s: String, alphabet: Vec<String>) -> Result<String, String> 
     Ok(result)
 }
 
-/* pub fn int2pair(n: i32) -> (i32, i32) {
-    assert!(n>0);
-    let d = ((((8 * n + 1) as f32).sqrt() + (1 as f32)) / (2 as f32)).floor() as i32;
-    (n - (d * (d+1)/2), d + (d * (d+1) / 2) - n)
-} */
-
+/// Checks if a string contains only numeric characters.
+///
+/// # Arguments
+///
+/// * `s` - The string to check.
+///
+/// # Returns
+///
+/// `true` if the string contains only numeric characters, `false` otherwise.
 pub fn is_numeric(s: String) -> bool {
     if s.is_empty() {
         return false;
@@ -115,14 +191,12 @@ mod tests {
             vec!["a", "b", "b"]
         );
 
-        // Test with multi-char symbols
         let alphabet2 = vec!["aa".to_string(), "bb".to_string(), "c".to_string()];
         assert_eq!(
             input_string_to_vec(alphabet2, "aabbc".to_string()),
             vec!["aa", "bb", "c"]
         );
 
-        // Test empty input
         let alphabet3 = vec!["a".to_string(), "b".to_string()];
         assert_eq!(
             input_string_to_vec(alphabet3, "".to_string()),
@@ -134,7 +208,6 @@ mod tests {
     fn test_int2bin() {
         assert_eq!(int2bin(5, 4), "0101");
         assert_eq!(int2bin(3, 0), "11");
-        // Additional cases
         assert_eq!(int2bin(0, 4), "0000");
         assert_eq!(int2bin(15, 4), "1111");
         assert_eq!(int2bin(8, 5), "01000");
@@ -144,7 +217,6 @@ mod tests {
     fn test_bin2int() {
         assert_eq!(bin2int("101".to_string()), Ok(5));
         assert!(bin2int("abc".to_string()).is_err());
-        // Additional cases
         assert_eq!(bin2int("0000".to_string()), Ok(0));
         assert_eq!(bin2int("1111".to_string()), Ok(15));
         assert!(bin2int("21".to_string()).is_err());
@@ -156,7 +228,6 @@ mod tests {
         let alphabet = vec!["a".to_string(), "b".to_string()];
         assert_eq!(uint2str(1, alphabet.clone()), Ok("a".to_string()));
 
-        // Test with larger alphabet
         let alphabet2 = vec!["x".to_string(), "y".to_string(), "z".to_string()];
         assert_eq!(uint2str(2, alphabet2.clone()), Ok("y".to_string()));
     }
@@ -170,7 +241,6 @@ mod tests {
         );
         assert!(bin2alphabet("".to_string(), alphabet.clone()).is_err());
 
-        // Additional cases
         let large_alphabet = vec![
             "a".to_string(),
             "b".to_string(),
@@ -181,14 +251,13 @@ mod tests {
             bin2alphabet("10".to_string(), large_alphabet.clone()),
             Ok("c".to_string())
         );
-        assert!(bin2alphabet("111".to_string(), large_alphabet).is_err()); // Invalid bit length
+        assert!(bin2alphabet("111".to_string(), large_alphabet).is_err());
     }
 
     #[test]
     fn test_is_numeric() {
         assert!(is_numeric("123".to_string()));
         assert!(!is_numeric("12a".to_string()));
-        // Additional cases
         assert!(is_numeric("0".to_string()));
         assert!(is_numeric("9999999".to_string()));
         assert!(!is_numeric("".to_string()));
@@ -197,14 +266,12 @@ mod tests {
     }
     #[test]
     fn test_input_string_to_vec_extended() {
-        // Test with overlapping symbols
         let alphabet = vec!["a".to_string(), "aa".to_string()];
         assert_eq!(
             input_string_to_vec(alphabet, "aaa".to_string()),
             vec!["a", "a", "a"]
         );
 
-        // Test with longer input
         let alphabet2 = vec!["00".to_string(), "11".to_string(), "22".to_string()];
         assert_eq!(
             input_string_to_vec(alphabet2, "001122".to_string()),
@@ -243,7 +310,7 @@ mod tests {
             bin2alphabet("0010".to_string(), alphabet.clone()),
             Ok("0022".to_string())
         );
-        assert!(bin2alphabet("0".to_string(), alphabet).is_err()); // Insufficient bits
+        assert!(bin2alphabet("0".to_string(), alphabet).is_err());
     }
 
     #[test]
