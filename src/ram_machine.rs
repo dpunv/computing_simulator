@@ -147,7 +147,7 @@ impl RamMachine {
     ///
     /// Returns a String containing the 4-bit binary opcode.
     ///
-    pub fn ram_instruction_lookup(instruction: String) -> String {
+    pub fn ram_instruction_lookup(instruction: String) -> Result<String, String> {
         let opcode = match instruction.as_str() {
             "R" => "0000",
             "MIR" => "0001",
@@ -165,9 +165,9 @@ impl RamMachine {
             "MOV" => "1101",
             "LD" => "1110",
             "STD" => "1111",
-            _ => "0000",
+            _ => return Err(format!("Unknown RAM instruction: '{}'", instruction)),
         };
-        opcode.to_string()
+        Ok(opcode.to_string())
     }
 
     /// Simulates the execution of the RAM machine.
@@ -237,16 +237,18 @@ impl RamMachine {
         let mut steps = 0;
         while steps < max_steps {
             steps += 1;
-            ir = memory
+            let mem_val = memory
                 .get(&pc)
                 .ok_or(format!("key not found: {}", pc))?
-                .clone()[0..4]
-                .to_string();
-            ar = memory
-                .get(&pc)
-                .ok_or(format!("key not found: {}", pc))?
-                .clone()[4..]
-                .to_string();
+                .clone();
+            if mem_val.len() < 4 {
+                return Err(format!(
+                    "Invalid memory value at address {}: '{}' is shorter than 4 bits",
+                    pc, mem_val
+                ));
+            }
+            ir = mem_val[0..4].to_string();
+            ar = mem_val[4..].to_string();
             pc = utils::int2bin(utils::bin2int(pc)? + 1, 0);
             computation
                 .push("ram;".to_string() + &ir.clone() + ";" + &ar.clone() + ";" + &acc.clone());
@@ -475,30 +477,39 @@ mod tests {
 
     #[test]
     fn test_ram_instruction_lookup() {
-        assert_eq!(RamMachine::ram_instruction_lookup("R".to_string()), "0000");
         assert_eq!(
-            RamMachine::ram_instruction_lookup("MIR".to_string()),
-            "0001"
-        );
-        assert_eq!(RamMachine::ram_instruction_lookup("H".to_string()), "1011");
-        assert_eq!(
-            RamMachine::ram_instruction_lookup("INVALID".to_string()),
+            RamMachine::ram_instruction_lookup("R".to_string()).unwrap(),
             "0000"
         );
+        assert_eq!(
+            RamMachine::ram_instruction_lookup("MIR".to_string()).unwrap(),
+            "0001"
+        );
+        assert_eq!(
+            RamMachine::ram_instruction_lookup("H".to_string()).unwrap(),
+            "1011"
+        );
+        assert!(RamMachine::ram_instruction_lookup("INVALID".to_string()).is_err());
 
         // Additional opcode tests
         assert_eq!(
-            RamMachine::ram_instruction_lookup("MIL".to_string()),
+            RamMachine::ram_instruction_lookup("MIL".to_string()).unwrap(),
             "0010"
         );
-        assert_eq!(RamMachine::ram_instruction_lookup("W".to_string()), "0011");
-        assert_eq!(RamMachine::ram_instruction_lookup("L".to_string()), "0100");
         assert_eq!(
-            RamMachine::ram_instruction_lookup("CALL".to_string()),
+            RamMachine::ram_instruction_lookup("W".to_string()).unwrap(),
+            "0011"
+        );
+        assert_eq!(
+            RamMachine::ram_instruction_lookup("L".to_string()).unwrap(),
+            "0100"
+        );
+        assert_eq!(
+            RamMachine::ram_instruction_lookup("CALL".to_string()).unwrap(),
             "1100"
         );
         assert_eq!(
-            RamMachine::ram_instruction_lookup("MOV".to_string()),
+            RamMachine::ram_instruction_lookup("MOV".to_string()).unwrap(),
             "1101"
         );
     }

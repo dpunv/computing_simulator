@@ -966,21 +966,21 @@ impl Computer {
                             "ACCEPT_STATE".to_string(),
                             states_map
                                 .get(&m.accept_state)
-                                .unwrap_or(&utils::int2bin(2_i32.pow(state_size as u32), 0))
+                                .unwrap_or(&utils::int2bin((1_i32) << state_size.min(30), 0))
                                 .to_owned(),
                         );
                         ram.labels_map.insert(
                             "REJECT_STATE".to_string(),
                             states_map
                                 .get(&m.reject_state)
-                                .unwrap_or(&utils::int2bin(2_i32.pow(state_size as u32), 0))
+                                .unwrap_or(&utils::int2bin((1_i32) << state_size.min(30), 0))
                                 .to_owned(),
                         );
                         ram.labels_map.insert(
                             "HALT_STATE".to_string(),
                             states_map
                                 .get(&m.halt_state)
-                                .unwrap_or(&utils::int2bin(2_i32.pow(state_size as u32), 0))
+                                .unwrap_or(&utils::int2bin((1_i32) << state_size.min(30), 0))
                                 .to_owned(),
                         );
                         ram.labels_map.insert(
@@ -1076,6 +1076,9 @@ impl Server {
         if n < self.computation_order.len() {
             self.computation_order[n] = name;
         } else {
+            while self.computation_order.len() < n {
+                self.computation_order.push(String::new());
+            }
             self.computation_order.push(name);
         }
     }
@@ -1109,7 +1112,7 @@ impl Server {
             return Err("empty server".to_string());
         }
         if self.computation_order.is_empty() {
-            return Err("empry computation order".to_string());
+            return Err("empty computation order".to_string());
         }
         for name in self.computation_order.clone() {
             let computer = self.get_computer(name.clone()).ok_or_else(|| {

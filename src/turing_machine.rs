@@ -211,15 +211,18 @@ pub enum Direction {
 }
 
 pub trait FromString {
-    fn from_string(s: &str) -> Self;
+    fn from_string(s: &str) -> Result<Self, String>
+    where
+        Self: Sized;
 }
 
 impl FromString for Direction {
-    fn from_string(s: &str) -> Self {
+    fn from_string(s: &str) -> Result<Self, String> {
         match s {
-            "L" => Direction::Left,
-            "R" => Direction::Right,
-            _ => Direction::Stay,
+            "L" => Ok(Direction::Left),
+            "R" => Ok(Direction::Right),
+            "S" => Ok(Direction::Stay),
+            _ => Err(format!("Invalid direction: '{}'. Expected 'L', 'R', or 'S'", s)),
         }
     }
 }
@@ -1819,7 +1822,12 @@ impl TuringMachine {
                     "L" => directions.push(Direction::Left),
                     "R" => directions.push(Direction::Right),
                     "S" => directions.push(Direction::Stay),
-                    _ => (),
+                    _ => {
+                        return Err(format!(
+                            "Invalid direction '{}' in encoding. Expected 'L', 'R', or 'S'",
+                            direction
+                        ))
+                    }
                 }
             }
             tm.add_transition(
@@ -2275,10 +2283,11 @@ mod tests {
 
     #[test]
     fn test_direction_from_string() {
-        assert!(matches!(Direction::from_string("L"), Direction::Left));
-        assert!(matches!(Direction::from_string("R"), Direction::Right));
-        assert!(matches!(Direction::from_string("S"), Direction::Stay));
-        assert!(matches!(Direction::from_string("other"), Direction::Stay));
+        assert!(matches!(Direction::from_string("L"), Ok(Direction::Left)));
+        assert!(matches!(Direction::from_string("R"), Ok(Direction::Right)));
+        assert!(matches!(Direction::from_string("S"), Ok(Direction::Stay)));
+        assert!(Direction::from_string("other").is_err());
+        assert!(Direction::from_string("X").is_err());
     }
     #[test]
     fn test_final_states() {

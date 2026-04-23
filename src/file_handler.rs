@@ -230,7 +230,7 @@ pub fn read_turing_machine(
             new_symbols.push(transition[3 + i * 3].to_string());
             directions.push(turing_machine::Direction::from_string(
                 transition[4 + i * 3],
-            ));
+            )?);
         }
         tm.add_transition(
             transition[0].to_string(),
@@ -639,7 +639,7 @@ pub fn read_ram_program(
                 instr.push(ram_machine::Instruction {
                     opcode: ram_machine::RamMachine::ram_instruction_lookup(
                         instruction[0].to_string(),
-                    ),
+                    )?,
                     operand: "0".to_string(),
                     label: "".to_string(),
                 });
@@ -650,7 +650,7 @@ pub fn read_ram_program(
                     instr.push(ram_machine::Instruction {
                         opcode: ram_machine::RamMachine::ram_instruction_lookup(
                             instruction[0].to_string(),
-                        ),
+                        )?,
                         operand: utils::int2bin(
                             instruction[1].parse().map_err(|_| {
                                 format!("Error parsing operand '{}'", instruction[1])
@@ -663,7 +663,7 @@ pub fn read_ram_program(
                     instr.push(ram_machine::Instruction {
                         opcode: ram_machine::RamMachine::ram_instruction_lookup(
                             instruction[0].to_string(),
-                        ),
+                        )?,
                         operand: "".to_string(),
                         label: instruction[1].to_string(),
                     });
@@ -675,7 +675,7 @@ pub fn read_ram_program(
                 instr.push(ram_machine::Instruction {
                     opcode: ram_machine::RamMachine::ram_instruction_lookup(
                         instruction[1].to_string(),
-                    ),
+                    )?,
                     operand: "".to_string(),
                     label: "".to_string(),
                 });
@@ -689,7 +689,7 @@ pub fn read_ram_program(
                 instr.push(ram_machine::Instruction {
                     opcode: ram_machine::RamMachine::ram_instruction_lookup(
                         instruction[1].to_string(),
-                    ),
+                    )?,
                     operand: utils::int2bin(
                         instruction[2]
                             .parse()
@@ -702,7 +702,7 @@ pub fn read_ram_program(
                 instr.push(ram_machine::Instruction {
                     opcode: ram_machine::RamMachine::ram_instruction_lookup(
                         instruction[1].to_string(),
-                    ),
+                    )?,
                     operand: "".to_string(),
                     label: instruction[2].to_string(),
                 });
