@@ -293,7 +293,7 @@ impl Computer {
     /// - For RAM machines: Uses the RAM-specific encoding format
     /// - For Lambda calculus: Returns the string representation with empty mappings
     pub fn to_encoding(&self) -> Result<EncodingResult, String> {
-        match self.element.clone() {
+        match &self.element {
             ComputingElem::Tm(m) => m.to_encoding(),
             ComputingElem::Ram(m) => m.to_encoding(),
             ComputingElem::Lambda(l) => Ok((
@@ -369,21 +369,21 @@ impl Computer {
     /// - For Turing machines: Converts input to tape symbols and simulates TM execution
     /// - For Lambda calculus: Evaluates the lambda expression
     pub fn simulate(
-        self,
-        input: String,
+        &self,
+        input: &str,
         max_steps: usize,
-        context: Server,
+        context: &Server,
         head: usize,
     ) -> Result<SimulationResult, String> {
-        match self.element.clone() {
-            ComputingElem::Ram(m) => m.simulate(input.clone(), max_steps, self, context),
+        match &self.element {
+            ComputingElem::Ram(m) => m.simulate(input.to_string(), max_steps, self, context),
             ComputingElem::Tm(m) => {
-                let input_vec = utils::input_string_to_vec(m.tape_alphabet.clone(), input);
+                let input_vec = utils::input_string_to_vec(m.tape_alphabet.clone(), input.to_string());
                 m.simulate(input_vec, max_steps, self, context, head)
             }
             ComputingElem::Lambda(l) => {
                 let mut l_new = lambda::Lambda {
-                    expr: lambda::parse_lambda(&input)?,
+                    expr: lambda::parse_lambda(input)?,
                     references: l.references.clone(),
                     name: "".to_string(),
                     force_currying: false,
@@ -418,14 +418,14 @@ impl Computer {
     /// * `Ok(String)` - The value associated with the name, or an empty string if the name doesn't exist
     /// * `Err(String)` - An error message if the mapping retrieval fails
     ///
-    pub fn get_mapping(&self, name: String) -> Result<String, String> {
-        if self.mapping.contains_key(&name) {
+    pub fn get_mapping(&self, name: &str) -> Result<String, String> {
+        if self.mapping.contains_key(name) {
             self.mapping
-                .get(&name)
+                .get(name)
                 .ok_or(format!("key not found: {}", name))
                 .cloned()
         } else {
-            Ok("".to_string())
+            Ok(String::new())
         }
     }
 
@@ -1041,8 +1041,19 @@ impl Server {
     ///
     /// # Returns
     /// * `Option<&mut Computer>` - Some(computer) if found, None if not present
-    pub fn get_computer(&mut self, name: String) -> Option<&mut Computer> {
-        self.map_computers.get_mut(&name)
+    pub fn get_computer(&self, name: &str) -> Option<&Computer> {
+        self.map_computers.get(name)
+    }
+
+    /// Returns a mutable reference to the computer with the given name
+    ///
+    /// # Arguments
+    /// * `name` - String identifier of the computer to retrieve
+    ///
+    /// # Returns
+    /// * `Option<&mut Computer>` - Some(computer) if found, None if not present
+    pub fn get_computer_mut(&mut self, name: &str) -> Option<&mut Computer> {
+        self.map_computers.get_mut(name)
     }
 
     /// Checks if a computer with the given name exists in the server
@@ -1052,8 +1063,8 @@ impl Server {
     ///
     /// # Returns
     /// * `bool` - true if computer exists, false otherwise
-    pub fn contains(&self, name: String) -> bool {
-        self.map_computers.contains_key(&name)
+    pub fn contains(&self, name: &str) -> bool {
+        self.map_computers.contains_key(name)
     }
 
     /// Gets the name of the computer at position n in the computation order
@@ -1099,13 +1110,13 @@ impl Server {
     /// * Returns error if computation order is empty
     /// * Returns error if a computer in the computation chain cannot be found
     pub fn execute(
-        &mut self,
-        input: String,
+        &self,
+        input: &str,
         max_steps: usize,
     ) -> Result<(String, usize, String, usize, Vec<String>), String> {
         let mut steps: usize = 0;
-        let mut output: String = input;
-        let mut final_state = "".to_string();
+        let mut output: String = input.to_string();
+        let mut final_state = String::new();
         let mut current_head = 0;
         let mut tot_comp = Vec::new();
         if self.map_computers.is_empty() {
@@ -1114,24 +1125,24 @@ impl Server {
         if self.computation_order.is_empty() {
             return Err("empty computation order".to_string());
         }
-        for name in self.computation_order.clone() {
-            let computer = self.get_computer(name.clone()).ok_or_else(|| {
-                format!("cannot find computer with name '{}'", name.clone()).to_string()
+        for name in &self.computation_order {
+            let computer = self.get_computer(name).ok_or_else(|| {
+                format!("cannot find computer with name '{}'", name)
             })?;
             let (state, head, tape, s, computation) =
                 computer
-                    .clone()
-                    .simulate(output, max_steps - steps, self.clone(), 0)?;
+                    .simulate(&output, max_steps - steps, self, 0)?;
             final_state = state;
             current_head = head;
             output = tape.join("");
             steps += s;
             tot_comp.extend(computation);
         }
+        let last_name = &self.computation_order[self.computation_order.len() - 1];
         let last_computer = self
-            .get_computer(self.computation_order[self.computation_order.len() - 1].clone())
+            .get_computer(last_name)
             .ok_or_else(|| "cannot find computer".to_string())?;
-        match last_computer.element.clone() {
+        match &last_computer.element {
             ComputingElem::Lambda(_) => {}
             ComputingElem::Ram(_) => {}
             ComputingElem::Tm(m) => {
@@ -1174,11 +1185,11 @@ mod tests {
         let mut computer = Computer::new();
         computer.add_mapping("test".to_string(), "value".to_string());
         assert_eq!(
-            computer.get_mapping("test".to_string()),
+            computer.get_mapping("test"),
             Ok("value".to_string())
         );
         assert_eq!(
-            computer.get_mapping("missing".to_string()),
+            computer.get_mapping("missing"),
             Ok("".to_string())
         );
     }
@@ -1195,8 +1206,8 @@ mod tests {
         let mut server = Server::new();
         let computer = Computer::new();
         server.add_computer("test".to_string(), computer.clone());
-        assert!(server.contains("test".to_string()));
-        assert!(server.get_computer("test".to_string()).is_some());
+        assert!(server.contains("test"));
+        assert!(server.get_computer("test").is_some());
     }
 
     #[test]
@@ -1256,19 +1267,19 @@ mod tests {
         computer.add_mapping("key3".to_string(), "val3".to_string());
 
         assert_eq!(
-            computer.get_mapping("key1".to_string()),
+            computer.get_mapping("key1"),
             Ok("val1".to_string())
         );
         assert_eq!(
-            computer.get_mapping("key2".to_string()),
+            computer.get_mapping("key2"),
             Ok("val2".to_string())
         );
         assert_eq!(
-            computer.get_mapping("key3".to_string()),
+            computer.get_mapping("key3"),
             Ok("val3".to_string())
         );
         assert_eq!(
-            computer.get_mapping("missing".to_string()),
+            computer.get_mapping("missing"),
             Ok("".to_string())
         );
     }
@@ -1283,10 +1294,10 @@ mod tests {
         server.add_computer("comp2".to_string(), computer2);
         server.add_computer("comp3".to_string(), computer3);
 
-        assert!(server.contains("comp1".to_string()));
-        assert!(server.contains("comp2".to_string()));
-        assert!(server.contains("comp3".to_string()));
-        assert!(!server.contains("comp4".to_string()));
+        assert!(server.contains("comp1"));
+        assert!(server.contains("comp2"));
+        assert!(server.contains("comp3"));
+        assert!(!server.contains("comp4"));
     }
 
     #[test]
@@ -1324,7 +1335,7 @@ mod tests {
     #[test]
     fn test_server_empty_execution() {
         let mut server = Server::new();
-        let result = server.execute("test input".to_string(), 100);
+        let result = server.execute("test input", 100);
         assert!(result.is_err());
     }
 
@@ -1388,7 +1399,7 @@ mod tests {
         server.add_computer("test".to_string(), computer);
         server.set_computation_order_at(0, "test".to_string());
 
-        let result = server.execute("test".to_string(), 100);
+        let result = server.execute("test", 100);
         assert!(result.is_ok());
     }
 
@@ -1404,7 +1415,7 @@ mod tests {
         computer.set_lambda(lambda);
 
         let context = Server::new();
-        let result = computer.simulate("(x)".to_string(), 100, context, 0);
+        let result = computer.simulate(&"(x)", 100, &context, 0);
         assert!(result.is_ok());
     }
 
@@ -1445,7 +1456,7 @@ mod tests {
         computer.set_ram(ram);
 
         let context = Server::new();
-        let result = computer.simulate("".to_string(), 100, context, 0);
+        let result = computer.simulate(&"", 100, &context, 0);
         assert!(result.is_ok());
     }
 
@@ -1461,10 +1472,10 @@ mod tests {
         server.set_computation_order_at(0, "c1".to_string());
         server.set_computation_order_at(1, "c2".to_string());
 
-        let result1 = server.execute("test1".to_string(), 100);
+        let result1 = server.execute("test1", 100);
         assert!(result1.is_ok());
 
-        let result2 = server.execute("test2".to_string(), 200);
+        let result2 = server.execute("test2", 200);
         assert!(result2.is_ok());
     }
 
@@ -1475,7 +1486,7 @@ mod tests {
         computer.add_mapping("key".to_string(), "value2".to_string());
 
         assert_eq!(
-            computer.get_mapping("key".to_string()),
+            computer.get_mapping("key"),
             Ok("value2".to_string())
         );
     }
@@ -1485,7 +1496,7 @@ mod tests {
         let mut server = Server::new();
         server.set_computation_order_at(0, "nonexistent".to_string());
 
-        let result = server.execute("test".to_string(), 100);
+        let result = server.execute("test", 100);
         assert!(result.is_err());
     }
 
@@ -1517,7 +1528,7 @@ mod tests {
 
         let context = Server::new();
 
-        let result = computer.simulate("test".to_string(), 0, context, 0);
+        let result = computer.simulate(&"test", 0, &context, 0);
         assert!(result.is_ok());
     }
     #[test]
@@ -1705,11 +1716,11 @@ mod tests {
         if let Ok(converted) = result {
             assert_eq!(converted.mapping.len(), computer.mapping.len());
             assert_eq!(
-                converted.get_mapping("key1".to_string()),
+                converted.get_mapping("key1"),
                 Ok("val1".to_string())
             );
             assert_eq!(
-                converted.get_mapping("key2".to_string()),
+                converted.get_mapping("key2"),
                 Ok("val2".to_string())
             );
         }
@@ -1898,11 +1909,11 @@ mod tests {
         if let Ok(converted) = result {
             assert_eq!(converted.mapping.len(), computer.mapping.len());
             assert_eq!(
-                converted.get_mapping("key1".to_string()),
+                converted.get_mapping("key1"),
                 Ok("val1".to_string())
             );
             assert_eq!(
-                converted.get_mapping("key2".to_string()),
+                converted.get_mapping("key2"),
                 Ok("val2".to_string())
             );
         }
@@ -1926,7 +1937,7 @@ mod tests {
         server.set_computation_order_at(2, "c3".to_string());
 
         // Test execution with chained computers
-        let result = server.execute("test input".to_string(), 1000);
+        let result = server.execute("test input", 1000);
         assert!(result.is_ok());
 
         if let Ok((state, _, output, _, comp)) = result {
@@ -1961,7 +1972,7 @@ mod tests {
         computer.set_turing(tm);
 
         let context = Server::new();
-        let result = computer.simulate("0".to_string(), 100, context, 0);
+        let result = computer.simulate(&"0", 100, &context, 0);
         assert!(result.is_ok());
         if let Ok((state, _, tape, _, comp)) = result {
             assert!(!state.is_empty());
@@ -1975,7 +1986,7 @@ mod tests {
         let computer = Computer::new();
         let context = Server::new();
 
-        let result = computer.simulate("".to_string(), 100, context, 0);
+        let result = computer.simulate(&"", 100, &context, 0);
         assert!(result.is_ok());
     }
 
@@ -1985,7 +1996,7 @@ mod tests {
         assert!(server.map_computers.is_empty());
         assert!(server.computation_order.is_empty());
 
-        let result = server.execute("test".to_string(), 100);
+        let result = server.execute("test", 100);
         assert!(result.is_err());
     }
 
@@ -1997,7 +2008,7 @@ mod tests {
         server.add_computer("test".to_string(), computer);
         server.set_computation_order_at(0, "invalid".to_string());
 
-        let result = server.execute("test".to_string(), 100);
+        let result = server.execute("test", 100);
         assert!(result.is_err());
     }
 
@@ -2006,7 +2017,7 @@ mod tests {
         let computer = Computer::new();
         let context = Server::new();
 
-        let result = computer.simulate("test".to_string(), 0, context, 0);
+        let result = computer.simulate(&"test", 0, &context, 0);
         assert!(result.is_err());
     }
 
@@ -2027,7 +2038,7 @@ mod tests {
 
         server.add_computer("test".to_string(), computer);
 
-        let result = server.execute("test".to_string(), 100);
+        let result = server.execute("test", 100);
         assert!(result.is_err());
     }
 
@@ -2050,7 +2061,7 @@ mod tests {
         computer.set_turing(tm);
 
         let context = Server::new();
-        let result = computer.simulate("0".to_string(), 100, context, 0);
+        let result = computer.simulate(&"0", 100, &context, 0);
         assert!(result.is_ok());
     }
 
@@ -2062,7 +2073,7 @@ mod tests {
         }
 
         let computer = Computer::new();
-        let result = computer.simulate("test".to_string(), 100, server, 0);
+        let result = computer.simulate(&"test", 100, &server, 0);
         assert!(result.is_ok());
     }
 
@@ -2075,7 +2086,7 @@ mod tests {
         outer_server.add_computer("outer".to_string(), Computer::new());
 
         let computer = Computer::new();
-        let result = computer.simulate("test".to_string(), 100, outer_server, 0);
+        let result = computer.simulate(&"test", 100, &outer_server, 0);
         assert!(result.is_ok());
     }
 
@@ -2091,7 +2102,7 @@ mod tests {
         server.set_computation_order_at(0, opt.file.clone());
 
         let result: Result<(String, usize, String, usize, Vec<String>), String> =
-            server.execute(opt.input, 1000);
+            server.execute(&opt.input, 1000);
         assert!(result.is_ok());
         if let Ok((state, _, output, _, _)) = result {
             assert_eq!(state, "halt");
@@ -2111,7 +2122,7 @@ mod tests {
         server.set_computation_order_at(0, opt.file.clone());
 
         let result: Result<(String, usize, String, usize, Vec<String>), String> =
-            server.execute(opt.input, 1000);
+            server.execute(&opt.input, 1000);
         assert!(result.is_ok());
         if let Ok((state, _, output, _, _)) = result {
             assert_eq!(state, "halt");
@@ -2132,7 +2143,7 @@ mod tests {
         server.set_computation_order_at(0, opt.file.clone());
 
         let result: Result<(String, usize, String, usize, Vec<String>), String> =
-            server.execute(opt.input, 1000);
+            server.execute(&opt.input, 1000);
         assert!(result.is_ok());
         if let Ok((state, _, output, _, _)) = result {
             assert_eq!(state, "halt");
@@ -2152,7 +2163,7 @@ mod tests {
         server.set_computation_order_at(0, opt.file.clone());
 
         let result: Result<(String, usize, String, usize, Vec<String>), String> =
-            server.execute(opt.input, 1000);
+            server.execute(&opt.input, 1000);
         assert!(result.is_ok());
         if let Ok((state, _, _, _, _)) = result {
             assert_eq!(state, "2");
@@ -2174,7 +2185,7 @@ mod tests {
         server.set_computation_order_at(0, opt.file.clone());
 
         let result: Result<(String, usize, String, usize, Vec<String>), String> =
-            server.execute(opt.input, opt.max_steps);
+            server.execute(&opt.input, opt.max_steps);
         assert!(result.is_ok());
         if let Ok((state, _, output, _, _)) = result {
             assert_eq!(state, "halt");
@@ -2194,7 +2205,7 @@ mod tests {
         server.add_computer(opt.file.clone(), computer);
         server.set_computation_order_at(0, opt.file.clone());
 
-        let result: Result<(String, usize, String, usize, Vec<String>), String> = server.execute(opt.input, opt.max_steps);
+        let result: Result<(String, usize, String, usize, Vec<String>), String> = server.execute(&opt.input, opt.max_steps);
         assert!(result.is_ok());
         if let Ok((state, _, output, _, _)) = result {
             assert_eq!(state, "halt");
@@ -2214,7 +2225,7 @@ mod tests {
         server.set_computation_order_at(0, opt.file.clone());
 
         let result: Result<(String, usize, String, usize, Vec<String>), String> =
-            server.execute(opt.input, 1000);
+            server.execute(&opt.input, 1000);
         assert!(result.is_ok());
         if let Ok((state, _, output, _, _)) = result {
             assert_eq!(state, "halt");
@@ -2234,7 +2245,7 @@ mod tests {
         server.set_computation_order_at(0, opt.file.clone());
 
         let result: Result<(String, usize, String, usize, Vec<String>), String> =
-            server.execute(opt.input, 1000);
+            server.execute(&opt.input, 1000);
         assert!(result.is_ok());
         if let Ok((state, _, output, _, _)) = result {
             assert_eq!(state, "halt");
@@ -2254,7 +2265,7 @@ mod tests {
         server.set_computation_order_at(0, opt.file.clone());
 
         let result: Result<(String, usize, String, usize, Vec<String>), String> =
-            server.execute(opt.input, 1000);
+            server.execute(&opt.input, 1000);
         assert!(result.is_ok());
         if let Ok((state, _, output, _, _)) = result {
             assert_eq!(state, "halt");
@@ -2277,7 +2288,7 @@ mod tests {
         server.set_computation_order_at(0, opt.file.clone());
 
         let result: Result<(String, usize, String, usize, Vec<String>), String> =
-            server.execute(opt.input, 100000);
+            server.execute(&opt.input, 100000);
         assert!(result.is_ok());
         if let Ok((state, _, output, _, _)) = result {
             assert_eq!(state, "halt");
@@ -2297,7 +2308,7 @@ mod tests {
         server.set_computation_order_at(0, opt.file.clone());
 
         let result: Result<(String, usize, String, usize, Vec<String>), String> =
-            server.execute(opt.input, 1000);
+            server.execute(&opt.input, 1000);
         assert!(result.is_ok());
         if let Ok((state, _, output, _, _)) = result {
             assert_eq!(state, "halt");
@@ -2317,7 +2328,7 @@ mod tests {
         server.set_computation_order_at(0, opt.file.clone());
 
         let result: Result<(String, usize, String, usize, Vec<String>), String> =
-            server.execute(opt.input, 1000);
+            server.execute(&opt.input, 1000);
         assert!(result.is_ok());
         if let Ok((state, _, output, _, _)) = result {
             assert_eq!(state, "accept");

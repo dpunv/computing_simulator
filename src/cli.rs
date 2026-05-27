@@ -142,7 +142,7 @@ pub fn print_status_tm(tm: &turing_machine::TuringMachine) {
 /// * `server` - The computation server instance
 /// * `opt` - Options containing verbosity and other settings
 fn process_results(server: computer::Server, opt: options::Options) {
-    let result = server.clone().execute(opt.input.clone(), opt.max_steps);
+    let result = server.execute(&opt.input, opt.max_steps);
     match result {
         Ok((state, _, tape, steps, computation)) => {
             if opt.verbose < 0 {
@@ -195,7 +195,7 @@ fn interactive_tui(server: &mut computer::Server, opt: options::Options) {
         new_opt.input = input.clone();
         if trimmed_input == "status" {
             match server
-                .get_computer(server.computes_at(0).clone())
+                .get_computer(&server.computes_at(0))
                 .map(|c| c.element.clone())
             {
                 Some(element) => match element {

@@ -429,11 +429,11 @@ impl TuringMachine {
     /// - Maintains computation history for each step of execution
     /// - Stops when reaching max_steps, a final state, or when no valid transitions exist
     pub fn simulate(
-        self,
+        &self,
         input: Vec<String>,
         max_steps: usize,
-        this_computer_object: computer::Computer,
-        context: computer::Server,
+        this_computer_object: &computer::Computer,
+        context: &computer::Server,
         prev_head: usize,
     ) -> Result<computer::SimulationResult, String> {
         if max_steps == 0 {
@@ -469,7 +469,7 @@ impl TuringMachine {
             tapes: tapes.clone(),
             computation: vec![
                 "tm;".to_string()
-                    + &self.initial_state.clone()
+                    + &self.initial_state
                     + ";"
                     + &tapes[0].tape.clone().join(""),
             ],
@@ -524,38 +524,35 @@ impl TuringMachine {
                         let new_state = transition.new_state.clone();
                         this_computation.push(
                             "tm;".to_string()
-                                + &new_state.clone()
+                                + &new_state
                                 + ";"
                                 + &new_tapes[0].tape.clone().join(""),
                         );
                         let subroutine_name: String = this_computer_object
-                            .clone()
-                            .get_mapping(new_state.clone())?;
+                            .get_mapping(&new_state)?;
                         if subroutine_name != *"" {
                             let remaining_steps = max_steps - steps;
                             let subroutine = context
-                                .clone()
-                                .get_computer(subroutine_name.clone())
+                                .get_computer(&subroutine_name)
                                 .ok_or_else(|| {
                                     format!("cannot get computer with name '{}'", subroutine_name)
-                                })?
-                                .clone();
+                                })?;
                             let new_tape_input = if subroutine.is_ram() {
                                 new_tapes[0]
                                     .tape
-                                    .clone()
+                                    
                                     .into_iter()
-                                    .filter(|symb| *symb != self.blank_symbol.clone())
+                                    .filter(|symb| *symb != self.blank_symbol)
                                     .collect::<Vec<String>>()
                                     .join("")
                             } else {
                                 new_tapes[0].tape.clone().join("")
                             };
                             let (_, head_result, tape_result, steps_result, sub_computation) =
-                                subroutine.clone().simulate(
-                                    new_tape_input,
+                                subroutine.simulate(
+                                    &new_tape_input,
                                     remaining_steps,
-                                    context.clone(),
+                                    context,
                                     new_tapes[0].head,
                                 )?;
                             this_computation.extend(sub_computation);
@@ -1149,7 +1146,7 @@ impl TuringMachine {
                 );
             } else {
                 new_tm.add_transition(
-                    initial_state_fake.clone()
+                    initial_state_fake
                         + "<INIT_TP"
                         + (self.tape_count - 1).to_string().as_str()
                         + "_END>",
@@ -1195,17 +1192,17 @@ impl TuringMachine {
                             "key not found: {}",
                             (state.clone() + &tapenum.to_string())
                         ))?
-                        .clone()
+                        
                     {
                         let state_tape =
                             actual_state.clone() + "<R_TP" + &tapenum.to_string() + ">";
-                        let new_state = actual_state.clone()
+                        let new_state = actual_state
                             + "<R_TP"
                             + &tapenum.to_string()
                             + "_S_"
                             + symbol
                             + ">";
-                        let end_state = actual_state.clone()
+                        let end_state = actual_state
                             + "<R_TP"
                             + &tapenum.to_string()
                             + "_S_"
@@ -1295,11 +1292,11 @@ impl TuringMachine {
                     "key not found: {}",
                     (state.clone() + &self.tape_count.to_string())
                 ))?
-                .clone()
+                
             {
                 let splitted0: Vec<&str> = actual_state.split("<R_TP").collect();
                 let key = state
-                    .clone()
+                    
                     //.strip_suffix("<START>")
                     //.unwrap_or(&state)
                     //.to_string()
@@ -1323,25 +1320,25 @@ impl TuringMachine {
                         .clone();
                     for (ind, t) in transitions.iter().enumerate() {
                         for tapenum in 0..self.tape_count {
-                            let state_init_tape = actual_state.clone()
+                            let state_init_tape = actual_state
                                 + "<WRITE_TR"
                                 + &ind.to_string()
                                 + "_TP_"
                                 + &tapenum.to_string()
                                 + "_START>";
-                            let state_mid_tape = actual_state.clone()
+                            let state_mid_tape = actual_state
                                 + "<WRITE_TR"
                                 + &ind.to_string()
                                 + "_TP_"
                                 + &tapenum.to_string()
                                 + "_^FOUND>";
-                            let state_mid_mid_tape = actual_state.clone()
+                            let state_mid_mid_tape = actual_state
                                 + "<WRITE_TR"
                                 + &ind.to_string()
                                 + "_TP_"
                                 + &tapenum.to_string()
                                 + "_COPY>";
-                            let state_end_tape = actual_state.clone()
+                            let state_end_tape = actual_state
                                 + "<WRITE_TR"
                                 + &ind.to_string()
                                 + "_TP_"
@@ -1396,7 +1393,7 @@ impl TuringMachine {
                                                 new_tm.add_transition(
                                                     state_mid_tape.clone(),
                                                     vec![
-                                                        symb.clone()
+                                                        symb
                                                             .strip_suffix("_")
                                                             .unwrap_or(&symb)
                                                             .to_string()
@@ -1404,7 +1401,7 @@ impl TuringMachine {
                                                     ],
                                                     state_end_tape.clone(),
                                                     vec![
-                                                        symb.clone()
+                                                        symb
                                                             .strip_suffix("_")
                                                             .unwrap_or(&symb)
                                                             .to_string()
@@ -1435,7 +1432,7 @@ impl TuringMachine {
                                                 new_tm.add_transition(
                                                     state_mid_tape.clone(),
                                                     vec![
-                                                        symb.clone()
+                                                        symb
                                                             .strip_suffix("_")
                                                             .unwrap_or(&symb)
                                                             .to_string()
@@ -1443,7 +1440,7 @@ impl TuringMachine {
                                                     ],
                                                     state_end_tape.clone(),
                                                     vec![
-                                                        symb.clone()
+                                                        symb
                                                             .strip_suffix("_")
                                                             .unwrap_or(&symb)
                                                             .to_string()
@@ -1498,7 +1495,7 @@ impl TuringMachine {
                                 new_tm.add_transition(
                                     state_end_tape.clone(),
                                     vec![tape_sep_symbol.clone()],
-                                    actual_state.clone()
+                                    actual_state
                                         + "<WRITE_TR"
                                         + &ind.to_string()
                                         + "_TP_"
@@ -1591,7 +1588,7 @@ impl TuringMachine {
                         state_copy_e.clone(),
                         vec![self.blank_symbol.clone()],
                         state
-                            .clone()
+                            
                             .strip_suffix("_COPY>")
                             .unwrap_or(&state)
                             .to_string()
@@ -1639,7 +1636,7 @@ impl TuringMachine {
                     vec![symbol.clone()],
                     state.clone(),
                     vec![symbol
-                        .clone()
+                        
                         .strip_suffix("^")
                         .unwrap_or(&symbol)
                         .to_string()
@@ -1924,7 +1921,7 @@ impl TuringMachine {
                 orig_state_encoding
                     .get(&tm.halt_state)
                     .ok_or(format!("key not found: {}", tm.halt_state))?
-                    .clone()
+                    
             } else {
                 "".to_string()
             },
@@ -1968,7 +1965,7 @@ impl TuringMachine {
                                 orig_alphabet_encoding
                                     .get(symbol)
                                     .ok_or(format!("key not found: {}", symbol))
-                                    .clone()
+                                    
                             })
                             .collect::<Result<Vec<_>, String>>()?
                             .into_iter()
@@ -1985,7 +1982,7 @@ impl TuringMachine {
                                 orig_alphabet_encoding
                                     .get(symbol)
                                     .ok_or(format!("key not found: {}", symbol))
-                                    .clone()
+                                    
                             })
                             .collect::<Result<Vec<_>, String>>()?
                             .into_iter()
@@ -2438,12 +2435,12 @@ mod tests {
 
         // Should accept "1"
         let result: (String, usize, Vec<String>, usize, Vec<String>) = tm
-            .clone()
+            
             .simulate(
                 vec!["1".to_string()],
                 100,
-                computer.clone(),
-                context.clone(),
+                &computer,
+                &context,
                 0,
             )
             .unwrap();
@@ -2451,12 +2448,12 @@ mod tests {
 
         // Should accept "01"
         let result = tm
-            .clone()
+            
             .simulate(
                 vec!["0".to_string(), "1".to_string()],
                 100,
-                computer.clone(),
-                context.clone(),
+                &computer,
+                &context,
                 0,
             )
             .unwrap();
@@ -2464,12 +2461,12 @@ mod tests {
 
         // Should reject "0"
         let result = tm
-            .clone()
+            
             .simulate(
                 vec!["0".to_string()],
                 100,
-                computer.clone(),
-                context.clone(),
+                &computer,
+                &context,
                 0,
             )
             .unwrap();
@@ -2614,36 +2611,36 @@ mod tests {
 
         // Test empty input
         let multi_result = tm
-            .clone()
-            .simulate(vec![], 1000, computer.clone(), context.clone(), 0)
+            
+            .simulate(vec![], 1000, &computer, &context, 0)
             .unwrap();
 
         let single_result = single_tape
-            .clone()
-            .simulate(vec![], 1000, computer.clone(), context.clone(), 0)
+            
+            .simulate(vec![], 1000, &computer, &context, 0)
             .unwrap();
 
         assert_eq!(multi_result.0, single_result.0);
 
         // Test input "0"
         let multi_result = tm
-            .clone()
+            
             .simulate(
                 vec!["0".to_string()],
                 1000,
-                computer.clone(),
-                context.clone(),
+                &computer,
+                &context,
                 0,
             )
             .unwrap();
 
         let single_result = single_tape
-            .clone()
+            
             .simulate(
                 vec!["0".to_string()],
                 1000,
-                computer.clone(),
-                context.clone(),
+                &computer,
+                &context,
                 0,
             )
             .unwrap();
@@ -2652,12 +2649,12 @@ mod tests {
 
         // Test input "01"
         let multi_result = tm
-            .clone()
+            
             .simulate(
                 vec!["0".to_string(), "1".to_string()],
                 1000,
-                computer.clone(),
-                context.clone(),
+                &computer,
+                &context,
                 0,
             )
             .unwrap();
@@ -2723,8 +2720,8 @@ mod tests {
             .simulate(
                 vec!["0".to_string()],
                 100,
-                computer.clone(),
-                context.clone(),
+                &computer,
+                &context,
                 0,
             )
             .unwrap();
@@ -2768,8 +2765,8 @@ mod tests {
             .simulate(
                 vec!["1".to_string()],
                 100,
-                computer.clone(),
-                context.clone(),
+                &computer,
+                &context,
                 1, // Test with head not at start
             )
             .unwrap();
@@ -2820,8 +2817,8 @@ mod tests {
             .simulate(
                 vec!["1".to_string()],
                 100,
-                computer.clone(),
-                context.clone(),
+                &computer,
+                &context,
                 0,
             )
             .unwrap();

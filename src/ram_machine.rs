@@ -196,11 +196,11 @@ impl RamMachine {
     /// * Binary conversion fails
     /// * Subroutine calls fail
     pub fn simulate(
-        self,
+        &self,
         input: String,
         max_steps: usize,
-        this_computer_object: computer::Computer,
-        context: computer::Server,
+        this_computer_object: &computer::Computer,
+        context: &computer::Server,
     ) -> Result<computer::SimulationResult, String> {
         let mut input = input.clone();
         let mut ir: String;
@@ -347,22 +347,19 @@ impl RamMachine {
                     // CALL: call a subroutine
                     let mapping_key = (utils::bin2int(ar.clone())?).to_string();
                     let mapping = this_computer_object
-                        .clone()
-                        .get_mapping(mapping_key.clone())?;
+                        .get_mapping(&mapping_key)?;
                     let subroutine = context
-                        .clone()
-                        .get_computer(mapping.clone())
-                        .ok_or_else(|| format!("cannot find computer with name '{}'", mapping))?
-                        .clone();
-                    let (state, _, tape, steps, sub_computation) = subroutine.clone().simulate(
-                        acc.clone(),
+                        .get_computer(&mapping)
+                        .ok_or_else(|| format!("cannot find computer with name '{}'", mapping))?;
+                    let (state, _, tape, sub_steps, sub_computation) = subroutine.simulate(
+                        &acc,
                         max_steps - steps,
-                        context.clone(),
+                        context,
                         0,
                     )?;
                     computation.extend(sub_computation);
                     if state == "accept" || state == "halt" {
-                        match subroutine.element {
+                        match &subroutine.element {
                             computer::ComputingElem::Tm(m) => {
                                 acc = tape
                                     .into_iter()

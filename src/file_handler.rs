@@ -138,11 +138,11 @@ pub fn handle_file_reads(
     for (name, f) in mapping_raw {
         if f == file_name {
             c.add_mapping(name, f);
-        } else if !context.contains(f.clone()) {
+        } else if !context.contains(&f) {
             let new_comp = handle_file_reads(f.clone(), context)?;
             context.add_computer(f.clone(), new_comp);
             c.add_mapping(name, f);
-        } else if (c.get_mapping(name.clone())?).is_empty() {
+        } else if (c.get_mapping(&name)?).is_empty() {
             c.add_mapping(name.clone(), f.clone());
         }
     }
