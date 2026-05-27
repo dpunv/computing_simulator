@@ -52,6 +52,20 @@ pub fn input_string_to_vec(input_alphabet: Vec<String>, input: String) -> Vec<St
         if input_alphabet.contains(&current_symbol) {
             vec.push(current_symbol.clone());
             current_symbol = String::new();
+        } else {
+            let starts_any = input_alphabet.iter().any(|s| s.starts_with(&current_symbol));
+            if !starts_any {
+                let mut chars = current_symbol.chars();
+                if let Some(first) = chars.next() {
+                    vec.push(first.to_string());
+                }
+                current_symbol = chars.collect();
+            }
+        }
+    }
+    if !current_symbol.is_empty() {
+        for c in current_symbol.chars() {
+            vec.push(c.to_string());
         }
     }
     vec
@@ -114,7 +128,7 @@ pub fn uint2str(n: usize, alphabet: Vec<String>) -> Result<String, String> {
         let m = x.len();
         let y = x[1..m].to_string();
         p += 1;
-        let bitnum = (alphabet.len() as f64).log2().ceil() as usize;
+        let bitnum = std::cmp::max(1, (alphabet.len() as f64).log2().ceil() as usize);
         let padding = if y.len() % bitnum != 0 {
             bitnum - (y.len() % bitnum)
         } else {
@@ -141,7 +155,7 @@ pub fn uint2str(n: usize, alphabet: Vec<String>) -> Result<String, String> {
 ///
 /// A `Result` containing the string representation if successful, or an error message if the input is invalid.
 pub fn bin2alphabet(s: String, alphabet: Vec<String>) -> Result<String, String> {
-    let bitnum: usize = (alphabet.len() as f64).log2().ceil() as usize;
+    let bitnum: usize = std::cmp::max(1, (alphabet.len() as f64).log2().ceil() as usize);
     if s.is_empty() || (s.len() % bitnum != 0) {
         return Err(format!("wrong input string length: {}", s.len()));
     }
@@ -152,7 +166,11 @@ pub fn bin2alphabet(s: String, alphabet: Vec<String>) -> Result<String, String> 
             i * bitnum,
             ((i + 1) * bitnum)
         ))?;
-        result.push_str(&alphabet[bin2int(symbol.to_string())? as usize]);
+        let idx = bin2int(symbol.to_string())? as usize;
+        if idx >= alphabet.len() {
+            return Err(format!("Index {} is out of alphabet bounds {}", idx, alphabet.len()));
+        }
+        result.push_str(&alphabet[idx]);
     }
     Ok(result)
 }
@@ -318,5 +336,20 @@ mod tests {
         assert!(!is_numeric("-123".to_string()));
         assert!(!is_numeric("+123".to_string()));
         assert!(!is_numeric("12_3".to_string()));
+    }
+
+    #[test]
+    fn test_bin2alphabet_out_of_bounds() {
+        let alphabet = vec!["a".to_string(), "b".to_string(), "c".to_string()];
+        assert!(bin2alphabet("11".to_string(), alphabet).is_err());
+    }
+
+    #[test]
+    fn test_input_string_to_vec_fallback() {
+        let alphabet = vec!["aa".to_string(), "bb".to_string()];
+        assert_eq!(
+            input_string_to_vec(alphabet, "aaxbb".to_string()),
+            vec!["aa", "x", "bb"]
+        );
     }
 }

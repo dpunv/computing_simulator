@@ -191,52 +191,6 @@ pub fn build_regex_tree(input: &str) -> Result<Regex, String> {
     parse_regex(&mut chars)
 }
 
-/// Converts a parsed regular expression syntax tree into a finite state automaton (FSA)
-/// represented as a Turing Machine.
-///
-/// This function takes a reference to a `Regex` syntax tree and constructs a corresponding
-/// Turing Machine that recognizes the same language as the regular expression. The resulting
-/// Turing Machine uses the input alphabet derived from the symbols in the regex and creates
-/// states and transitions according to the structure of the regex tree.
-///
-/// The conversion supports the following regex operations:
-/// - Concatenation
-/// - Alternation (`|`)
-/// - Kleene star (`*`)
-/// - Kleene plus (`+`)
-/// - Optional (`?`)
-/// - Symbols (including escaped characters)
-///
-/// # Arguments
-///
-/// * `regex` - A reference to a `Regex` syntax tree representing the regular expression to convert.
-///
-/// # Returns
-///
-/// * `Ok(turing_machine::TuringMachine)` - If the conversion is successful, returns a Turing Machine
-///   that acts as a finite state automaton for the given regex.
-/// * `Err(String)` - If the regex tree is malformed or contains unsupported constructs, returns an error message.
-///
-/// # Errors
-///
-/// Returns an error if the regex tree is invalid or if required operands for operations are missing.
-///
-/// # See Also
-///
-/// - [`build_regex_tree`] for parsing a regex string into a syntax tree.
-/// - [`turing_machine::TuringMachine`] for the FSA representation.
-fn parse_regex(chars: &mut Peekable<Chars>) -> Result<Regex, String> {
-    let mut left = parse_concat(chars)?;
-
-    while let Some('|') = chars.peek() {
-        chars.next();
-        let right = parse_concat(chars)?;
-        left = Regex::operation(Operation::Or, Some(Box::new(left)), Some(Box::new(right)));
-    }
-
-    Ok(left)
-}
-
 /// Parses a regular expression from a stream of characters, handling alternation (`|`) operations.
 ///
 /// This function is the entry point for the recursive descent parser. It attempts to parse a regular expression
@@ -256,74 +210,16 @@ fn parse_regex(chars: &mut Peekable<Chars>) -> Result<Regex, String> {
 /// # Errors
 ///
 /// Returns an error if the input contains invalid syntax or if a required operand is missing for an alternation.
-fn parse_concat(chars: &mut Peekable<Chars>) -> Result<Regex, String> {
-    let mut left = parse_unary(chars)?;
+fn parse_regex(chars: &mut Peekable<Chars>) -> Result<Regex, String> {
+    let mut left = parse_concat(chars)?;
 
-    while let Some(&ch) = chars.peek() {
-        if (ch == '(' || ch.is_alphanumeric() || ch == '\\') || (ch != ')' && ch != '|') {
-            let right = parse_unary(chars)?;
-            left = Regex::operation(
-                Operation::Concat,
-                Some(Box::new(left)),
-                Some(Box::new(right)),
-            );
-        } else {
-            break;
-        }
+    while let Some('|') = chars.peek() {
+        chars.next();
+        let right = parse_concat(chars)?;
+        left = Regex::operation(Operation::Or, Some(Box::new(left)), Some(Box::new(right)));
     }
 
     Ok(left)
-}
-
-/// Parses a primary expression from a stream of characters, handling symbols, escaped characters,
-/// and grouped sub-expressions (parentheses).
-///
-/// This function is responsible for parsing the most basic units of a regular expression:
-/// - Single symbols (alphanumeric or other allowed characters)
-/// - Escaped characters (e.g., `\*`, `\+`)
-/// - Grouped expressions within parentheses (e.g., `(a|b)`)
-///
-/// # Arguments
-///
-/// * `chars` - A mutable reference to a `Peekable<Chars>` iterator over the input regular expression string.
-///
-/// # Returns
-///
-/// * `Ok(Regex)` - The parsed primary expression as a `Regex` node if successful.
-/// * `Err(String)` - An error message if the input is invalid or a syntax error is encountered.
-///
-/// # Errors
-///
-/// Returns an error if:
-/// - There is an unmatched parenthesis.
-/// - An escape character is not followed by a valid character.
-/// - An unexpected character is encountered.
-///
-/// # See Also
-/// - [`parse_concat`] for parsing concatenation expressions.
-///
-fn parse_unary(chars: &mut Peekable<Chars>) -> Result<Regex, String> {
-    let mut expr = parse_primary(chars)?;
-
-    while let Some(&ch) = chars.peek() {
-        match ch {
-            '*' => {
-                chars.next();
-                expr = Regex::operation(Operation::KleeneStar, Some(Box::new(expr)), None);
-            }
-            '+' => {
-                chars.next();
-                expr = Regex::operation(Operation::KleneePlus, Some(Box::new(expr)), None);
-            }
-            '?' => {
-                chars.next();
-                expr = Regex::operation(Operation::Optional, Some(Box::new(expr)), None);
-            }
-            _ => break,
-        }
-    }
-
-    Ok(expr)
 }
 
 /// Parses a concatenation expression from a stream of characters in a regular expression.
@@ -349,6 +245,84 @@ fn parse_unary(chars: &mut Peekable<Chars>) -> Result<Regex, String> {
 /// # See Also
 ///
 /// - [`parse_unary`] for parsing unary expressions.
+fn parse_concat(chars: &mut Peekable<Chars>) -> Result<Regex, String> {
+    let mut left = parse_unary(chars)?;
+
+    while let Some(&ch) = chars.peek() {
+        if (ch == '(' || ch.is_alphanumeric() || ch == '\\') || (ch != ')' && ch != '|') {
+            let right = parse_unary(chars)?;
+            left = Regex::operation(
+                Operation::Concat,
+                Some(Box::new(left)),
+                Some(Box::new(right)),
+            );
+        } else {
+            break;
+        }
+    }
+
+    Ok(left)
+}
+
+/// Parses a unary expression from a stream of characters, handling operations like Kleene star (`*`),
+/// Kleene plus (`+`), and optional (`?`).
+///
+/// # Arguments
+///
+/// * `chars` - A mutable reference to a `Peekable<Chars>` iterator over the input regular expression string.
+///
+/// # Returns
+///
+/// * `Ok(Regex)` - The parsed unary expression as a `Regex` node if successful.
+/// * `Err(String)` - An error message if the input is invalid or a syntax error is encountered.
+///
+fn parse_unary(chars: &mut Peekable<Chars>) -> Result<Regex, String> {
+    let mut expr = parse_primary(chars)?;
+
+    while let Some(&ch) = chars.peek() {
+        match ch {
+            '*' => {
+                chars.next();
+                expr = Regex::operation(Operation::KleeneStar, Some(Box::new(expr)), None);
+            }
+            '+' => {
+                chars.next();
+                expr = Regex::operation(Operation::KleneePlus, Some(Box::new(expr)), None);
+            }
+            '?' => {
+                chars.next();
+                expr = Regex::operation(Operation::Optional, Some(Box::new(expr)), None);
+            }
+            _ => break,
+        }
+    }
+
+    Ok(expr)
+}
+
+/// Parses a primary expression from a stream of characters, handling symbols, escaped characters,
+/// and grouped sub-expressions (parentheses).
+///
+/// This function is responsible for parsing the most basic units of a regular expression:
+/// - Single symbols (alphanumeric or other allowed characters)
+/// - Escaped characters (e.g., `\*`, `\+`)
+/// - Grouped expressions within parentheses (e.g., `(a|b)`)
+///
+/// # Arguments
+///
+/// * `chars` - A mutable reference to a `Peekable<Chars>` iterator over the input regular expression string.
+///
+/// # Returns
+///
+/// * `Ok(Regex)` - The parsed primary expression as a `Regex` node if successful.
+/// * `Err(String)` - An error message if the input is invalid or a syntax error is encountered.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - There is an unmatched parenthesis.
+/// - An escape character is not followed by a valid character.
+/// - An unexpected character is encountered.
 ///
 fn parse_primary(chars: &mut Peekable<Chars>) -> Result<Regex, String> {
     match chars.peek() {
@@ -421,19 +395,23 @@ pub fn regex_to_fsa(regex: &Regex) -> Result<turing_machine::TuringMachine, Stri
     fsa.tape_alphabet = fsa.input_alphabet.clone();
     fsa.tape_alphabet.push(fsa.blank_symbol.clone());
 
-    for transition in fsa.transitions.clone().iter() {
+    let mut new_transitions = Vec::new();
+    for transition in fsa.transitions.iter() {
         if transition.symbols[0] == fsa.blank_symbol {
-            for symbol in fsa.input_alphabet.clone().iter() {
-                fsa.add_transition(
-                    transition.state.clone(),
-                    vec![symbol.clone()],
-                    transition.new_state.clone(),
-                    vec![symbol.clone()],
-                    transition.directions.clone(),
-                );
+            for symbol in fsa.tape_alphabet.iter() {
+                new_transitions.push(turing_machine::Transition {
+                    state: transition.state.clone(),
+                    symbols: vec![symbol.clone()],
+                    new_state: transition.new_state.clone(),
+                    new_symbols: vec![symbol.clone()],
+                    directions: transition.directions.clone(),
+                });
             }
+        } else {
+            new_transitions.push(transition.clone());
         }
     }
+    fsa.transitions = new_transitions;
 
     let begin = fsa.add_state();
     fsa.initial_state = begin.clone();

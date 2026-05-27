@@ -197,12 +197,11 @@ impl RamMachine {
     /// * Subroutine calls fail
     pub fn simulate(
         &self,
-        input: String,
+        mut input: String,
         max_steps: usize,
         this_computer_object: &computer::Computer,
         context: &computer::Server,
     ) -> Result<computer::SimulationResult, String> {
-        let mut input = input.clone();
         let mut ir: String;
         let mut out: String = "".to_string();
         let mut pc: String = "0".to_string();
@@ -212,12 +211,12 @@ impl RamMachine {
         let mut input_head = 0;
         let mut memory: std::collections::HashMap<String, String> =
             std::collections::HashMap::new();
-        for (index, instr) in self.instructions.clone().into_iter().enumerate() {
+        for (index, instr) in self.instructions.iter().enumerate() {
             if !instr.opcode.is_empty() {
                 if instr.label.is_empty() {
                     memory.insert(
                         utils::int2bin(index as i32, 0),
-                        instr.opcode.clone() + &instr.operand.clone(),
+                        instr.opcode.clone() + &instr.operand,
                     );
                 } else {
                     memory.insert(
@@ -226,7 +225,7 @@ impl RamMachine {
                             + self
                                 .labels_map
                                 .get(&instr.label)
-                                .ok_or(format!("key not found: {}", instr.label))?,
+                                .ok_or_else(|| format!("key not found: {}", instr.label))?,
                     );
                 }
             } else {
@@ -235,12 +234,12 @@ impl RamMachine {
         }
         let mut computation = Vec::new();
         let mut steps = 0;
+        let mut halted = false;
         while steps < max_steps {
             steps += 1;
             let mem_val = memory
                 .get(&pc)
-                .ok_or(format!("key not found: {}", pc))?
-                .clone();
+                .ok_or_else(|| format!("key not found: {}", pc))?;
             if mem_val.len() < 4 {
                 return Err(format!(
                     "Invalid memory value at address {}: '{}' is shorter than 4 bits",
@@ -251,15 +250,22 @@ impl RamMachine {
             ar = mem_val[4..].to_string();
             pc = utils::int2bin(utils::bin2int(pc)? + 1, 0);
             computation
-                .push("ram;".to_string() + &ir.clone() + ";" + &ar.clone() + ";" + &acc.clone());
+                .push(format!("ram;{};{};{}", ir, ar, acc));
             match ir.as_str() {
                 "0000" => {
                     // R: Read [operands] bit from input
                     let end = input_head + (utils::bin2int(ar)? as usize);
                     if input.len() < end {
+                        let start = std::cmp::min(input_head, input.len());
+                        let slice = input[start..input.len()].to_string();
+                        let value = if slice.is_empty() {
+                            0
+                        } else {
+                            utils::bin2int(slice)?
+                        };
                         acc = format!(
                             "{:0>width$b}",
-                            utils::bin2int(input[input_head..input.len()].to_string())?,
+                            value,
                             width = end - input_head
                         )
                     } else {
@@ -283,7 +289,7 @@ impl RamMachine {
                 }
                 "0011" => {
                     // W: Write ACC to output
-                    out = out + &acc.clone();
+                    out.push_str(&acc);
                 }
                 "0100" => {
                     // L: Load AR to ACC
@@ -297,6 +303,9 @@ impl RamMachine {
                 }
                 "0101" => {
                     // A: Add AR to ACC
+                    if !memory.contains_key(&ar) {
+                        memory.insert(ar.clone(), "0".to_string());
+                    }
                     acc = utils::int2bin(
                         utils::bin2int(acc)?
                             + utils::bin2int(
@@ -310,6 +319,9 @@ impl RamMachine {
                 }
                 "0110" => {
                     // S: Subtract AR from ACC
+                    if !memory.contains_key(&ar) {
+                        memory.insert(ar.clone(), "0".to_string());
+                    }
                     acc = utils::int2bin(
                         utils::bin2int(acc)?
                             - (utils::bin2int(
@@ -341,6 +353,7 @@ impl RamMachine {
                 }
                 "1011" => {
                     // HALT: Halt
+                    halted = true;
                     break;
                 }
                 "1100" => {
@@ -351,9 +364,9 @@ impl RamMachine {
                     let subroutine = context
                         .get_computer(&mapping)
                         .ok_or_else(|| format!("cannot find computer with name '{}'", mapping))?;
-                    let (state, _, tape, sub_steps, sub_computation) = subroutine.simulate(
+                    let (state, _, tape, _sub_steps, sub_computation) = subroutine.simulate(
                         &acc,
-                        max_steps - steps,
+                        max_steps.saturating_sub(steps),
                         context,
                         0,
                     )?;
@@ -398,11 +411,16 @@ impl RamMachine {
                 }
                 _ => {
                     // default: Halt
+                    halted = true;
                     break;
                 }
             }
         }
-        Ok(("halt".to_string(), 0, vec![out], steps, computation))
+        if halted {
+            Ok(("halt".to_string(), 0, vec![out], steps, computation))
+        } else {
+            Ok(("timeout".to_string(), 0, vec![out], steps, computation))
+        }
     }
 
     /// Converts the RAM machine to its encoding representation.
@@ -421,6 +439,15 @@ impl RamMachine {
     pub fn to_encoding(&self) -> Result<computer::EncodingResult, String> {
         let mut encoding = "#".to_string();
         for (counter, instr) in self.instructions.clone().into_iter().enumerate() {
+            let resolved_operand = if !instr.operand.is_empty() {
+                instr.operand.clone()
+            } else if !instr.label.is_empty() {
+                self.labels_map.get(&instr.label)
+                    .ok_or_else(|| format!("label key not found: {}", instr.label))?
+                    .clone()
+            } else {
+                "0".to_string()
+            };
             if instr.opcode == "1011" || instr.opcode == "0011" {
                 // Write and Halt does not have operands
                 encoding =
@@ -430,7 +457,7 @@ impl RamMachine {
                     + &utils::int2bin(counter as i32, 0)
                     + ","
                     + &instr.opcode
-                    + &(utils::int2bin(utils::bin2int(instr.operand)?, 0))
+                    + &(utils::int2bin(utils::bin2int(resolved_operand)?, 0))
                     + "#";
             }
         }
@@ -569,7 +596,7 @@ mod tests {
             computation_order: Vec::new(),
         };
 
-        let result = ram.simulate("".to_string(), 100, computer, context);
+        let result = ram.simulate("".to_string(), 100, &computer, &context);
         assert!(result.is_ok());
         let (state, _, output, steps, _) = result.unwrap();
         assert_eq!(state, "halt");
@@ -611,7 +638,7 @@ mod tests {
             computation_order: Vec::new(),
         };
 
-        let result = ram.simulate("1111".to_string(), 100, computer, context);
+        let result = ram.simulate("1111".to_string(), 100, &computer, &context);
         assert!(result.is_ok());
         let (_, _, output, _, _) = result.unwrap();
         assert_eq!(output[0], "1111");
@@ -661,7 +688,7 @@ mod tests {
             computation_order: Vec::new(),
         };
 
-        let result = ram.simulate("".to_string(), 100, computer, context);
+        let result = ram.simulate("".to_string(), 100, &computer, &context);
         assert!(result.is_ok());
         let (_, _, output, _, _) = result.unwrap();
         assert_eq!(output[0], "1010"); // 5 + 5 = 10 in binary
@@ -720,7 +747,7 @@ mod tests {
             computation_order: Vec::new(),
         };
 
-        let result = ram.simulate("11100111".to_string(), 100, computer, context);
+        let result = ram.simulate("11100111".to_string(), 100, &computer, &context);
         assert!(result.is_ok());
         let (_, _, output, _, _) = result.unwrap();
         assert_eq!(output[0], "10001");
@@ -789,7 +816,7 @@ mod tests {
             computation_order: Vec::new(),
         };
 
-        let result = ram.simulate("".to_string(), 100, computer, context);
+        let result = ram.simulate("".to_string(), 100, &computer, &context);
         assert!(result.is_ok());
         let (_, _, output, _, _) = result.unwrap();
         assert_eq!(output[0], "1100");
@@ -848,7 +875,7 @@ mod tests {
             computation_order: Vec::new(),
         };
 
-        let result = ram.simulate("".to_string(), 100, computer, context);
+        let result = ram.simulate("".to_string(), 100, &computer, &context);
         assert!(result.is_ok());
         let (_, _, output, _, _) = result.unwrap();
         assert_eq!(output[0], "1");
@@ -888,7 +915,7 @@ mod tests {
             computation_order: Vec::new(),
         };
 
-        let result = ram.simulate("11".to_string(), 100, computer, context);
+        let result = ram.simulate("11".to_string(), 100, &computer, &context);
         assert!(result.is_ok());
         let (_, _, output, _, _) = result.unwrap();
         assert_eq!(output[0], "0011");
@@ -943,7 +970,7 @@ mod tests {
             computation_order: Vec::new(),
         };
 
-        let result = ram.simulate("".to_string(), 100, computer, context);
+        let result = ram.simulate("".to_string(), 100, &computer, &context);
         assert!(result.is_ok());
         let (_, _, output, _, _) = result.unwrap();
         assert_eq!(output[0], "11111111111111111111111111111011");
@@ -1003,7 +1030,7 @@ mod tests {
             computation_order: Vec::new(),
         };
 
-        let result = ram.simulate("".to_string(), 1, computer, context);
+        let result = ram.simulate("".to_string(), 1, &computer, &context);
         assert!(result.is_ok());
     }
 
@@ -1029,7 +1056,7 @@ mod tests {
             computation_order: Vec::new(),
         };
 
-        let result = ram.simulate("".to_string(), 10, computer, context);
+        let result = ram.simulate("".to_string(), 10, &computer, &context);
         assert!(result.is_ok());
         let (_, _, _, steps, _) = result.unwrap();
         assert_eq!(steps, 10);
@@ -1069,9 +1096,56 @@ mod tests {
             computation_order: Vec::new(),
         };
 
-        let result = ram.simulate("".to_string(), 100, computer, context);
+        let result = ram.simulate("".to_string(), 100, &computer, &context);
         assert!(result.is_ok());
         let (_, _, output, _, _) = result.unwrap();
         assert_eq!(output[0], "0");
+    }
+
+    #[test]
+    fn test_ram_out_of_bounds_read() {
+        let ram = RamMachine {
+            instructions: vec![
+                Instruction {
+                    opcode: "0001".to_string(),  // MIR
+                    operand: "1010".to_string(), // Move head right by 10 (past end of input)
+                    label: "".to_string(),
+                },
+                Instruction {
+                    opcode: "0000".to_string(),  // R
+                    operand: "0010".to_string(), // Read 2 bits
+                    label: "".to_string(),
+                },
+                Instruction {
+                    opcode: "0011".to_string(), // W
+                    operand: "".to_string(),    // Write to output
+                    label: "".to_string(),
+                },
+                Instruction {
+                    opcode: "1011".to_string(), // H
+                    operand: "".to_string(),
+                    label: "".to_string(),
+                },
+            ],
+            labels_map: std::collections::HashMap::new(),
+            translation_map: std::collections::HashMap::new(),
+        };
+
+        let computer = computer::Computer {
+            element: computer::ComputingElem::Ram(Box::new(ram.clone())),
+            mapping: std::collections::HashMap::new(),
+        };
+
+        let context = computer::Server {
+            map_computers: std::collections::HashMap::new(),
+            computation_order: Vec::new(),
+        };
+
+        // Input is short ("11"). Move right by 10 puts head way past end.
+        // It should read "00" instead of panicking.
+        let result = ram.simulate("11".to_string(), 100, &computer, &context);
+        assert!(result.is_ok());
+        let (_, _, output, _, _) = result.unwrap();
+        assert_eq!(output[0], "00");
     }
 }

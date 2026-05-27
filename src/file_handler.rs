@@ -105,7 +105,7 @@ pub fn handle_file_reads(
     context: &mut computer::Server,
 ) -> Result<computer::Computer, String> {
     let file = std::fs::read_to_string(file_name.clone())
-        .map_err(|_| "Error reading the file".to_string())?;
+        .map_err(|e| format!("Error reading the file '{}': {}", file_name, e))?;
 
     let mut lines: Vec<String> = file
         .lines()
@@ -186,6 +186,9 @@ pub fn read_turing_machine(
     lines: Vec<String>,
     computer: &mut computer::Computer,
 ) -> Result<computer::Computer, String> {
+    if lines.len() < 9 {
+        return Err("Turing machine definition must have at least 9 lines".to_string());
+    }
     let mut tm = turing_machine::TuringMachine::new();
 
     tm.initial_state = lines[0].to_string();
@@ -266,6 +269,9 @@ pub fn read_finite_state_machine(
     lines: Vec<String>,
     computer: &mut computer::Computer,
 ) -> Result<computer::Computer, String> {
+    if lines.len() < 4 {
+        return Err("Finite State Machine definition must have at least 4 lines".to_string());
+    }
     let mut tm = turing_machine::TuringMachine::new();
     tm.blank_symbol = " ".to_string();
 
@@ -325,6 +331,13 @@ pub fn read_finite_state_machine(
                     vec![turing_machine::Direction::Stay],
                 );
             }
+            tm.add_transition(
+                transition_data[0].to_string(),
+                vec![tm.blank_symbol.clone()],
+                transition_data[1].to_string(),
+                vec![tm.blank_symbol.clone()],
+                vec![turing_machine::Direction::Stay],
+            );
         } else if transition_data.len() == 3 {
             tm.add_transition(
                 transition_data[0].to_string(),
@@ -365,6 +378,9 @@ pub fn read_pushdown_automaton(
     lines: Vec<String>,
     computer: &mut computer::Computer,
 ) -> Result<computer::Computer, String> {
+    if lines.len() < 6 {
+        return Err("Pushdown Automaton definition must have at least 6 lines".to_string());
+    }
     let mut tm = turing_machine::TuringMachine::new();
     tm.tape_count = 2;
     tm.blank_symbol = lines[5].to_string();
@@ -408,8 +424,6 @@ pub fn read_pushdown_automaton(
             ],
         );
     }
-
-    tm.states.push(final_state);
 
     let input_alphabet: Vec<&str> = lines[3].split(" ").collect();
     for symbol in input_alphabet {
@@ -565,6 +579,9 @@ pub fn read_tm_from_encoding(
     lines: Vec<String>,
     computer: &mut computer::Computer,
 ) -> Result<computer::Computer, String> {
+    if lines.is_empty() {
+        return Err("TM encoding definition must have at least 1 line".to_string());
+    }
     let encoding = lines[0].to_string();
     if lines.len() < 2 {
         computer.set_turing(turing_machine::TuringMachine::encoding_to_tm(encoding)?);
@@ -740,24 +757,49 @@ pub fn read_ram_program_from_encoding(
     lines: Vec<String>,
     computer: &mut computer::Computer,
 ) -> Result<computer::Computer, String> {
+    if lines.is_empty() {
+        return Err("RAM program encoding definition must have at least 1 line".to_string());
+    }
     let line = lines[0]
         .strip_prefix("#")
         .ok_or_else(|| "cannot strip prefix #".to_string())?
         .strip_suffix("#")
         .ok_or_else(|| "cannot strip suffix #".to_string())?;
-    let mut instr = Vec::new();
+    let mut pairs = Vec::new();
     for elem in line.split("#") {
+        if elem.is_empty() {
+            continue;
+        }
         let splitted = elem.split(",").collect::<Vec<&str>>();
-        if !splitted.is_empty() {
-            instr.insert(
-                (utils::bin2int(splitted[0].to_string())?) as usize,
+        if splitted.len() >= 2 {
+            let idx = utils::bin2int(splitted[0].to_string())? as usize;
+            if splitted[1].len() < 4 {
+                return Err("Instruction encoding too short".to_string());
+            }
+            pairs.push((
+                idx,
                 ram_machine::Instruction {
                     opcode: splitted[1][0..4].to_string(),
                     operand: splitted[1][4..].to_string(),
                     label: "".to_string(),
                 },
-            );
+            ));
         }
+    }
+    if pairs.is_empty() {
+        return Err("No instructions found in encoding".to_string());
+    }
+    let max_idx = pairs.iter().map(|(idx, _)| *idx).max().unwrap();
+    let mut instr = vec![
+        ram_machine::Instruction {
+            opcode: "".to_string(),
+            operand: "".to_string(),
+            label: "".to_string(),
+        };
+        max_idx + 1
+    ];
+    for (idx, inst) in pairs {
+        instr[idx] = inst;
     }
 
     computer.set_ram(ram_machine::RamMachine {
@@ -785,6 +827,9 @@ pub fn read_regex(
     lines: Vec<String>,
     computer: &mut computer::Computer,
 ) -> Result<computer::Computer, String> {
+    if lines.is_empty() {
+        return Err("Regex definition must have at least 1 line".to_string());
+    }
     computer.set_turing(regex_to_fsa(&regex::build_regex_tree(&lines[0])?)?);
     Ok(computer.clone())
 }
@@ -831,6 +876,9 @@ pub fn read_lambda(
             force_currying: false,
         })
         .collect();
+    if readed.is_empty() {
+        return Err("Lambda definition must have at least one valid expression".to_string());
+    }
     computer.set_lambda(readed[0].clone());
     Ok(computer.clone())
 }
@@ -1073,6 +1121,15 @@ mod tests {
 
         let result = handle_file_reads("temp.txt".to_string(), &mut context);
         std::fs::remove_file("temp.txt").unwrap();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_read_ram_program_from_encoding_consecutive_hashes() {
+        let mut computer = computer::Computer::new();
+        // Notice consecutive hashes ## and trailing hash # after that. It should skip the empty slice.
+        let lines = vec!["#0,00001##1,00010#".to_string()];
+        let result = read_ram_program_from_encoding(lines, &mut computer);
         assert!(result.is_ok());
     }
 }

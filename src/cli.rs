@@ -146,7 +146,8 @@ fn process_results(server: computer::Server, opt: options::Options) {
     match result {
         Ok((state, _, tape, steps, computation)) => {
             if opt.verbose < 0 {
-                panic!("Invalid verbose level");
+                eprintln!("Error: Invalid verbose level");
+                return;
             }
             if opt.verbose >= 0 {
                 println!("{}", state);
@@ -192,7 +193,7 @@ fn interactive_tui(server: &mut computer::Server, opt: options::Options) {
         };
         let mut new_opt = opt.clone();
         let trimmed_input = input.trim().to_string();
-        new_opt.input = input.clone();
+        new_opt.input = trimmed_input.clone();
         if trimmed_input == "status" {
             match server
                 .get_computer(&server.computes_at(0))
@@ -486,8 +487,8 @@ fn handle_computation(options: &mut options::Options) {
                     }
                 }
             }
-            if options.convert_to_tm {
-                println!("Error: invalid option --convert-to-ran on ram file");
+            if options.convert_to_ram {
+                println!("Error: invalid option --convert-to-ram on ram file");
             }
             if options.convert_to_singletape {
                 println!("Error: invalid option --convert-to-singletape on non-tm file");

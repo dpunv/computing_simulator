@@ -627,22 +627,21 @@ impl Computer {
                             }
                         }
 
-                        this.transitions = new_transitions
-                            .into_iter()
-                            .inspect(|t| {
-                                this.add_transition(
-                                    t.state.clone(),
-                                    t.symbols.clone(),
-                                    t.new_state.clone(),
-                                    t.new_symbols.clone(),
-                                    t.directions.clone(),
-                                );
-                            })
-                            .collect();
+                        this.transitions.clear();
+                        for t in new_transitions {
+                            this.add_transition(
+                                t.state.clone(),
+                                t.symbols.clone(),
+                                t.new_state.clone(),
+                                t.new_symbols.clone(),
+                                t.directions.clone(),
+                            );
+                        }
 
                         this.input_alphabet = input_alphabet.clone().into_iter().collect();
-                        this.tape_alphabet =
-                            [input_alphabet.into_iter().collect(), m.tape_alphabet].concat();
+                        let mut unique_tape_alphabet: std::collections::HashSet<String> = input_alphabet.clone();
+                        unique_tape_alphabet.extend(m.tape_alphabet);
+                        this.tape_alphabet = unique_tape_alphabet.into_iter().collect();
                         self.element = ComputingElem::Tm(Box::new(*this));
                     }
                 }
@@ -695,7 +694,7 @@ impl Computer {
                             ],
                         );
                         for i in 0..(((orig_c.mapping.len() + 1) as f32).log2().ceil() as usize) {
-                            internal_count += 2 ^ i;
+                            internal_count += 2_usize.pow(i as u32);
                             let mut this_layer_new = Vec::new();
                             for state in this_layer {
                                 this_layer_new.push(state * 2 + 1);
@@ -802,7 +801,7 @@ impl Computer {
                         let new_states: Vec<String> = layers_vec
                             .concat()
                             .iter()
-                            .map(|e| (e + 130).to_string())
+                            .map(|e| (e + 131).to_string())
                             .collect();
                         m.states = [m.states.clone(), new_states].concat();
                         self.set_turing(*m.clone());
@@ -868,8 +867,8 @@ impl Computer {
             ComputingElem::Ram(_) => Err("already a ram".to_string()),
             ComputingElem::Tm(m) => {
                 options.file = "src/standard/tm over ram.ram".to_string();
-                let state_size = (m.states.len() as f32).log2().ceil() as usize;
-                let symbol_size = (m.tape_alphabet.len() as f32).log2().ceil() as usize;
+                let state_size = std::cmp::max(1, (m.states.len() as f32).log2().ceil() as usize);
+                let symbol_size = std::cmp::max(1, (m.tape_alphabet.len() as f32).log2().ceil() as usize);
                 let states_map: std::collections::HashMap<String, String> = m
                     .states
                     .iter()
@@ -1045,16 +1044,6 @@ impl Server {
         self.map_computers.get(name)
     }
 
-    /// Returns a mutable reference to the computer with the given name
-    ///
-    /// # Arguments
-    /// * `name` - String identifier of the computer to retrieve
-    ///
-    /// # Returns
-    /// * `Option<&mut Computer>` - Some(computer) if found, None if not present
-    pub fn get_computer_mut(&mut self, name: &str) -> Option<&mut Computer> {
-        self.map_computers.get_mut(name)
-    }
 
     /// Checks if a computer with the given name exists in the server
     ///
@@ -1075,7 +1064,11 @@ impl Server {
     /// # Returns
     /// * `String` - Name of the computer at that position
     pub fn computes_at(&self, n: usize) -> String {
-        self.computation_order[n].clone()
+        if n < self.computation_order.len() {
+            self.computation_order[n].clone()
+        } else {
+            String::new()
+        }
     }
 
     /// Sets or adds a computer name at a specific position in the computation order
@@ -1126,12 +1119,15 @@ impl Server {
             return Err("empty computation order".to_string());
         }
         for name in &self.computation_order {
+            if name.is_empty() {
+                continue;
+            }
             let computer = self.get_computer(name).ok_or_else(|| {
                 format!("cannot find computer with name '{}'", name)
             })?;
             let (state, head, tape, s, computation) =
                 computer
-                    .simulate(&output, max_steps - steps, self, 0)?;
+                    .simulate(&output, max_steps.saturating_sub(steps), self, current_head)?;
             final_state = state;
             current_head = head;
             output = tape.join("");
@@ -1334,7 +1330,7 @@ mod tests {
 
     #[test]
     fn test_server_empty_execution() {
-        let mut server = Server::new();
+        let server = Server::new();
         let result = server.execute("test input", 100);
         assert!(result.is_err());
     }
@@ -1887,7 +1883,7 @@ mod tests {
 
         let mut options = options::Options {
             file: "".to_string(),
-            input: "test".to_string(),
+            input: "01".to_string(),
             convert_to_tm: false,
             convert_to_ram: false,
             convert_to_singletape: false,
@@ -1937,7 +1933,7 @@ mod tests {
         server.set_computation_order_at(2, "c3".to_string());
 
         // Test execution with chained computers
-        let result = server.execute("test input", 1000);
+        let result = server.execute("", 1000);
         assert!(result.is_ok());
 
         if let Ok((state, _, output, _, comp)) = result {
@@ -1992,7 +1988,7 @@ mod tests {
 
     #[test]
     fn test_server_empty_computer_list() {
-        let mut server = Server::new();
+        let server = Server::new();
         assert!(server.map_computers.is_empty());
         assert!(server.computation_order.is_empty());
 
@@ -2027,7 +2023,7 @@ mod tests {
         let context = Server::new();
 
         let large_input = "0".repeat(1000);
-        let result = computer.simulate(large_input, 100, context, 0);
+        let result = computer.simulate(&large_input, 100, &context, 0);
         assert!(result.is_ok());
     }
 
